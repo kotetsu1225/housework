@@ -1,0 +1,85 @@
+version: '3.8'
+
+services:
+  # ==========================================
+  # PostgreSQL Database
+  # ==========================================
+  postgres:
+    image: postgres:16-alpine
+    container_name: housework-db
+    environment:
+      POSTGRES_USER: housework
+      POSTGRES_PASSWORD: housework_password
+      POSTGRES_DB: housework
+      TZ: Asia/Tokyo
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backend/docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U housework -d housework"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - housework-network
+
+  # ==========================================
+  # Backend API (Kotlin/Ktor)
+  # ==========================================
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: housework-backend
+    environment:
+      DATABASE_URL: jdbc:postgresql://postgres:5432/housework
+      DATABASE_USER: housework
+      DATABASE_PASSWORD: housework_password
+      TZ: Asia/Tokyo
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/health > /dev/null || exit 1"]
+      interval: 30s
+      timeout: 3s
+      start_period: 30s
+      retries: 3
+    restart: unless-stopped
+    networks:
+      - housework-network
+
+  # ==========================================
+  # Frontend (React/Vite)
+  # ==========================================
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: housework-frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:80/"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+    restart: unless-stopped
+    networks:
+      - housework-network
+
+networks:
+  housework-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+    driver: local

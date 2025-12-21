@@ -1,0 +1,20 @@
+# Gradle
+.gradle/
+build/
+
+# IDE
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# Kotlin
+*.class
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+

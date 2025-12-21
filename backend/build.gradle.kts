@@ -126,12 +126,15 @@ jooq {
                     target.apply {
                         packageName = "com.task.infra.database.jooq"
                         // ============================================================
-                        // 【重要】生成コードは build/ 配下に出力する
-                        // src/main/kotlin に出力すると、cleanタスク実行時に
-                        // 手書きコードまで削除される危険がある
+                        // 【重要】生成コードは src/generated/ 配下に出力する
+                        // 
+                        // NG: src/main/kotlin → cleanタスクで手書きコードが消える危険
+                        // NG: build/         → Gitにコミットされず、Dockerビルドで使えない
+                        // OK: src/generated/ → 手書きコードと分離 & Gitにコミット可能
+                        //
                         // 出典: https://github.com/etiennestuder/gradle-jooq-plugin#generating-sources-into-shared-folders-eg-srcmainjava
                         // ============================================================
-                        directory = "build/generated-src/jooq/main"
+                        directory = "src/generated/jooq/main"
                     }
                 }
             }
@@ -158,12 +161,12 @@ tasks.withType<Test> {
 
 // ============================================================
 // 【重要】JOOQ生成コードをソースセットに追加
-// build/generated-src/jooq/main をコンパイル対象に含める
+// src/generated/jooq/main をコンパイル対象に含める
 // ============================================================
 sourceSets {
     main {
         kotlin {
-            srcDir("build/generated-src/jooq/main")
+            srcDir("src/generated/jooq/main")
         }
     }
 }

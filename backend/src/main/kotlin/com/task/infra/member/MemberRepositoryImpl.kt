@@ -11,26 +11,17 @@ import com.task.infra.database.jooq.tables.records.MembersRecord
 import org.jooq.DSLContext
 import java.time.OffsetDateTime
 
-/**
- * MemberRepositoryのJOOQ実装
- *
- * 【このクラスの役割】
- * - ドメインオブジェクト(Member)をDBに保存する
- * - DBからドメインオブジェクト(Member)を復元する
- * - JOOQを使ってタイプセーフにSQLを実行する
- */
 @Singleton
 class MemberRepositoryImpl : MemberRepository {
 
     override fun create(member: Member, session: DSLContext): Member {
         val record = session.newRecord(MEMBERS)
 
-        record.id = member.id.value                  // UUID
+        record.id = member.id.value
         record.name = member.name.value
         record.role = member.familyRole.value
         record.createdAt = OffsetDateTime.now()
         record.updatedAt = OffsetDateTime.now()
-
 
         record.store()
 

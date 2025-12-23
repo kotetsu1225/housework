@@ -1,7 +1,7 @@
 # ==========================================
 # Stage 1: Build
 # ==========================================
-FROM gradle:8.5-jdk17 AS builder
+FROM gradle:8.5-jdk21 AS builder
 
 WORKDIR /app
 
@@ -22,7 +22,7 @@ RUN gradle shadowJar -x flywayMigrate --no-daemon -x generateJooq --no-daemon
 # ==========================================
 # Stage 2: Runtime
 # ==========================================
-FROM eclipse-temurin:17-jre
+FROM eclipse-temurin:21-jre
 #
 # Install minimal utilities required by HEALTHCHECK (wget)
 # Note: run as root before switching to non-root user.

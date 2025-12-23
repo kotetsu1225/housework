@@ -16,6 +16,7 @@ interface CreateMemberAvailabilityUseCase {
 
     data class Output(
         val id: MemberAvailabilityId,
+        val memberId: MemberId,
         val targetDate: LocalDate,
         val slots: List<TimeSlot>,
     )

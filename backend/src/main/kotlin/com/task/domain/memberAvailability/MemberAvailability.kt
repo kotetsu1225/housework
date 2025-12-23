@@ -38,9 +38,11 @@ class MemberAvailability(
 
     fun updateSlots(
         newSlots: List<TimeSlot>,
-        existingSlots: List<TimeSlot>,
+        existingSlots: List<TimeSlot>?,
     ): MemberAvailability{
-        validateNoOverlapWithExisting(slots, existingSlots)
+
+        validateNoOverlapWithExisting(newSlots, existingSlots)
+
         return MemberAvailability(
             id = this.id,
             memberId = this.memberId,
@@ -49,19 +51,33 @@ class MemberAvailability(
         )
     }
 
+    private fun validateNoOverlapWithExisting(
+        newSlots: List<TimeSlot>,
+        existingSlots: List<TimeSlot>?
+    ) {
+        if (existingSlots == null) return
+
+        for (newSlot in newSlots) {
+            for (existingSlot in existingSlots) {
+                require(!newSlot.overlapsWith(existingSlot)) {
+                    "既存の空き時間（${existingSlot.startTime}〜${existingSlot.endTime}）と" +
+                    "重複しています（${newSlot.startTime}〜${newSlot.endTime}）"
+                }
+            }
+        }
+    }
+
     companion object {
+
         fun create(
             memberId: MemberId,
             targetDate: LocalDate,
             slots: List<TimeSlot>,
-            existingAvailabilities: List<MemberAvailability>,
+            existingAvailability: MemberAvailability?
         ): MemberAvailability {
-
-            validateNoCreateSameDayAndMember(
-                memberId = memberId,
-                targetDate = targetDate,
-                existingAvailabilities = existingAvailabilities
-            )
+            require(existingAvailability == null) {
+                "同じ日付（${targetDate}）とメンバーの空き時間が既に存在します"
+            }
 
             return MemberAvailability(
                 id = MemberAvailabilityId.generate(),
@@ -95,34 +111,6 @@ class MemberAvailability(
                     "${next.startTime}〜${next.endTime}"
                 }
             }
-        }
-
-        private fun validateNoOverlapWithExisting(
-            newSlots: List<TimeSlot>,
-            // ここは同日、同一メンバー
-            existingSlots: List<TimeSlot>
-        ) {
-            for (newSlot in newSlots) {
-                for (existingSlot in existingSlots) {
-                    require(!newSlot.overlapsWith(existingSlot)) {
-                        "既存の空き時間（${existingSlot.startTime}〜${existingSlot.endTime}）と" +
-                        "重複しています（${newSlot.startTime}〜${newSlot.endTime}）"
-                    }
-                }
-            }
-        }
-
-        private fun validateNoCreateSameDayAndMember(
-            memberId: MemberId,
-            targetDate: LocalDate,
-            existingAvailabilities: List<MemberAvailability>
-        ){
-            for (existingAvailability in existingAvailabilities) {
-                require(existingAvailability.memberId != memberId || existingAvailability.targetDate != targetDate) {
-                    "同じ日付とメンバーの空き時間が既に存在します"
-                }
-            }
-
         }
     }
 }

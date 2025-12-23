@@ -10,12 +10,14 @@ import com.task.infra.database.jooq.tables.TaskDefinitions
 import com.task.infra.database.jooq.tables.TaskExecutions
 import com.task.infra.database.jooq.tables.TaskRecurrences
 import com.task.infra.database.jooq.tables.TaskSnapshots
+import com.task.infra.database.jooq.tables.TimeSlots
 import com.task.infra.database.jooq.tables.records.MemberAvailabilitiesRecord
 import com.task.infra.database.jooq.tables.records.MembersRecord
 import com.task.infra.database.jooq.tables.records.TaskDefinitionsRecord
 import com.task.infra.database.jooq.tables.records.TaskExecutionsRecord
 import com.task.infra.database.jooq.tables.records.TaskRecurrencesRecord
 import com.task.infra.database.jooq.tables.records.TaskSnapshotsRecord
+import com.task.infra.database.jooq.tables.records.TimeSlotsRecord
 
 import org.jooq.ForeignKey
 import org.jooq.UniqueKey
@@ -34,6 +36,7 @@ val TASK_DEFINITIONS_PKEY: UniqueKey<TaskDefinitionsRecord> = Internal.createUni
 val TASK_EXECUTIONS_PKEY: UniqueKey<TaskExecutionsRecord> = Internal.createUniqueKey(TaskExecutions.TASK_EXECUTIONS, DSL.name("task_executions_pkey"), arrayOf(TaskExecutions.TASK_EXECUTIONS.ID), true)
 val TASK_RECURRENCES_PKEY: UniqueKey<TaskRecurrencesRecord> = Internal.createUniqueKey(TaskRecurrences.TASK_RECURRENCES, DSL.name("task_recurrences_pkey"), arrayOf(TaskRecurrences.TASK_RECURRENCES.TASK_DEFINITION_ID), true)
 val TASK_SNAPSHOTS_PKEY: UniqueKey<TaskSnapshotsRecord> = Internal.createUniqueKey(TaskSnapshots.TASK_SNAPSHOTS, DSL.name("task_snapshots_pkey"), arrayOf(TaskSnapshots.TASK_SNAPSHOTS.TASK_EXECUTION_ID), true)
+val TIME_SLOTS_PKEY: UniqueKey<TimeSlotsRecord> = Internal.createUniqueKey(TimeSlots.TIME_SLOTS, DSL.name("time_slots_pkey"), arrayOf(TimeSlots.TIME_SLOTS.ID), true)
 
 // -------------------------------------------------------------------------
 // FOREIGN KEY definitions
@@ -46,3 +49,4 @@ val TASK_EXECUTIONS__TASK_EXECUTIONS_COMPLETED_BY_MEMBER_ID_FKEY: ForeignKey<Tas
 val TASK_EXECUTIONS__TASK_EXECUTIONS_TASK_DEFINITION_ID_FKEY: ForeignKey<TaskExecutionsRecord, TaskDefinitionsRecord> = Internal.createForeignKey(TaskExecutions.TASK_EXECUTIONS, DSL.name("task_executions_task_definition_id_fkey"), arrayOf(TaskExecutions.TASK_EXECUTIONS.TASK_DEFINITION_ID), com.task.infra.database.jooq.keys.TASK_DEFINITIONS_PKEY, arrayOf(TaskDefinitions.TASK_DEFINITIONS.ID), true)
 val TASK_RECURRENCES__TASK_RECURRENCES_TASK_DEFINITION_ID_FKEY: ForeignKey<TaskRecurrencesRecord, TaskDefinitionsRecord> = Internal.createForeignKey(TaskRecurrences.TASK_RECURRENCES, DSL.name("task_recurrences_task_definition_id_fkey"), arrayOf(TaskRecurrences.TASK_RECURRENCES.TASK_DEFINITION_ID), com.task.infra.database.jooq.keys.TASK_DEFINITIONS_PKEY, arrayOf(TaskDefinitions.TASK_DEFINITIONS.ID), true)
 val TASK_SNAPSHOTS__TASK_SNAPSHOTS_TASK_EXECUTION_ID_FKEY: ForeignKey<TaskSnapshotsRecord, TaskExecutionsRecord> = Internal.createForeignKey(TaskSnapshots.TASK_SNAPSHOTS, DSL.name("task_snapshots_task_execution_id_fkey"), arrayOf(TaskSnapshots.TASK_SNAPSHOTS.TASK_EXECUTION_ID), com.task.infra.database.jooq.keys.TASK_EXECUTIONS_PKEY, arrayOf(TaskExecutions.TASK_EXECUTIONS.ID), true)
+val TIME_SLOTS__TIME_SLOTS_MEMBER_AVAILABILITY_ID_FKEY: ForeignKey<TimeSlotsRecord, MemberAvailabilitiesRecord> = Internal.createForeignKey(TimeSlots.TIME_SLOTS, DSL.name("time_slots_member_availability_id_fkey"), arrayOf(TimeSlots.TIME_SLOTS.MEMBER_AVAILABILITY_ID), com.task.infra.database.jooq.keys.MEMBER_AVAILABILITIES_PKEY, arrayOf(MemberAvailabilities.MEMBER_AVAILABILITIES.ID), true)

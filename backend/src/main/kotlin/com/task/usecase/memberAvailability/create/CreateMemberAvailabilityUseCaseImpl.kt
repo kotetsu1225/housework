@@ -12,24 +12,28 @@ class CreateMemberAvailabilityUseCaseImpl @Inject constructor(
     private val database: Database,
 ) : CreateMemberAvailabilityUseCase {
     override fun execute(input: CreateMemberAvailabilityUseCase.Input): CreateMemberAvailabilityUseCase.Output {
-        val memberAvailability = database.withTransaction { session ->
-
-            val existingAvailabilities = memberAvailabilityRepository.findAll(session)
-
-            val newMemberAvailability = MemberAvailability.create(
-                input.memberId, 
-                input.targetDate, 
-                input.slots,
-                existingAvailabilities
+        return database.withTransaction { session ->
+            val existingAvailability = memberAvailabilityRepository.findByMemberIdAndTargetDate(
+                memberId = input.memberId,
+                targetDate = input.targetDate,
+                session = session
             )
 
-            memberAvailabilityRepository.create(newMemberAvailability, session)
-        }
+            val newMemberAvailability = MemberAvailability.create(
+                memberId = input.memberId,
+                targetDate = input.targetDate,
+                slots = input.slots,
+                existingAvailability = existingAvailability
+            )
 
-        return CreateMemberAvailabilityUseCase.Output(
-            id = memberAvailability.id,
-            targetDate = memberAvailability.targetDate,
-            slots = memberAvailability.slots
-        )
+            val memberAvailability = memberAvailabilityRepository.save(newMemberAvailability, session)
+
+            CreateMemberAvailabilityUseCase.Output(
+                id = memberAvailability.id,
+                memberId = memberAvailability.memberId,
+                targetDate = memberAvailability.targetDate,
+                slots = memberAvailability.slots
+            )
+        }
     }
 }

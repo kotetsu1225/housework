@@ -6,17 +6,20 @@ import com.task.domain.memberAvailability.MemberAvailabilityId
 import com.task.domain.memberAvailability.TimeSlot
 import java.time.LocalDate
 
-@ImplementedBy(UpdateMemberAvailabilityTimeSlotsUseCaseImpl::class)
-interface UpdateMemberAvailabilityTimeSlotsUseCase {
+@ImplementedBy(DeleteMemberAvailabilityTimeSlotsUseCaseImpl::class)
+interface DeleteMemberAvailabilityTimeSlotsUseCase {
+    
     data class Input(
         val id: MemberAvailabilityId,
-        val newSlots: List<TimeSlot>,
+        val deletedSlots: List<TimeSlot>,
     )
+    
     data class Output(
         val id: MemberAvailabilityId,
         val memberId: MemberId,
         val targetDate: LocalDate,
         val slots: List<TimeSlot>,
     )
+
     fun execute(input: Input): Output
 }

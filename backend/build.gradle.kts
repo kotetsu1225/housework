@@ -55,6 +55,7 @@ dependencies {
     implementation("io.ktor:ktor-server-cors-jvm:$ktorVersion")
     implementation("io.ktor:ktor-server-status-pages-jvm:$ktorVersion")
     implementation("io.ktor:ktor-server-call-logging-jvm:$ktorVersion")
+    implementation("io.ktor:ktor-server-resources:$ktorVersion")
 
     // Ktor Client (for external API calls if needed)
     implementation("io.ktor:ktor-client-core-jvm:$ktorVersion")

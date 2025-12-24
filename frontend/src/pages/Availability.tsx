@@ -1,63 +1,366 @@
-import { useState } from 'react'
-import { format, addDays, startOfWeek, isSameDay } from 'date-fns'
-import { ja } from 'date-fns/locale'
-import { ChevronLeft, ChevronRight, Plus, Clock, X, Trash2 } from 'lucide-react'
+import { useState, useEffect, useMemo } from 'react'
+import { addDays, startOfWeek, isSameDay } from 'date-fns'
+import { ChevronLeft, ChevronRight, Plus, Clock, Trash2 } from 'lucide-react'
 import { Header } from '../components/layout/Header'
 import { PageContainer } from '../components/layout/PageContainer'
 import { Card } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
 import { Avatar } from '../components/ui/Avatar'
 import { Input } from '../components/ui/Input'
-import type { Member, TimeSlot, FamilyRole } from '../types'
+import { Modal } from '../components/ui/Modal'
+import { Alert } from '../components/ui/Alert'
+import { useMemberAvailability } from '../hooks'
+import { isParentRole, formatJa, toISODateString } from '../utils'
+import { MOCK_MEMBERS, createMockAvailabilities } from '../mocks'
+import type { Member, MemberAvailability, TimeSlot } from '../types'
+import type { TimeSlotRequest } from '../types/api'
 import { clsx } from 'clsx'
 
-const isParentRole = (role: FamilyRole): boolean => {
-  return role === 'FATHER' || role === 'MOTHER'
+/**
+ * 週カレンダーコンポーネント
+ */
+interface WeekCalendarProps {
+  currentWeekStart: Date
+  selectedDate: Date
+  onSelectDate: (date: Date) => void
+  onPreviousWeek: () => void
+  onNextWeek: () => void
+  hasAvailabilitiesOnDate: (date: Date) => boolean
 }
 
-// モックデータ
-const mockMembers: Member[] = [
-  { id: '1', name: '母', role: 'MOTHER', createdAt: '', updatedAt: '' },
-  { id: '2', name: '太郎', role: 'BROTHER', createdAt: '', updatedAt: '' },
-  { id: '3', name: '花子', role: 'SISTER', createdAt: '', updatedAt: '' },
-]
+function WeekCalendar({
+  currentWeekStart,
+  selectedDate,
+  onSelectDate,
+  onPreviousWeek,
+  onNextWeek,
+  hasAvailabilitiesOnDate,
+}: WeekCalendarProps) {
+  const weekDays = useMemo(
+    () => Array.from({ length: 7 }, (_, i) => addDays(currentWeekStart, i)),
+    [currentWeekStart]
+  )
 
-const mockTimeSlots: TimeSlot[] = [
-  { id: '1', memberId: '1', targetDate: format(new Date(), 'yyyy-MM-dd'), startTime: '10:00', endTime: '12:00', memo: '買い物後' },
-  { id: '2', memberId: '2', targetDate: format(new Date(), 'yyyy-MM-dd'), startTime: '15:00', endTime: '18:00', memo: '学校から帰宅後' },
-  { id: '3', memberId: '3', targetDate: format(new Date(), 'yyyy-MM-dd'), startTime: '16:00', endTime: '17:00' },
-  { id: '4', memberId: '2', targetDate: format(addDays(new Date(), 1), 'yyyy-MM-dd'), startTime: '10:00', endTime: '12:00' },
-]
+  return (
+    <section className="py-4">
+      <div className="flex items-center justify-between mb-4">
+        <Button variant="ghost" size="sm" onClick={onPreviousWeek}>
+          <ChevronLeft className="w-5 h-5" />
+        </Button>
+        <span className="font-semibold text-white">
+          {formatJa(currentWeekStart, 'M月')}
+        </span>
+        <Button variant="ghost" size="sm" onClick={onNextWeek}>
+          <ChevronRight className="w-5 h-5" />
+        </Button>
+      </div>
 
+      <div className="grid grid-cols-7 gap-1">
+        {weekDays.map((day) => {
+          const isSelected = isSameDay(day, selectedDate)
+          const isToday = isSameDay(day, new Date())
+          const hasSlots = hasAvailabilitiesOnDate(day)
+
+          return (
+            <button
+              key={day.toISOString()}
+              onClick={() => onSelectDate(day)}
+              className={clsx(
+                'flex flex-col items-center py-2 rounded-xl transition-all',
+                isSelected
+                  ? 'bg-coral-500 text-white'
+                  : isToday
+                    ? 'bg-dark-800 text-coral-400'
+                    : 'text-dark-300 hover:bg-dark-800'
+              )}
+            >
+              <span className="text-[10px] mb-1">{formatJa(day, 'E')}</span>
+              <span className={clsx('text-lg font-bold', isSelected && 'text-white')}>
+                {formatJa(day, 'd')}
+              </span>
+              {hasSlots && (
+                <div
+                  className={clsx(
+                    'w-1.5 h-1.5 rounded-full mt-1',
+                    isSelected ? 'bg-white' : 'bg-coral-400'
+                  )}
+                />
+              )}
+            </button>
+          )
+        })}
+      </div>
+    </section>
+  )
+}
+
+/**
+ * 時間スロットアイテムコンポーネント
+ */
+interface TimeSlotItemProps {
+  slot: TimeSlot
+  onDelete: () => void
+  disabled?: boolean
+}
+
+function TimeSlotItem({ slot, onDelete, disabled }: TimeSlotItemProps) {
+  return (
+    <div className="flex items-center justify-between bg-dark-900/50 rounded-lg px-3 py-2">
+      <div className="flex items-center gap-2">
+        <Clock className="w-4 h-4 text-coral-400" />
+        <span className="text-white">
+          {slot.startTime} - {slot.endTime}
+        </span>
+        {slot.memo && (
+          <span className="text-dark-400 text-sm">({slot.memo})</span>
+        )}
+      </div>
+      <button
+        className="p-1 hover:bg-dark-700 rounded disabled:opacity-50"
+        onClick={onDelete}
+        disabled={disabled}
+      >
+        <Trash2 className="w-4 h-4 text-dark-500 hover:text-red-400" />
+      </button>
+    </div>
+  )
+}
+
+/**
+ * メンバー空き時間カードコンポーネント
+ */
+interface MemberAvailabilityCardProps {
+  member: Member
+  availabilities: MemberAvailability[]
+  onDeleteSlot: (availability: MemberAvailability, slot: TimeSlot) => void
+  loading: boolean
+}
+
+function MemberAvailabilityCard({
+  member,
+  availabilities,
+  onDeleteSlot,
+  loading,
+}: MemberAvailabilityCardProps) {
+  return (
+    <Card variant="glass">
+      <div className="flex items-start gap-3">
+        <Avatar
+          name={member.name}
+          size="md"
+          variant={isParentRole(member.role) ? 'parent' : 'child'}
+        />
+        <div className="flex-1">
+          <span className="font-medium text-white">{member.name}</span>
+          <div className="mt-2 space-y-2">
+            {availabilities.flatMap((availability) =>
+              availability.slots.map((slot, slotIndex) => (
+                <TimeSlotItem
+                  key={`${availability.id}-${slotIndex}`}
+                  slot={slot}
+                  onDelete={() => onDeleteSlot(availability, slot)}
+                  disabled={loading}
+                />
+              ))
+            )}
+          </div>
+        </div>
+      </div>
+    </Card>
+  )
+}
+
+/**
+ * 空の状態コンポーネント
+ */
+interface EmptyStateProps {
+  onAdd: () => void
+}
+
+function EmptyState({ onAdd }: EmptyStateProps) {
+  return (
+    <Card variant="glass" className="text-center py-8">
+      <Clock className="w-12 h-12 text-dark-600 mx-auto mb-3" />
+      <p className="text-dark-400">この日の登録はありません</p>
+      <Button variant="primary" size="sm" className="mt-4" onClick={onAdd}>
+        <Plus className="w-4 h-4 mr-1" />
+        空き時間を登録
+      </Button>
+    </Card>
+  )
+}
+
+/**
+ * メンバー選択コンポーネント
+ */
+interface MemberSelectorProps {
+  members: Member[]
+  selectedMemberId: string | null
+  onSelect: (memberId: string) => void
+}
+
+function MemberSelector({ members, selectedMemberId, onSelect }: MemberSelectorProps) {
+  return (
+    <div>
+      <label className="block text-sm font-medium text-dark-300 mb-2">
+        メンバー
+      </label>
+      <div className="flex gap-2 flex-wrap">
+        {members.map((member) => (
+          <Button
+            key={member.id}
+            variant={selectedMemberId === member.id ? 'primary' : 'secondary'}
+            size="sm"
+            onClick={() => onSelect(member.id)}
+          >
+            {member.name}
+          </Button>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+/**
+ * 空き時間管理ページ
+ */
 export function Availability() {
+  // カレンダー状態
   const [currentWeekStart, setCurrentWeekStart] = useState(() =>
     startOfWeek(new Date(), { weekStartsOn: 1 })
   )
   const [selectedDate, setSelectedDate] = useState(new Date())
   const [selectedMember, setSelectedMember] = useState<string | null>(null)
+
+  // モーダル状態
   const [showAddModal, setShowAddModal] = useState(false)
-  const [newSlot, setNewSlot] = useState({ startTime: '', endTime: '', memo: '' })
+  const [newSlot, setNewSlot] = useState<TimeSlotRequest>({
+    startTime: '',
+    endTime: '',
+    memo: '',
+  })
 
-  const weekDays = Array.from({ length: 7 }, (_, i) => addDays(currentWeekStart, i))
+  // 空き時間管理フック
+  const {
+    availabilities,
+    loading,
+    error,
+    addAvailability,
+    removeSlots,
+    setAvailabilities,
+    clearError,
+  } = useMemberAvailability(createMockAvailabilities())
 
-  const goToPreviousWeek = () => {
-    setCurrentWeekStart(addDays(currentWeekStart, -7))
-  }
+  // エラー時の自動クリア
+  useEffect(() => {
+    if (error) {
+      const timer = setTimeout(clearError, 5000)
+      return () => clearTimeout(timer)
+    }
+  }, [error, clearError])
 
-  const goToNextWeek = () => {
-    setCurrentWeekStart(addDays(currentWeekStart, 7))
-  }
-
-  const getSlotsForDate = (date: Date, memberId?: string) => {
-    const dateStr = format(date, 'yyyy-MM-dd')
-    return mockTimeSlots.filter(
-      (slot) =>
-        slot.targetDate === dateStr &&
-        (memberId ? slot.memberId === memberId : true)
+  /**
+   * 指定日付の空き時間を取得
+   */
+  const getAvailabilitiesForDate = (date: Date, memberId?: string): MemberAvailability[] => {
+    const dateStr = toISODateString(date)
+    return availabilities.filter(
+      (av) => av.targetDate === dateStr && (memberId ? av.memberId === memberId : true)
     )
   }
 
-  const selectedDateSlots = getSlotsForDate(selectedDate)
+  /**
+   * 指定日付にスロットがあるかチェック
+   */
+  const hasAvailabilitiesOnDate = (date: Date): boolean => {
+    const dateStr = toISODateString(date)
+    return availabilities.some((av) => av.targetDate === dateStr && av.slots.length > 0)
+  }
+
+  /**
+   * メンバーごとの総スロット数を取得
+   */
+  const getTotalSlotsForMember = (memberId: string): number => {
+    return availabilities
+      .filter((av) => av.memberId === memberId)
+      .reduce((sum, av) => sum + av.slots.length, 0)
+  }
+
+  const selectedDateAvailabilities = getAvailabilitiesForDate(selectedDate)
+
+  /**
+   * モーダルを閉じる
+   */
+  const handleCloseModal = () => {
+    setShowAddModal(false)
+    setNewSlot({ startTime: '', endTime: '', memo: '' })
+    setSelectedMember(null)
+    clearError()
+  }
+
+  /**
+   * 空き時間追加ハンドラー
+   */
+  const handleAddAvailability = async () => {
+    if (!selectedMember || !newSlot.startTime || !newSlot.endTime) return
+
+    const targetDate = toISODateString(selectedDate)
+    const existingAvailability = availabilities.find(
+      (av) => av.memberId === selectedMember && av.targetDate === targetDate
+    )
+
+    if (existingAvailability) {
+      // 既存データがある場合はローカルでスロット追加
+      setAvailabilities((prev) =>
+        prev.map((av) =>
+          av.id === existingAvailability.id
+            ? {
+                ...av,
+                slots: [
+                  ...av.slots,
+                  {
+                    startTime: newSlot.startTime,
+                    endTime: newSlot.endTime,
+                    memo: newSlot.memo || null,
+                  },
+                ],
+              }
+            : av
+        )
+      )
+      handleCloseModal()
+    } else {
+      const success = await addAvailability(selectedMember, targetDate, [
+        {
+          startTime: newSlot.startTime,
+          endTime: newSlot.endTime,
+          memo: newSlot.memo || undefined,
+        },
+      ])
+
+      if (success) {
+        handleCloseModal()
+      }
+    }
+  }
+
+  /**
+   * スロット削除ハンドラー
+   */
+  const handleDeleteSlot = async (availability: MemberAvailability, slotToDelete: TimeSlot) => {
+    if (availability.slots.length <= 1) {
+      setAvailabilities((prev) => prev.filter((av) => av.id !== availability.id))
+      return
+    }
+
+    await removeSlots(availability.id, [
+      {
+        startTime: slotToDelete.startTime,
+        endTime: slotToDelete.endTime,
+        memo: slotToDelete.memo ?? undefined,
+      },
+    ])
+  }
 
   return (
     <>
@@ -72,127 +375,50 @@ export function Availability() {
         }
       />
       <PageContainer>
+        {/* エラーメッセージ */}
+        {error && (
+          <Alert variant="error" className="mb-4">
+            {error}
+          </Alert>
+        )}
+
         {/* カレンダーナビゲーション */}
-        <section className="py-4">
-          <div className="flex items-center justify-between mb-4">
-            <Button variant="ghost" size="sm" onClick={goToPreviousWeek}>
-              <ChevronLeft className="w-5 h-5" />
-            </Button>
-            <span className="font-semibold text-white">
-              {format(currentWeekStart, 'M月', { locale: ja })}
-            </span>
-            <Button variant="ghost" size="sm" onClick={goToNextWeek}>
-              <ChevronRight className="w-5 h-5" />
-            </Button>
-          </div>
-
-          {/* 週カレンダー */}
-          <div className="grid grid-cols-7 gap-1">
-            {weekDays.map((day) => {
-              const isSelected = isSameDay(day, selectedDate)
-              const isToday = isSameDay(day, new Date())
-              const hasSlots = getSlotsForDate(day).length > 0
-
-              return (
-                <button
-                  key={day.toISOString()}
-                  onClick={() => setSelectedDate(day)}
-                  className={clsx(
-                    'flex flex-col items-center py-2 rounded-xl transition-all',
-                    isSelected
-                      ? 'bg-coral-500 text-white'
-                      : isToday
-                      ? 'bg-dark-800 text-coral-400'
-                      : 'text-dark-300 hover:bg-dark-800'
-                  )}
-                >
-                  <span className="text-[10px] mb-1">
-                    {format(day, 'E', { locale: ja })}
-                  </span>
-                  <span className={clsx('text-lg font-bold', isSelected && 'text-white')}>
-                    {format(day, 'd')}
-                  </span>
-                  {hasSlots && (
-                    <div
-                      className={clsx(
-                        'w-1.5 h-1.5 rounded-full mt-1',
-                        isSelected ? 'bg-white' : 'bg-coral-400'
-                      )}
-                    />
-                  )}
-                </button>
-              )
-            })}
-          </div>
-        </section>
+        <WeekCalendar
+          currentWeekStart={currentWeekStart}
+          selectedDate={selectedDate}
+          onSelectDate={setSelectedDate}
+          onPreviousWeek={() => setCurrentWeekStart(addDays(currentWeekStart, -7))}
+          onNextWeek={() => setCurrentWeekStart(addDays(currentWeekStart, 7))}
+          hasAvailabilitiesOnDate={hasAvailabilitiesOnDate}
+        />
 
         {/* 選択日の詳細 */}
         <section className="mt-4">
           <h2 className="text-lg font-bold text-white mb-4">
-            {format(selectedDate, 'M月d日（E）', { locale: ja })}の空き時間
+            {formatJa(selectedDate, 'M月d日（E）')}の空き時間
           </h2>
 
-          {selectedDateSlots.length > 0 ? (
+          {selectedDateAvailabilities.length > 0 ? (
             <div className="space-y-3">
-              {mockMembers.map((member) => {
-                const memberSlots = selectedDateSlots.filter(
-                  (s) => s.memberId === member.id
+              {MOCK_MEMBERS.map((member) => {
+                const memberAvailabilities = selectedDateAvailabilities.filter(
+                  (av) => av.memberId === member.id
                 )
-                if (memberSlots.length === 0) return null
+                if (memberAvailabilities.length === 0) return null
 
                 return (
-                  <Card key={member.id} variant="glass">
-                    <div className="flex items-start gap-3">
-                      <Avatar
-                        name={member.name}
-                        size="md"
-                        variant={isParentRole(member.role) ? 'parent' : 'child'}
-                      />
-                      <div className="flex-1">
-                        <span className="font-medium text-white">{member.name}</span>
-                        <div className="mt-2 space-y-2">
-                          {memberSlots.map((slot) => (
-                            <div
-                              key={slot.id}
-                              className="flex items-center justify-between bg-dark-900/50 rounded-lg px-3 py-2"
-                            >
-                              <div className="flex items-center gap-2">
-                                <Clock className="w-4 h-4 text-coral-400" />
-                                <span className="text-white">
-                                  {slot.startTime} - {slot.endTime}
-                                </span>
-                                {slot.memo && (
-                                  <span className="text-dark-400 text-sm">
-                                    ({slot.memo})
-                                  </span>
-                                )}
-                              </div>
-                              <button className="p-1 hover:bg-dark-700 rounded">
-                                <Trash2 className="w-4 h-4 text-dark-500 hover:text-red-400" />
-                              </button>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  </Card>
+                  <MemberAvailabilityCard
+                    key={member.id}
+                    member={member}
+                    availabilities={memberAvailabilities}
+                    onDeleteSlot={handleDeleteSlot}
+                    loading={loading}
+                  />
                 )
               })}
             </div>
           ) : (
-            <Card variant="glass" className="text-center py-8">
-              <Clock className="w-12 h-12 text-dark-600 mx-auto mb-3" />
-              <p className="text-dark-400">この日の登録はありません</p>
-              <Button
-                variant="primary"
-                size="sm"
-                className="mt-4"
-                onClick={() => setShowAddModal(true)}
-              >
-                <Plus className="w-4 h-4 mr-1" />
-                空き時間を登録
-              </Button>
-            </Card>
+            <EmptyState onAdd={() => setShowAddModal(true)} />
           )}
         </section>
 
@@ -200,125 +426,99 @@ export function Availability() {
         <section className="mt-8">
           <h2 className="text-lg font-bold text-white mb-4">メンバー別</h2>
           <div className="grid grid-cols-3 gap-3">
-            {mockMembers.map((member) => {
-              const totalSlots = mockTimeSlots.filter(
-                (s) => s.memberId === member.id
-              ).length
-
-              return (
-                <Card
-                  key={member.id}
-                  variant="glass"
-                  hoverable
-                  className="text-center"
-                  onClick={() => setSelectedMember(member.id)}
-                >
-                  <Avatar
-                    name={member.name}
-                    size="lg"
-                    variant={isParentRole(member.role) ? 'parent' : 'child'}
-                    className="mx-auto mb-2"
-                  />
-                  <p className="font-medium text-white text-sm">{member.name}</p>
-                  <p className="text-xs text-dark-400">{totalSlots}件の登録</p>
-                </Card>
-              )
-            })}
+            {MOCK_MEMBERS.map((member) => (
+              <Card
+                key={member.id}
+                variant="glass"
+                hoverable
+                className="text-center"
+                onClick={() => setSelectedMember(member.id)}
+              >
+                <Avatar
+                  name={member.name}
+                  size="lg"
+                  variant={isParentRole(member.role) ? 'parent' : 'child'}
+                  className="mx-auto mb-2"
+                />
+                <p className="font-medium text-white text-sm">{member.name}</p>
+                <p className="text-xs text-dark-400">
+                  {getTotalSlotsForMember(member.id)}件の登録
+                </p>
+              </Card>
+            ))}
           </div>
         </section>
 
         {/* 追加モーダル */}
-        {showAddModal && (
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-end justify-center z-50">
-            <div className="bg-dark-900 w-full max-w-lg rounded-t-3xl p-6 safe-bottom">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-bold text-white">空き時間を登録</h2>
-                <button
-                  onClick={() => setShowAddModal(false)}
-                  className="p-2 hover:bg-dark-800 rounded-full"
-                >
-                  <X className="w-5 h-5 text-dark-400" />
-                </button>
-              </div>
+        <Modal
+          isOpen={showAddModal}
+          onClose={handleCloseModal}
+          title="空き時間を登録"
+          footer={
+            <>
+              <Button
+                variant="secondary"
+                className="flex-1"
+                onClick={handleCloseModal}
+                disabled={loading}
+              >
+                キャンセル
+              </Button>
+              <Button
+                variant="primary"
+                className="flex-1"
+                onClick={handleAddAvailability}
+                loading={loading}
+                disabled={!selectedMember || !newSlot.startTime || !newSlot.endTime}
+              >
+                登録
+              </Button>
+            </>
+          }
+        >
+          {error && (
+            <Alert variant="error" className="mb-4">
+              {error}
+            </Alert>
+          )}
 
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-dark-300 mb-2">
-                    メンバー
-                  </label>
-                  <div className="flex gap-2 flex-wrap">
-                    {mockMembers.map((member) => (
-                      <Button
-                        key={member.id}
-                        variant={selectedMember === member.id ? 'primary' : 'secondary'}
-                        size="sm"
-                        onClick={() => setSelectedMember(member.id)}
-                      >
-                        {member.name}
-                      </Button>
-                    ))}
-                  </div>
-                </div>
+          <MemberSelector
+            members={MOCK_MEMBERS}
+            selectedMemberId={selectedMember}
+            onSelect={setSelectedMember}
+          />
 
-                <div>
-                  <label className="block text-sm font-medium text-dark-300 mb-2">
-                    日付
-                  </label>
-                  <div className="bg-dark-800 border border-dark-700 rounded-xl px-4 py-3 text-white">
-                    {format(selectedDate, 'yyyy年M月d日（E）', { locale: ja })}
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <Input
-                    label="開始時刻"
-                    type="time"
-                    value={newSlot.startTime}
-                    onChange={(e) =>
-                      setNewSlot({ ...newSlot, startTime: e.target.value })
-                    }
-                  />
-                  <Input
-                    label="終了時刻"
-                    type="time"
-                    value={newSlot.endTime}
-                    onChange={(e) =>
-                      setNewSlot({ ...newSlot, endTime: e.target.value })
-                    }
-                  />
-                </div>
-
-                <Input
-                  label="メモ（任意）"
-                  placeholder="例: 学校から帰宅後"
-                  value={newSlot.memo}
-                  onChange={(e) => setNewSlot({ ...newSlot, memo: e.target.value })}
-                />
-              </div>
-
-              <div className="flex gap-3 mt-8">
-                <Button
-                  variant="secondary"
-                  className="flex-1"
-                  onClick={() => setShowAddModal(false)}
-                >
-                  キャンセル
-                </Button>
-                <Button
-                  variant="primary"
-                  className="flex-1"
-                  onClick={() => {
-                    // TODO: APIを呼び出して空き時間を登録
-                    setShowAddModal(false)
-                    setNewSlot({ startTime: '', endTime: '', memo: '' })
-                  }}
-                >
-                  登録
-                </Button>
-              </div>
+          <div>
+            <label className="block text-sm font-medium text-dark-300 mb-2">
+              日付
+            </label>
+            <div className="bg-dark-800 border border-dark-700 rounded-xl px-4 py-3 text-white">
+              {formatJa(selectedDate, 'yyyy年M月d日（E）')}
             </div>
           </div>
-        )}
+
+          <div className="grid grid-cols-2 gap-3">
+            <Input
+              label="開始時刻"
+              type="time"
+              value={newSlot.startTime}
+              onChange={(e) => setNewSlot({ ...newSlot, startTime: e.target.value })}
+            />
+            <Input
+              label="終了時刻"
+              type="time"
+              value={newSlot.endTime}
+              onChange={(e) => setNewSlot({ ...newSlot, endTime: e.target.value })}
+            />
+          </div>
+
+          <Input
+            label="メモ（任意）"
+            placeholder="例: 学校から帰宅後"
+            value={newSlot.memo ?? ''}
+            onChange={(e) => setNewSlot({ ...newSlot, memo: e.target.value })}
+          />
+        </Modal>
       </PageContainer>
     </>
   )

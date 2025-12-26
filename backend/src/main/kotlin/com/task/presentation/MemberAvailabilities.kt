@@ -4,6 +4,7 @@ import com.task.domain.member.MemberId
 import com.task.domain.memberAvailability.MemberAvailabilityId
 import com.task.domain.memberAvailability.TimeSlot
 import com.task.usecase.memberAvailability.create.CreateMemberAvailabilityUseCase
+import com.task.usecase.memberAvailability.get.GetMemberAvailabilitiesUseCase
 import com.task.usecase.memberAvailability.update.DeleteMemberAvailabilityTimeSlotsUseCase
 import com.task.usecase.memberAvailability.update.UpdateMemberAvailabilityTimeSlotsUseCase
 import io.ktor.http.HttpStatusCode
@@ -12,7 +13,11 @@ import io.ktor.server.application.call
 import io.ktor.server.request.receive
 import io.ktor.server.response.respond
 import io.ktor.server.routing.Route
-import io.ktor.server.routing.post
+// Ktor Resources: Type-safe routingを使用する場合は、
+// io.ktor.server.resources.get/postを使用する必要がある
+// 出典: https://ktor.io/docs/server-resources.html#routes
+import io.ktor.server.resources.get
+import io.ktor.server.resources.post
 import kotlinx.serialization.Serializable
 import java.time.LocalDate
 import java.time.LocalTime
@@ -20,6 +25,32 @@ import java.util.UUID
 
 @Resource("api/member-availabilities")
 class MemberAvailabilities {
+
+    @Resource("/member/{memberId}")
+    class ByMember(
+        val parent: MemberAvailabilities = MemberAvailabilities(),
+        val memberId: String
+    ) {
+        @Serializable
+        data class Response(
+            val availabilities: kotlin.collections.List<AvailabilityDto>
+        )
+
+        @Serializable
+        data class AvailabilityDto(
+            val id: String,
+            val memberId: String,
+            val targetDate: String,
+            val slots: kotlin.collections.List<TimeSlotDto>
+        )
+
+        @Serializable
+        data class TimeSlotDto(
+            val startTime: String,
+            val endTime: String,
+            val memo: String?
+        )
+    }
 
     @Resource("/create")
     class Create(
@@ -123,6 +154,37 @@ class MemberAvailabilities {
 }
 
 fun Route.memberAvailabilities() {
+    // GET /api/member-availabilities/member/{memberId} - メンバー別空き時間一覧取得
+    // DDDの観点: 集約間の参照はIDで行い、MemberAvailabilityをMemberIdで絞り込む
+    get<MemberAvailabilities.ByMember> { resource ->
+        val output = instance<GetMemberAvailabilitiesUseCase>().execute(
+            GetMemberAvailabilitiesUseCase.Input(
+                memberId = MemberId(UUID.fromString(resource.memberId))
+            )
+        )
+
+        call.respond(
+            HttpStatusCode.OK,
+            MemberAvailabilities.ByMember.Response(
+                availabilities = output.availabilities.map { availability ->
+                    MemberAvailabilities.ByMember.AvailabilityDto(
+                        id = availability.id.value.toString(),
+                        memberId = availability.memberId.value.toString(),
+                        targetDate = availability.targetDate.toString(),
+                        slots = availability.slots.map { slot ->
+                            MemberAvailabilities.ByMember.TimeSlotDto(
+                                startTime = slot.startTime.toString(),
+                                endTime = slot.endTime.toString(),
+                                memo = slot.memo
+                            )
+                        }
+                    )
+                }
+            )
+        )
+    }
+
+    // POST /api/member-availabilities/create - 空き時間作成
     post<MemberAvailabilities.Create> {
         val request = call.receive<MemberAvailabilities.Create.Request>()
 

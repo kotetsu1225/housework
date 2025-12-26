@@ -3,6 +3,7 @@ package com.task
 import com.task.presentation.GuicePlugin
 import com.task.presentation.members
 import com.task.presentation.memberAvailabilities
+import com.task.presentation.taskDefinitions
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpMethod
 import io.ktor.serialization.kotlinx.json.*
@@ -66,5 +67,6 @@ fun Application.module() {
 
         members()
         memberAvailabilities()
+        taskDefinitions()
     }
 }

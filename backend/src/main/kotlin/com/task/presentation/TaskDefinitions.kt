@@ -4,6 +4,8 @@ import com.task.domain.member.MemberId
 import com.task.domain.taskDefinition.*
 import com.task.usecase.taskDefinition.create.CreateTaskDefinitionUseCase
 import com.task.usecase.taskDefinition.delete.DeleteTaskDefinitionUseCase
+import com.task.usecase.taskDefinition.get.GetTaskDefinitionUseCase
+import com.task.usecase.taskDefinition.get.GetTaskDefinitionsUseCase
 import com.task.usecase.taskDefinition.update.UpdateTaskDefinitionUseCase
 import io.ktor.http.HttpStatusCode
 import io.ktor.resources.Resource
@@ -11,13 +13,62 @@ import io.ktor.server.application.call
 import io.ktor.server.request.receive
 import io.ktor.server.response.respond
 import io.ktor.server.routing.Route
-import io.ktor.server.routing.post
+// Ktor Resources: Type-safe routingを使用する場合は、
+// io.ktor.server.resources.get/postを使用する必要がある
+// 出典: https://ktor.io/docs/server-resources.html#routes
+import io.ktor.server.resources.get
+import io.ktor.server.resources.post
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import java.time.LocalDate
 import java.util.UUID
 
 @Resource("api/task-definitions")
 class TaskDefinitions {
+    @Resource("")
+    class List(
+        val parent: TaskDefinitions = TaskDefinitions(),
+        val limit: Int = 20,
+        val offset: Int = 0
+    ) {
+        @Serializable
+        data class Response(
+            val taskDefinitions: kotlin.collections.List<TaskDefinitionDto>,
+            val total: Int,
+            val hasMore: Boolean
+        )
+
+        @Serializable
+        data class TaskDefinitionDto(
+            val id: String,
+            val name: String,
+            val description: String,
+            val estimatedMinutes: Int,
+            val scope: String,
+            val ownerMemberId: String?,
+            val schedule: ScheduleDto,
+            val version: Int
+        )
+    }
+
+    @Resource("/{taskDefinitionId}")
+    class Get(
+        val parent: TaskDefinitions = TaskDefinitions(),
+        val taskDefinitionId: String
+    ) {
+        @Serializable
+        data class Response(
+            val id: String,
+            val name: String,
+            val description: String,
+            val estimatedMinutes: Int,
+            val scope: String,
+            val ownerMemberId: String?,
+            val schedule: ScheduleDto,
+            val version: Int
+        )
+    }
+
     @Resource("/create")
     class Create(
         val parent: TaskDefinitions = TaskDefinitions(),
@@ -94,6 +145,7 @@ class TaskDefinitions {
     @Serializable
     sealed class ScheduleDto {
         @Serializable
+        @SerialName("Recurring")
         data class Recurring(
             val pattern: PatternDto,
             val startDate: String,
@@ -101,6 +153,7 @@ class TaskDefinitions {
         ) : ScheduleDto()
 
         @Serializable
+        @SerialName("OneTime")
         data class OneTime(
             val deadline: String,
         ) : ScheduleDto()
@@ -109,16 +162,19 @@ class TaskDefinitions {
     @Serializable
     sealed class PatternDto {
         @Serializable
+        @SerialName("Daily")
         data class Daily(
             val skipWeekends: Boolean,
         ) : PatternDto()
 
         @Serializable
+        @SerialName("Weekly")
         data class Weekly(
             val dayOfWeek: String,
         ) : PatternDto()
 
         @Serializable
+        @SerialName("Monthly")
         data class Monthly(
             val dayOfMonth: Int,
         ) : PatternDto()
@@ -126,6 +182,62 @@ class TaskDefinitions {
 }
 
 fun Route.taskDefinitions() {
+    get<TaskDefinitions.List> { resource ->
+        val output = instance<GetTaskDefinitionsUseCase>().execute(
+            GetTaskDefinitionsUseCase.Input(
+                limit = resource.limit,
+                offset = resource.offset
+            )
+        )
+
+        call.respond(
+            HttpStatusCode.OK,
+            TaskDefinitions.List.Response(
+                taskDefinitions = output.taskDefinitions.map { taskDef ->
+                    TaskDefinitions.List.TaskDefinitionDto(
+                        id = taskDef.id.value.toString(),
+                        name = taskDef.name.value,
+                        description = taskDef.description.value,
+                        estimatedMinutes = taskDef.estimatedMinutes,
+                        scope = taskDef.scope.value,
+                        ownerMemberId = taskDef.ownerMemberId?.value?.toString(),
+                        schedule = taskDef.schedule.toDto(),
+                        version = taskDef.version
+                    )
+                },
+                total = output.total,
+                hasMore = output.hasMore
+            )
+        )
+    }
+
+    get<TaskDefinitions.Get> { resource ->
+        val output = instance<GetTaskDefinitionUseCase>().execute(
+            GetTaskDefinitionUseCase.Input(
+                id = TaskDefinitionId(UUID.fromString(resource.taskDefinitionId))
+            )
+        )
+
+        if (output == null) {
+            call.respond(HttpStatusCode.NotFound, mapOf("error" to "TaskDefinition not found"))
+            return@get
+        }
+
+        call.respond(
+            HttpStatusCode.OK,
+            TaskDefinitions.Get.Response(
+                id = output.id.value.toString(),
+                name = output.name.value,
+                description = output.description.value,
+                estimatedMinutes = output.estimatedMinutes,
+                scope = output.scope.value,
+                ownerMemberId = output.ownerMemberId?.value?.toString(),
+                schedule = output.schedule.toDto(),
+                version = output.version
+            )
+        )
+    }
+
     post<TaskDefinitions.Create> {
         val request = call.receive<TaskDefinitions.Create.Request>()
 

@@ -3,6 +3,7 @@ package com.task.infra.database
 import com.typesafe.config.ConfigFactory
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
+import org.flywaydb.core.Flyway
 
 /**
  * データベース接続プールの設定クラス
@@ -31,6 +32,7 @@ object DatabaseConfig {
         // application.confを読み込む
         val config = ConfigFactory.load()
         val dbConfig = config.getConfig("database")
+        runMigrations(dbConfig)
 
         // HikariCPの設定を作成
         val hikariConfig = HikariConfig().apply {
@@ -78,5 +80,36 @@ object DatabaseConfig {
         if (!dataSource.isClosed) {
             dataSource.close()
         }
+    }
+
+    /**
+     * Flywayマイグレーションを実行
+     *
+     * 【Flywayとは？】
+     * - DBスキーマのバージョン管理ツール
+     * - db/migration/V1__*.sql 形式のファイルを順番に実行
+     * - 既に適用済みのマイグレーションはスキップ
+     *
+     * 【なぜ起動時に実行？】
+     * - Docker環境でアプリ起動時に自動でスキーマが最新になる
+     * - 手動でマイグレーションコマンドを実行する必要がない
+     *
+     * @param dbConfig データベース設定
+     */
+    private fun runMigrations(dbConfig: com.typesafe.config.Config) {
+        val flyway = Flyway.configure()
+            .dataSource(
+                dbConfig.getString("jdbcUrl"),
+                dbConfig.getString("username"),
+                dbConfig.getString("password")
+            )
+            // マイグレーションファイルの場所（Docker環境のみ）
+            // Docker環境では /app/db/migration にコピーされている
+            .locations("filesystem:/app/db/migration")
+            .load()
+
+        // マイグレーション実行（適用済みはスキップ）
+        val result = flyway.migrate()
+        println("Flyway migration completed: ${result.migrationsExecuted} migrations applied")
     }
 }

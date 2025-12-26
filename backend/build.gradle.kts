@@ -1,23 +1,10 @@
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
-// ============================================================
-// 【重要】Flyway 10以降では、buildscriptブロックでPostgreSQLドライバを追加する必要がある
-// これがないと "No database found to handle jdbc:postgresql" エラーが発生する
-// ============================================================
-buildscript {
-    repositories {
-        mavenCentral()
-    }
-    dependencies {
-        classpath("org.flywaydb:flyway-database-postgresql:10.4.1")
-    }
-}
-
 plugins {
     kotlin("jvm") version "1.9.22"
     kotlin("plugin.serialization") version "1.9.22"
     id("io.ktor.plugin") version "2.3.7"
-    id("org.flywaydb.flyway") version "10.4.1"
+    id("org.flywaydb.flyway") version "9.22.3"
     id("nu.studer.jooq") version "8.2"
     id("com.github.johnrengelman.shadow") version "8.1.1"
     application
@@ -40,7 +27,7 @@ val logbackVersion = "1.4.14"
 val jooqVersion = "3.18.7"
 val postgresVersion = "42.7.1"
 val guiceVersion = "7.0.0"
-val flywayVersion = "10.4.1"
+val flywayVersion = "9.22.3"
 
 dependencies {
     // Kotlin
@@ -68,8 +55,8 @@ dependencies {
     implementation("com.zaxxer:HikariCP:5.1.0")
 
     // Flyway (アプリケーション実行時用)
+    // Flyway 9.x: flyway-coreのみで PostgreSQL をサポート
     implementation("org.flywaydb:flyway-core:$flywayVersion")
-    implementation("org.flywaydb:flyway-database-postgresql:$flywayVersion")
 
     // DI - Guice
     implementation("com.google.inject:guice:$guiceVersion")
@@ -126,15 +113,6 @@ jooq {
                     }
                     target.apply {
                         packageName = "com.task.infra.database.jooq"
-                        // ============================================================
-                        // 【重要】生成コードは src/generated/ 配下に出力する
-                        // 
-                        // NG: src/main/kotlin → cleanタスクで手書きコードが消える危険
-                        // NG: build/         → Gitにコミットされず、Dockerビルドで使えない
-                        // OK: src/generated/ → 手書きコードと分離 & Gitにコミット可能
-                        //
-                        // 出典: https://github.com/etiennestuder/gradle-jooq-plugin#generating-sources-into-shared-folders-eg-srcmainjava
-                        // ============================================================
                         directory = "src/generated/jooq/main"
                     }
                 }

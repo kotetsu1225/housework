@@ -22,7 +22,9 @@ class MemberAvailability(
         require(slots.containsAll(deletedSlots)) {
             "指定されたスロットが存在しません"
         }
-        val newSlots = slots.filter { it != deletedSlots }
+        // DDDの原則: ドメインロジック内でコレクション操作を行う際は、
+        // contains/inを使用して要素の存在確認を行う
+        val newSlots = slots.filter { it !in deletedSlots }
 
         require(newSlots.isNotEmpty()) {
             "最後のスロットは削除できません"

@@ -59,6 +59,14 @@ class MemberRepositoryImpl : MemberRepository {
                 MemberName(record.get(MEMBERS.NAME)!!)
             }
     }
+    
+    override fun findAll(session: DSLContext): List<Member> {
+        return session
+            .selectFrom(MEMBERS)
+            .orderBy(MEMBERS.CREATED_AT.desc())
+            .fetch()
+            .map { record -> record.toDomain() }
+    }
 
     private fun MembersRecord.toDomain(): Member {
         return Member.reconstruct(

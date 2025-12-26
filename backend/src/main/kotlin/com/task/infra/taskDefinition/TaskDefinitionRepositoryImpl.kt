@@ -5,11 +5,25 @@ import com.task.domain.member.MemberId
 import com.task.domain.taskDefinition.*
 import com.task.infra.database.jooq.tables.TaskDefinitions.Companion.TASK_DEFINITIONS
 import com.task.infra.database.jooq.tables.TaskRecurrences.Companion.TASK_RECURRENCES
+import com.task.infra.database.jooq.tables.records.TaskDefinitionsRecord
+import com.task.infra.database.jooq.tables.records.TaskRecurrencesRecord
 import org.jooq.DSLContext
+import org.jooq.Field
+import org.jooq.impl.DSL.multiset
+import org.jooq.impl.DSL.select
 import java.time.OffsetDateTime
 
 @Singleton
 class TaskDefinitionRepositoryImpl : TaskDefinitionRepository {
+
+    // MULTISETフィールドを変数として定義することで型安全なアクセスを実現
+    // record.get(Field)は型パラメータからTaskRecurrencesRecord?を推論するため、キャスト不要
+    // 出典: https://blog.jooq.org/ad-hoc-data-type-conversion-with-jooq-3-15/
+    private val recurrenceField: Field<TaskRecurrencesRecord?> = multiset(
+        select(TASK_RECURRENCES.asterisk())
+            .from(TASK_RECURRENCES)
+            .where(TASK_RECURRENCES.TASK_DEFINITION_ID.eq(TASK_DEFINITIONS.ID))
+    ).convertFrom { r -> r.into(TaskRecurrencesRecord::class.java).firstOrNull() }
 
     override fun create(taskDefinition: TaskDefinition, session: DSLContext): TaskDefinition {
         val now = OffsetDateTime.now()
@@ -95,14 +109,50 @@ class TaskDefinitionRepositoryImpl : TaskDefinitionRepository {
             .execute()
     }
 
+    // MULTISETを使用して1回のクエリでTaskDefinitionと関連するTaskRecurrenceを取得
+    // N+1問題を回避し、データベースラウンドトリップを最小化
+    // 出典: https://www.jooq.org/doc/latest/manual/sql-building/column-expressions/multiset-value-constructor/
     override fun findById(id: TaskDefinitionId, session: DSLContext): TaskDefinition? {
-        val definitionRecord = session
-            .selectFrom(TASK_DEFINITIONS)
+        return session
+            .select(TASK_DEFINITIONS.asterisk(), recurrenceField)
+            .from(TASK_DEFINITIONS)
             .where(TASK_DEFINITIONS.ID.eq(id.value))
             .and(TASK_DEFINITIONS.IS_DELETED.eq(false))
-            .fetchOne()
-            ?: return null
+            .fetchOne { record ->
+                val defRecord = record.into(TaskDefinitionsRecord::class.java)
+                // Field変数を使用した型安全なアクセス（キャスト不要）
+                val recurrenceRecord = record.get(recurrenceField)
+                reconstructFromRecords(defRecord, recurrenceRecord)
+            }
+    }
 
+    override fun findAll(session: DSLContext, limit: Int, offset: Int): List<TaskDefinition> {
+        return session
+            .select(TASK_DEFINITIONS.asterisk(), recurrenceField)
+            .from(TASK_DEFINITIONS)
+            .where(TASK_DEFINITIONS.IS_DELETED.eq(false))
+            .orderBy(TASK_DEFINITIONS.CREATED_AT.desc())
+            .limit(limit)
+            .offset(offset)
+            .fetch { record ->
+                val defRecord = record.into(TaskDefinitionsRecord::class.java)
+                val recurrenceRecord = record.get(recurrenceField)
+                reconstructFromRecords(defRecord, recurrenceRecord)
+            }
+    }
+
+    override fun count(session: DSLContext): Int {
+        return session
+            .selectCount()
+            .from(TASK_DEFINITIONS)
+            .where(TASK_DEFINITIONS.IS_DELETED.eq(false))
+            .fetchOne(0, Int::class.java) ?: 0
+    }
+
+    private fun reconstructFromRecords(
+        definitionRecord: TaskDefinitionsRecord,
+        recurrenceRecord: TaskRecurrencesRecord?
+    ): TaskDefinition {
         val schedule = when (definitionRecord.scheduleType) {
             "ONE_TIME" -> {
                 TaskSchedule.OneTime(
@@ -110,11 +160,9 @@ class TaskDefinitionRepositoryImpl : TaskDefinitionRepository {
                 )
             }
             "RECURRING" -> {
-                val recurrenceRecord = session
-                    .selectFrom(TASK_RECURRENCES)
-                    .where(TASK_RECURRENCES.TASK_DEFINITION_ID.eq(id.value))
-                    .fetchOne()
-                    ?: throw IllegalStateException("Recurring schedule record not found for task definition ${id.value}")
+                if (recurrenceRecord == null) {
+                    throw IllegalStateException("Recurring schedule record not found for task definition ${definitionRecord.id}")
+                }
 
                 val pattern = when (recurrenceRecord.patternType) {
                     "DAILY" -> RecurrencePattern.Daily(

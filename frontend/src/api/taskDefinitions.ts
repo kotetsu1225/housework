@@ -5,13 +5,15 @@
  * @see backend/src/main/kotlin/com/task/presentation/TaskDefinitions.kt
  */
 
-import { apiPost } from './client'
+import { apiGet, apiPost } from './client'
 import type {
   CreateTaskDefinitionRequest,
   CreateTaskDefinitionResponse,
   UpdateTaskDefinitionRequest,
   UpdateTaskDefinitionResponse,
   DeleteTaskDefinitionResponse,
+  GetTaskDefinitionsResponse,
+  TaskDefinitionResponse,
 } from '../types/api'
 
 /**
@@ -91,21 +93,37 @@ export async function deleteTaskDefinition(
 
 /**
  * タスク定義一覧を取得する
+ * GET /api/task-definitions
  *
- * @note バックエンドにGETエンドポイントが存在しないため、現在は使用不可
- * @see docs/BACKEND_ISSUES.md - GETエンドポイントの欠如
+ * @param limit - 取得件数（デフォルト: 20）
+ * @param offset - オフセット（デフォルト: 0）
+ * @returns タスク定義一覧
+ *
+ * @example
+ * ```typescript
+ * const { taskDefinitions, total, hasMore } = await getTaskDefinitions()
+ * ```
  */
-// export async function getTaskDefinitions(): Promise<TaskDefinitionResponse[]> {
-//   return apiGet<TaskDefinitionResponse[]>('/task-definitions')
-// }
+export async function getTaskDefinitions(
+  limit: number = 20,
+  offset: number = 0
+): Promise<GetTaskDefinitionsResponse> {
+  return apiGet<GetTaskDefinitionsResponse>(`/task-definitions?limit=${limit}&offset=${offset}`)
+}
 
 /**
  * 個別タスク定義を取得する
+ * GET /api/task-definitions/{taskDefinitionId}
  *
- * @note バックエンドにGETエンドポイントが存在しないため、現在は使用不可
- * @see docs/BACKEND_ISSUES.md - GETエンドポイントの欠如
+ * @param taskDefinitionId - タスク定義ID
+ * @returns タスク定義情報
+ *
+ * @example
+ * ```typescript
+ * const taskDef = await getTaskDefinition('uuid')
+ * ```
  */
-// export async function getTaskDefinition(taskDefinitionId: string): Promise<TaskDefinitionResponse> {
-//   return apiGet<TaskDefinitionResponse>(`/task-definitions/${taskDefinitionId}`)
-// }
+export async function getTaskDefinition(taskDefinitionId: string): Promise<TaskDefinitionResponse> {
+  return apiGet<TaskDefinitionResponse>(`/task-definitions/${taskDefinitionId}`)
+}
 

@@ -6,10 +6,11 @@
 export { apiClient, apiGet, apiPost, apiPut, apiDelete, ApiError } from './client'
 
 // Member API
-export { createMember, updateMember } from './members'
+export { getMembers, getMember, createMember, updateMember } from './members'
 
 // MemberAvailability API
 export {
+  getMemberAvailabilities,
   createMemberAvailability,
   updateMemberAvailability,
   deleteMemberAvailabilitySlots,
@@ -17,6 +18,8 @@ export {
 
 // TaskDefinition API
 export {
+  getTaskDefinitions,
+  getTaskDefinition,
   createTaskDefinition,
   updateTaskDefinition,
   deleteTaskDefinition,

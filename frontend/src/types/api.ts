@@ -144,6 +144,21 @@ export interface DeleteMemberAvailabilitySlotsResponse {
   slots: TimeSlotResponse[]
 }
 
+/**
+ * メンバー別空き時間一覧取得レスポンス
+ * GET /api/member-availabilities/member/{memberId}
+ */
+export interface GetMemberAvailabilitiesResponse {
+  availabilities: MemberAvailabilityResponse[]
+}
+
+export interface MemberAvailabilityResponse {
+  id: string
+  memberId: string
+  targetDate: string
+  slots: TimeSlotResponse[]
+}
+
 // ==========================================
 // TaskDefinition API Types
 // ==========================================
@@ -245,6 +260,27 @@ export interface UpdateTaskDefinitionResponse {
  * POST /api/task-definitions/{taskDefinitionId}/delete
  */
 export interface DeleteTaskDefinitionResponse {
+  id: string
+  name: string
+  description: string
+  estimatedMinutes: number
+  scope: string
+  ownerMemberId?: string | null
+  schedule: ScheduleDto
+  version: number
+}
+
+/**
+ * タスク定義一覧取得レスポンス
+ * GET /api/task-definitions
+ */
+export interface GetTaskDefinitionsResponse {
+  taskDefinitions: TaskDefinitionResponse[]
+  total: number
+  hasMore: boolean
+}
+
+export interface TaskDefinitionResponse {
   id: string
   name: string
   description: string

@@ -5,7 +5,7 @@
  * @see backend/src/main/kotlin/com/task/presentation/MemberAvailabilities.kt
  */
 
-import { apiPost } from './client'
+import { apiGet, apiPost } from './client'
 import type {
   CreateMemberAvailabilityRequest,
   CreateMemberAvailabilityResponse,
@@ -13,6 +13,7 @@ import type {
   UpdateMemberAvailabilityResponse,
   DeleteMemberAvailabilitySlotsRequest,
   DeleteMemberAvailabilitySlotsResponse,
+  GetMemberAvailabilitiesResponse,
 } from '../types/api'
 
 /**
@@ -95,13 +96,19 @@ export async function deleteMemberAvailabilitySlots(
 
 /**
  * メンバーの空き時間一覧を取得する
+ * GET /api/member-availabilities/member/{memberId}
  *
- * @note バックエンドにGETエンドポイントが存在しないため、現在は使用不可
- * @see docs/BACKEND_ISSUES.md - 問題3: GETエンドポイントの欠如
+ * @param memberId - メンバーID
+ * @returns 空き時間一覧
+ *
+ * @example
+ * ```typescript
+ * const { availabilities } = await getMemberAvailabilities('uuid')
+ * ```
  */
-// export async function getMemberAvailabilities(
-//   memberId: string
-// ): Promise<MemberAvailabilityResponse[]> {
-//   return apiGet<MemberAvailabilityResponse[]>(`/member-availabilities/member/${memberId}`)
-// }
+export async function getMemberAvailabilities(
+  memberId: string
+): Promise<GetMemberAvailabilitiesResponse> {
+  return apiGet<GetMemberAvailabilitiesResponse>(`/member-availabilities/member/${memberId}`)
+}
 

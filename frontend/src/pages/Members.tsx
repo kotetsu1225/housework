@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { UserPlus, CheckCircle2, Clock, TrendingUp } from 'lucide-react'
+import { UserPlus, CheckCircle2, Clock, TrendingUp, RefreshCw } from 'lucide-react'
 import { Header } from '../components/layout/Header'
 import { PageContainer } from '../components/layout/PageContainer'
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card'
@@ -13,8 +13,23 @@ import { Alert } from '../components/ui/Alert'
 import { RoleSelector } from '../components/ui/RoleSelector'
 import { useMember } from '../hooks'
 import { isParentRole } from '../utils'
-import { MOCK_MEMBERS_WITH_STATS, type MemberWithStats } from '../mocks'
-import type { FamilyRole } from '../types'
+import type { FamilyRole, Member } from '../types'
+
+/**
+ * メンバー統計情報（将来的にはAPIから取得）
+ */
+interface MemberStats {
+  completed: number
+  total: number
+  streak: number
+}
+
+/**
+ * 統計情報付きメンバー
+ */
+export interface MemberWithStats extends Member {
+  stats: MemberStats
+}
 
 /**
  * 役割バッジコンポーネント
@@ -112,20 +127,24 @@ function FamilyStatsCard({ members }: { members: MemberWithStats[] }) {
  * メンバー一覧ページ
  */
 export function Members() {
-  // モックデータを初期値として設定
-  const [membersWithStats, setMembersWithStats] = useState<MemberWithStats[]>(
-    MOCK_MEMBERS_WITH_STATS
-  )
-
   // メンバー管理フック
-  const { loading, error, addMember, clearError } = useMember(
-    MOCK_MEMBERS_WITH_STATS.map(({ stats: _stats, ...member }) => member)
-  )
+  const { members, loading, error, fetchMembers, addMember, clearError } = useMember()
+
+  // 統計情報付きメンバー（将来的には統計APIから取得）
+  const membersWithStats: MemberWithStats[] = members.map((member) => ({
+    ...member,
+    stats: { completed: 0, total: 0, streak: 0 },
+  }))
 
   // モーダル状態
   const [showAddModal, setShowAddModal] = useState(false)
   const [newMemberName, setNewMemberName] = useState('')
   const [newMemberRole, setNewMemberRole] = useState<FamilyRole>('FATHER')
+
+  // 初回マウント時にAPIからメンバー一覧を取得
+  useEffect(() => {
+    fetchMembers()
+  }, [fetchMembers])
 
   // エラー時のトースト表示（5秒後に自動クリア）
   useEffect(() => {
@@ -154,15 +173,8 @@ export function Members() {
     const success = await addMember(newMemberName, newMemberRole)
 
     if (success) {
-      const newMemberWithStats: MemberWithStats = {
-        id: crypto.randomUUID(),
-        name: newMemberName,
-        role: newMemberRole,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        stats: { completed: 0, total: 0, streak: 0 },
-      }
-      setMembersWithStats((prev) => [...prev, newMemberWithStats])
+      // useMemberフックが内部でmembersを更新するので、
+      // ここではモーダルを閉じるだけでOK
       handleCloseModal()
     }
   }
@@ -173,10 +185,20 @@ export function Members() {
         title="メンバー"
         subtitle={`${membersWithStats.length}人の家族`}
         action={
-          <Button variant="primary" size="sm" onClick={() => setShowAddModal(true)}>
-            <UserPlus className="w-4 h-4 mr-1" />
-            追加
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={fetchMembers}
+              disabled={loading}
+            >
+              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+            </Button>
+            <Button variant="primary" size="sm" onClick={() => setShowAddModal(true)}>
+              <UserPlus className="w-4 h-4 mr-1" />
+              追加
+            </Button>
+          </div>
         }
       />
       <PageContainer>

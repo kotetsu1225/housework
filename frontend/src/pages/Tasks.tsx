@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Plus, Filter, Calendar, Clock, ChevronRight, Trash2, Edit2 } from 'lucide-react'
+import { Plus, Filter, Calendar, Clock, ChevronRight, Trash2, Edit2, RefreshCw } from 'lucide-react'
 import { Header } from '../components/layout/Header'
 import { PageContainer } from '../components/layout/PageContainer'
 import { Card } from '../components/ui/Card'
@@ -8,8 +8,7 @@ import { Badge } from '../components/ui/Badge'
 import { Input } from '../components/ui/Input'
 import { Modal } from '../components/ui/Modal'
 import { Alert } from '../components/ui/Alert'
-import { useTaskDefinition } from '../hooks'
-import { MOCK_TASK_DEFINITIONS, MOCK_MEMBERS } from '../mocks'
+import { useTaskDefinition, useMember } from '../hooks'
 import type { TaskDefinition, TaskScope, PatternType } from '../types'
 import type { CreateTaskDefinitionRequest, ScheduleDto, PatternDto } from '../types/api'
 
@@ -133,16 +132,27 @@ export function Tasks() {
   const [searchQuery, setSearchQuery] = useState('')
   const [filterScope, setFilterScope] = useState<TaskScope | 'ALL'>('ALL')
 
+  // メンバー管理フック（個人タスクのオーナー選択用）
+  const { members, fetchMembers, loading: membersLoading } = useMember()
+
   // タスク定義管理フック
   const {
     taskDefinitions,
-    loading,
+    loading: taskLoading,
     error,
+    fetchTaskDefinitions,
     addTaskDefinition,
     removeTaskDefinition,
-    setTaskDefinitions,
     clearError,
-  } = useTaskDefinition(MOCK_TASK_DEFINITIONS)
+  } = useTaskDefinition()
+
+  const loading = membersLoading || taskLoading
+
+  // 初回マウント時にデータを取得
+  useEffect(() => {
+    fetchMembers()
+    fetchTaskDefinitions()
+  }, [fetchMembers, fetchTaskDefinitions])
 
   // モーダル状態
   const [showAddModal, setShowAddModal] = useState(false)
@@ -280,16 +290,33 @@ export function Tasks() {
     console.log('Edit task:', task.id)
   }
 
+  /**
+   * データ再取得ハンドラー
+   */
+  const handleRefresh = async () => {
+    await Promise.all([fetchMembers(), fetchTaskDefinitions()])
+  }
+
   return (
     <>
       <Header
         title="タスク定義"
         subtitle={`${filteredTasks.length}件のタスク`}
         action={
-          <Button variant="primary" size="sm" onClick={() => setShowAddModal(true)}>
-            <Plus className="w-4 h-4 mr-1" />
-            追加
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={handleRefresh}
+              disabled={loading}
+            >
+              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+            </Button>
+            <Button variant="primary" size="sm" onClick={() => setShowAddModal(true)}>
+              <Plus className="w-4 h-4 mr-1" />
+              追加
+            </Button>
+          </div>
         }
       />
       <PageContainer>
@@ -439,7 +466,7 @@ export function Tasks() {
                 担当者
               </label>
               <div className="flex gap-2 flex-wrap">
-                {MOCK_MEMBERS.map((member) => (
+                {members.map((member) => (
                   <Button
                     key={member.id}
                     variant={newTask.ownerMemberId === member.id ? 'primary' : 'secondary'}

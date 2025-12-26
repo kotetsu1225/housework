@@ -4,8 +4,8 @@
  * メンバーの取得・作成・更新機能を提供
  */
 
-import { useState, useCallback } from 'react'
-import { createMember, updateMember, ApiError } from '../api'
+import { useState, useCallback, useEffect } from 'react'
+import { getMembers, createMember, updateMember, ApiError } from '../api'
 import type { Member, FamilyRole } from '../types'
 import type { CreateMemberRequest, UpdateMemberRequest } from '../types/api'
 
@@ -26,8 +26,11 @@ interface UseMemberState {
  */
 interface UseMemberActions {
   /**
+   * メンバー一覧をAPIから取得
+   */
+  fetchMembers: () => Promise<void>
+  /**
    * メンバーを追加（ローカル状態 + API）
-   * @note バックエンド修正後、APIレスポンスからidを取得するよう更新が必要
    */
   addMember: (name: string, familyRole: FamilyRole) => Promise<boolean>
   /**
@@ -35,7 +38,7 @@ interface UseMemberActions {
    */
   editMember: (id: string, name: string, familyRole: FamilyRole) => Promise<boolean>
   /**
-   * メンバー一覧をセット（初期データ設定用）
+   * メンバー一覧をセット（手動データ設定用）
    */
   setMembers: (members: Member[]) => void
   /**
@@ -71,6 +74,38 @@ export function useMember(initialMembers: Member[] = []): UseMemberReturn {
   const [members, setMembers] = useState<Member[]>(initialMembers)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  /**
+   * メンバー一覧をAPIから取得
+   */
+  const fetchMembers = useCallback(async (): Promise<void> => {
+    setLoading(true)
+    setError(null)
+
+    try {
+      const response = await getMembers()
+
+      const fetchedMembers: Member[] = response.members.map((m) => ({
+        id: m.id,
+        name: m.name,
+        role: m.familyRole,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      }))
+
+      setMembers(fetchedMembers)
+    } catch (err) {
+      if (err instanceof ApiError) {
+        setError(err.message)
+      } else if (err instanceof Error) {
+        setError(err.message)
+      } else {
+        setError('メンバーの取得に失敗しました')
+      }
+    } finally {
+      setLoading(false)
+    }
+  }, [])
 
   /**
    * メンバーを追加
@@ -164,6 +199,7 @@ export function useMember(initialMembers: Member[] = []): UseMemberReturn {
     members,
     loading,
     error,
+    fetchMembers,
     addMember,
     editMember,
     setMembers,

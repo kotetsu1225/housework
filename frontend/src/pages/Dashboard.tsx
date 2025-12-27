@@ -1,230 +1,215 @@
-import { CheckCircle2, Circle, PlayCircle, Sparkles } from 'lucide-react'
+/**
+ * ダッシュボードページ
+ *
+ * 今日のタスク一覧と進捗サマリーを表示するホーム画面
+ * @see docs/TASK_EXECUTION_API.md
+ */
+
+import { useEffect, useMemo, useCallback } from 'react'
+import { RefreshCw } from 'lucide-react'
 import { Header } from '../components/layout/Header'
 import { PageContainer } from '../components/layout/PageContainer'
-import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card'
-import { Badge } from '../components/ui/Badge'
-import { Avatar } from '../components/ui/Avatar'
-import { ProgressRing } from '../components/ui/ProgressRing'
 import { Button } from '../components/ui/Button'
-import { isParentRole, formatJa, toISODateString } from '../utils'
-import { MOCK_MEMBERS } from '../mocks'
-import type { TaskExecution, Member, ExecutionStatus } from '../types'
-
-// モックタスクデータ（バックエンド接続後に置き換え）
-const mockTasks: (TaskExecution & { assignee?: Member })[] = [
-  {
-    id: '1',
-    taskDefinitionId: 't1',
-    assigneeMemberId: '2',
-    scheduledDate: toISODateString(new Date()),
-    status: 'COMPLETED',
-    taskSnapshot: {
-      name: 'お風呂掃除',
-      description: '浴槽と床を洗う',
-      estimatedMinutes: 15,
-      definitionVersion: 1,
-      createdAt: '',
-    },
-    completedAt: new Date().toISOString(),
-    completedByMemberId: '2',
-    createdAt: '',
-    updatedAt: '',
-    assignee: MOCK_MEMBERS[1],
-  },
-  {
-    id: '2',
-    taskDefinitionId: 't2',
-    assigneeMemberId: '3',
-    scheduledDate: toISODateString(new Date()),
-    status: 'IN_PROGRESS',
-    taskSnapshot: {
-      name: '洗濯物を干す',
-      estimatedMinutes: 20,
-      definitionVersion: 1,
-      createdAt: '',
-    },
-    startedAt: new Date().toISOString(),
-    createdAt: '',
-    updatedAt: '',
-    assignee: MOCK_MEMBERS[2],
-  },
-  {
-    id: '3',
-    taskDefinitionId: 't3',
-    scheduledDate: toISODateString(new Date()),
-    status: 'NOT_STARTED',
-    taskSnapshot: {
-      name: '夕食の準備',
-      description: 'カレーを作る',
-      estimatedMinutes: 45,
-      definitionVersion: 1,
-      createdAt: '',
-    },
-    createdAt: '',
-    updatedAt: '',
-  },
-  {
-    id: '4',
-    taskDefinitionId: 't4',
-    assigneeMemberId: '2',
-    scheduledDate: toISODateString(new Date()),
-    status: 'NOT_STARTED',
-    taskSnapshot: {
-      name: 'ゴミ出し',
-      estimatedMinutes: 5,
-      definitionVersion: 1,
-      createdAt: '',
-    },
-    createdAt: '',
-    updatedAt: '',
-    assignee: MOCK_MEMBERS[1],
-  },
-]
+import { Alert } from '../components/ui/Alert'
+import {
+  TaskCard,
+  ProgressSummaryCard,
+  MemberSummaryCard,
+} from '../components/dashboard'
+import { useTaskExecution, useMember } from '../hooks'
+import { useAuth } from '../contexts'
+import { formatJa, toISODateString } from '../utils'
+import { MOCK_TASK_EXECUTIONS, MOCK_MEMBERS } from '../mocks'
+import type { TaskExecution, Member } from '../types'
 
 /**
- * ステータスアイコンを取得
+ * メンバーIDからメンバー情報を取得するヘルパー
  */
-function getStatusIcon(status: ExecutionStatus) {
-  switch (status) {
-    case 'COMPLETED':
-      return <CheckCircle2 className="w-5 h-5 text-emerald-400" />
-    case 'IN_PROGRESS':
-      return <PlayCircle className="w-5 h-5 text-shazam-400" />
-    default:
-      return <Circle className="w-5 h-5 text-white/30" />
-  }
+function getMemberById(members: Member[], memberId?: string): Member | undefined {
+  if (!memberId) return undefined
+  return members.find((m) => m.id === memberId)
 }
 
 /**
- * ステータスバッジを取得
+ * タスク実行とメンバー情報を結合する
  */
-function getStatusBadge(status: ExecutionStatus) {
-  switch (status) {
-    case 'COMPLETED':
-      return <Badge variant="success">完了</Badge>
-    case 'IN_PROGRESS':
-      return <Badge variant="info">実行中</Badge>
-    case 'CANCELLED':
-      return <Badge variant="danger">キャンセル</Badge>
-    default:
-      return <Badge variant="default">未着手</Badge>
-  }
+function enrichTasksWithMembers(
+  tasks: TaskExecution[],
+  members: Member[]
+): (TaskExecution & { assignee?: Member })[] {
+  return tasks.map((task) => ({
+    ...task,
+    assignee: getMemberById(members, task.assigneeMemberId),
+  }))
 }
 
 /**
- * タスクカードコンポーネント
+ * メンバーごとのタスクサマリーを計算する
  */
-function TaskCard({ task }: { task: TaskExecution & { assignee?: Member } }) {
-  return (
-    <Card variant="glass" hoverable className="flex items-center gap-4">
-      <button className="flex-shrink-0">{getStatusIcon(task.status)}</button>
+function calculateMemberTaskSummary(
+  members: Member[],
+  tasks: TaskExecution[]
+): { member: Member; completed: number; total: number }[] {
+  return members.map((member) => {
+    const memberTasks = tasks.filter((t) => t.assigneeMemberId === member.id)
+    const completedTasks = memberTasks.filter((t) => t.status === 'COMPLETED')
 
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 mb-1">
-          <span
-            className={`font-medium truncate ${
-              task.status === 'COMPLETED'
-                ? 'text-white/50 line-through'
-                : 'text-white'
-            }`}
-          >
-            {task.taskSnapshot.name}
-          </span>
-          {getStatusBadge(task.status)}
-        </div>
-        <div className="flex items-center gap-3 text-sm text-white/50">
-          <span>{task.taskSnapshot.estimatedMinutes}分</span>
-          {task.assignee && (
-            <div className="flex items-center gap-1">
-              <Avatar
-                name={task.assignee.name}
-                size="sm"
-                variant={isParentRole(task.assignee.role) ? 'parent' : 'child'}
-              />
-              <span>{task.assignee.name}</span>
-            </div>
-          )}
-        </div>
-      </div>
-    </Card>
-  )
-}
-
-/**
- * 進捗サマリーカードコンポーネント
- */
-function ProgressSummaryCard({
-  completedCount,
-  totalCount,
-}: {
-  completedCount: number
-  totalCount: number
-}) {
-  const progress = totalCount > 0 ? (completedCount / totalCount) * 100 : 0
-
-  return (
-    <Card variant="gradient" className="relative overflow-hidden">
-      <div className="absolute top-0 right-0 w-32 h-32 bg-shazam-500/20 rounded-full blur-3xl" />
-      <div className="flex items-center gap-6">
-        <ProgressRing progress={progress} size="lg" />
-        <div className="flex-1">
-          <div className="flex items-center gap-2 mb-1">
-            <Sparkles className="w-4 h-4 text-shazam-400" />
-            <span className="text-sm text-white/60">今日の進捗</span>
-          </div>
-          <p className="text-2xl font-bold text-white">
-            {completedCount} / {totalCount}
-          </p>
-          <p className="text-sm text-white/50 mt-1">
-            {totalCount - completedCount}件のタスクが残っています
-          </p>
-        </div>
-      </div>
-    </Card>
-  )
-}
-
-/**
- * メンバーカードコンポーネント
- */
-function MemberSummaryCard({
-  member,
-  completedCount,
-  totalCount,
-}: {
-  member: Member
-  completedCount: number
-  totalCount: number
-}) {
-  return (
-    <Card variant="glass" className="flex-shrink-0 w-28 text-center">
-      <div className="flex flex-col items-center gap-2">
-        <Avatar
-          name={member.name}
-          size="lg"
-          variant={isParentRole(member.role) ? 'parent' : 'child'}
-        />
-        <span className="font-medium text-white">{member.name}</span>
-        <span className="text-xs text-white/50">
-          {completedCount}/{totalCount}完了
-        </span>
-      </div>
-    </Card>
-  )
+    return {
+      member,
+      completed: completedTasks.length,
+      total: memberTasks.length,
+    }
+  })
 }
 
 /**
  * ダッシュボードページ
+ *
+ * @note 現在はモックデータを使用。バックエンドAPI実装後、
+ *       useEffect内のfetchTaskExecutions呼び出しを有効化する。
  */
 export function Dashboard() {
   const today = new Date()
-  const completedCount = mockTasks.filter((t) => t.status === 'COMPLETED').length
-  const totalCount = mockTasks.length
+  const todayStr = toISODateString(today)
+  const { user } = useAuth()
+
+  // タスク実行管理フック
+  const {
+    taskExecutions,
+    loading: tasksLoading,
+    error: tasksError,
+    fetchTaskExecutions,
+    startTask,
+    completeTask,
+    setTaskExecutions,
+    clearError: clearTaskError,
+  } = useTaskExecution()
+
+  // メンバー管理フック
+  const {
+    members,
+    loading: membersLoading,
+    error: membersError,
+    fetchMembers,
+    setMembers,
+    clearError: clearMemberError,
+  } = useMember()
+
+  const loading = tasksLoading || membersLoading
+  const error = tasksError || membersError
+
+  // 初回マウント時にデータを取得
+  useEffect(() => {
+    // TODO: バックエンドAPI実装後、以下のコメントを解除
+    // fetchTaskExecutions({ date: todayStr })
+    // fetchMembers()
+
+    // 現在はモックデータを使用
+    setTaskExecutions(MOCK_TASK_EXECUTIONS.filter((t) => t.scheduledDate === todayStr))
+    setMembers(MOCK_MEMBERS)
+  }, [todayStr, setTaskExecutions, setMembers])
+
+  // エラー自動クリア
+  useEffect(() => {
+    if (error) {
+      const timer = setTimeout(() => {
+        clearTaskError()
+        clearMemberError()
+      }, 5000)
+      return () => clearTimeout(timer)
+    }
+  }, [error, clearTaskError, clearMemberError])
+
+  // タスクにメンバー情報を結合
+  const enrichedTasks = useMemo(
+    () => enrichTasksWithMembers(taskExecutions, members),
+    [taskExecutions, members]
+  )
+
+  // 進捗サマリーの計算（キャンセル以外のタスクを対象）
+  const { completedCount, totalCount } = useMemo(() => {
+    const activeTasks = taskExecutions.filter((t) => t.status !== 'CANCELLED')
+    const completed = activeTasks.filter((t) => t.status === 'COMPLETED').length
+    return { completedCount: completed, totalCount: activeTasks.length }
+  }, [taskExecutions])
+
+  // メンバーごとのサマリー
+  const memberSummaries = useMemo(
+    () => calculateMemberTaskSummary(members, taskExecutions),
+    [members, taskExecutions]
+  )
+
+  // データ再取得
+  const handleRefresh = useCallback(async () => {
+    // TODO: バックエンドAPI実装後、以下のコメントを解除
+    // await Promise.all([
+    //   fetchTaskExecutions({ date: todayStr }),
+    //   fetchMembers(),
+    // ])
+
+    // 現在はモックデータをリセット
+    setTaskExecutions(MOCK_TASK_EXECUTIONS.filter((t) => t.scheduledDate === todayStr))
+    setMembers(MOCK_MEMBERS)
+  }, [todayStr, setTaskExecutions, setMembers])
+
+  // ステータスアイコンクリック時の処理
+  const handleStatusClick = useCallback(
+    async (task: TaskExecution) => {
+      if (!user) return
+
+      switch (task.status) {
+        case 'NOT_STARTED':
+          // 未着手 → 開始
+          await startTask(task.id, user.id)
+          break
+        case 'IN_PROGRESS':
+          // 実行中 → 完了
+          await completeTask(task.id, user.id)
+          break
+        default:
+          // COMPLETED, CANCELLED は何もしない
+          break
+      }
+    },
+    [user, startTask, completeTask]
+  )
+
+  // タスクカードクリック時の処理
+  const handleTaskClick = useCallback((task: TaskExecution) => {
+    // TODO: タスク詳細画面への遷移を実装
+    console.log('Task clicked:', task.id)
+  }, [])
+
+  // メンバーカードクリック時の処理
+  const handleMemberClick = useCallback((member: Member) => {
+    // TODO: メンバー詳細画面への遷移を実装
+    console.log('Member clicked:', member.id)
+  }, [])
 
   return (
     <>
-      <Header title="ホーム" subtitle={formatJa(today, 'M月d日（E）')} />
+      <Header
+        title="ホーム"
+        subtitle={formatJa(today, 'M月d日（E）')}
+        action={
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={handleRefresh}
+            disabled={loading}
+          >
+            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+          </Button>
+        }
+      />
       <PageContainer>
+        {/* エラーメッセージ */}
+        {error && (
+          <Alert variant="error" className="mb-4">
+            {error}
+          </Alert>
+        )}
+
         {/* 進捗サマリー */}
         <section className="py-6">
           <ProgressSummaryCard
@@ -243,9 +228,21 @@ export function Dashboard() {
           </div>
 
           <div className="space-y-3">
-            {mockTasks.map((task) => (
-              <TaskCard key={task.id} task={task} />
-            ))}
+            {enrichedTasks.length > 0 ? (
+              enrichedTasks.map((task) => (
+                <TaskCard
+                  key={task.id}
+                  task={task}
+                  assignee={task.assignee}
+                  onClick={handleTaskClick}
+                  onStatusClick={handleStatusClick}
+                />
+              ))
+            ) : (
+              <div className="text-center py-8 text-white/50">
+                {loading ? '読み込み中...' : '今日のタスクはありません'}
+              </div>
+            )}
           </div>
         </section>
 
@@ -253,23 +250,15 @@ export function Dashboard() {
         <section className="mt-8">
           <h2 className="text-lg font-bold text-white mb-4">メンバー</h2>
           <div className="flex gap-4 overflow-x-auto pb-2 -mx-4 px-4">
-            {MOCK_MEMBERS.map((member) => {
-              const memberTasks = mockTasks.filter(
-                (t) => t.assigneeMemberId === member.id
-              )
-              const memberCompleted = memberTasks.filter(
-                (t) => t.status === 'COMPLETED'
-              ).length
-
-              return (
-                <MemberSummaryCard
-                  key={member.id}
-                  member={member}
-                  completedCount={memberCompleted}
-                  totalCount={memberTasks.length}
-                />
-              )
-            })}
+            {memberSummaries.map(({ member, completed, total }) => (
+              <MemberSummaryCard
+                key={member.id}
+                member={member}
+                completedCount={completed}
+                totalCount={total}
+                onClick={handleMemberClick}
+              />
+            ))}
           </div>
         </section>
       </PageContainer>

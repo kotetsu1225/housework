@@ -25,3 +25,15 @@ export {
   deleteTaskDefinition,
 } from './taskDefinitions'
 
+// TaskExecution API
+export {
+  getTaskExecutions,
+  getTaskExecution,
+  startTaskExecution,
+  completeTaskExecution,
+  cancelTaskExecution,
+  assignTaskExecution,
+  generateTaskExecutions,
+} from './taskExecutions'
+export type { GetTaskExecutionsOptions } from './taskExecutions'
+

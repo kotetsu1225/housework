@@ -292,6 +292,91 @@ export interface TaskDefinitionResponse {
 }
 
 // ==========================================
+// TaskExecution API Types
+// ==========================================
+
+/**
+ * TaskExecution一覧取得レスポンス
+ * GET /api/task-executions
+ * @see docs/TASK_EXECUTION_API.md
+ */
+export interface GetTaskExecutionsResponse {
+  taskExecutions: TaskExecutionResponse[]
+  total: number
+  hasMore: boolean
+}
+
+/**
+ * TaskExecutionレスポンス
+ * 単一取得・一覧取得の共通型
+ */
+export interface TaskExecutionResponse {
+  id: string
+  taskDefinitionId: string
+  assigneeMemberId: string | null
+  scheduledDate: string // YYYY-MM-DD format
+  status: 'NOT_STARTED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED'
+  taskSnapshot: TaskSnapshotResponse | null // NOT_STARTEDの場合はnull
+  startedAt: string | null // ISO8601 format
+  completedAt: string | null
+  completedByMemberId: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+/**
+ * TaskSnapshotレスポンス
+ * タスク開始時点の凍結情報
+ */
+export interface TaskSnapshotResponse {
+  name: string
+  description: string | null
+  estimatedMinutes: number
+  definitionVersion: number
+  createdAt: string
+}
+
+/**
+ * TaskExecution開始リクエスト
+ * POST /api/task-executions/{id}/start
+ */
+export interface StartTaskExecutionRequest {
+  memberId: string
+}
+
+/**
+ * TaskExecution完了リクエスト
+ * POST /api/task-executions/{id}/complete
+ */
+export interface CompleteTaskExecutionRequest {
+  memberId: string
+}
+
+/**
+ * TaskExecution担当者割り当てリクエスト
+ * POST /api/task-executions/{id}/assign
+ */
+export interface AssignTaskExecutionRequest {
+  memberId: string
+}
+
+/**
+ * TaskExecution一括生成リクエスト
+ * POST /api/task-executions/generate
+ */
+export interface GenerateTaskExecutionsRequest {
+  targetDate: string // YYYY-MM-DD format
+}
+
+/**
+ * TaskExecution一括生成レスポンス
+ */
+export interface GenerateTaskExecutionsResponse {
+  generatedExecutions: TaskExecutionResponse[]
+  count: number
+}
+
+// ==========================================
 // Error Types
 // ==========================================
 

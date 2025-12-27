@@ -5,7 +5,7 @@ import java.time.LocalDate
 import java.time.LocalTime
 import java.util.UUID
 
-class MemberAvailability(
+class MemberAvailability private constructor(
     val id: MemberAvailabilityId,
     val memberId: MemberId,
     val targetDate: LocalDate,
@@ -120,6 +120,7 @@ class MemberAvailability(
 data class MemberAvailabilityId(val value: UUID) {
     companion object {
         fun generate() = MemberAvailabilityId(value = UUID.randomUUID())
+        fun from(value: String) = MemberAvailabilityId(value = UUID.fromString(value))
     }
 }
 

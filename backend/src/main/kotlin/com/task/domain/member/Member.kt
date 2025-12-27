@@ -2,7 +2,7 @@ package com.task.domain.member
 
 import java.util.UUID
 
-class Member(
+class Member private constructor(
     val id: MemberId,
     val name: MemberName,
     val familyRole: FamilyRole,
@@ -66,6 +66,7 @@ class Member(
 data class MemberId(val value: UUID) {
     companion object {
         fun generate() = MemberId(value = UUID.randomUUID())
+        fun from(value: String) = MemberId(value = UUID.fromString(value))
     }
 }
 

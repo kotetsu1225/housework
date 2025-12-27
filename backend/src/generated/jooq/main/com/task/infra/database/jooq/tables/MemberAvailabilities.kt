@@ -5,29 +5,27 @@ package com.task.infra.database.jooq.tables
 
 
 import com.task.infra.database.jooq.Public
-import com.task.infra.database.jooq.indexes.IDX_MEMBER_AVAILABILITIES_MEMBER_DATE
 import com.task.infra.database.jooq.indexes.IDX_MEMBER_AVAILABILITIES_MEMBER_ID
 import com.task.infra.database.jooq.indexes.IDX_MEMBER_AVAILABILITIES_TARGET_DATE
 import com.task.infra.database.jooq.keys.MEMBER_AVAILABILITIES_PKEY
 import com.task.infra.database.jooq.keys.MEMBER_AVAILABILITIES__MEMBER_AVAILABILITIES_MEMBER_ID_FKEY
+import com.task.infra.database.jooq.keys.UQ_MEMBER_TARGET_DATE
 import com.task.infra.database.jooq.tables.records.MemberAvailabilitiesRecord
 
 import java.time.LocalDate
-import java.time.LocalTime
 import java.time.OffsetDateTime
 import java.util.UUID
 import java.util.function.Function
 
 import kotlin.collections.List
 
-import org.jooq.Check
 import org.jooq.Field
 import org.jooq.ForeignKey
 import org.jooq.Index
 import org.jooq.Name
 import org.jooq.Record
 import org.jooq.Records
-import org.jooq.Row9
+import org.jooq.Row6
 import org.jooq.Schema
 import org.jooq.SelectField
 import org.jooq.Table
@@ -41,7 +39,7 @@ import org.jooq.impl.TableImpl
 
 
 /**
- * メンバーの空き時間
+ * MemberAvailability集約ルート
  */
 @Suppress("UNCHECKED_CAST")
 open class MemberAvailabilities(
@@ -57,7 +55,7 @@ open class MemberAvailabilities(
     path,
     aliased,
     parameters,
-    DSL.comment("メンバーの空き時間"),
+    DSL.comment("MemberAvailability集約ルート"),
     TableOptions.table()
 ) {
     companion object {
@@ -74,35 +72,21 @@ open class MemberAvailabilities(
     override fun getRecordType(): Class<MemberAvailabilitiesRecord> = MemberAvailabilitiesRecord::class.java
 
     /**
-     * The column <code>public.member_availabilities.id</code>. 空き時間ID（UUID）
+     * The column <code>public.member_availabilities.id</code>.
+     * MemberAvailabilityId（集約ルートID）
      */
-    val ID: TableField<MemberAvailabilitiesRecord, UUID?> = createField(DSL.name("id"), SQLDataType.UUID.nullable(false).defaultValue(DSL.field(DSL.raw("uuid_generate_v4()"), SQLDataType.UUID)), this, "空き時間ID（UUID）")
+    val ID: TableField<MemberAvailabilitiesRecord, UUID?> = createField(DSL.name("id"), SQLDataType.UUID.nullable(false).defaultValue(DSL.field(DSL.raw("uuid_generate_v4()"), SQLDataType.UUID)), this, "MemberAvailabilityId（集約ルートID）")
 
     /**
      * The column <code>public.member_availabilities.member_id</code>.
-     * メンバーID（外部キー）
+     * MemberId（外部集約参照）
      */
-    val MEMBER_ID: TableField<MemberAvailabilitiesRecord, UUID?> = createField(DSL.name("member_id"), SQLDataType.UUID.nullable(false), this, "メンバーID（外部キー）")
+    val MEMBER_ID: TableField<MemberAvailabilitiesRecord, UUID?> = createField(DSL.name("member_id"), SQLDataType.UUID.nullable(false), this, "MemberId（外部集約参照）")
 
     /**
      * The column <code>public.member_availabilities.target_date</code>. 対象日
      */
     val TARGET_DATE: TableField<MemberAvailabilitiesRecord, LocalDate?> = createField(DSL.name("target_date"), SQLDataType.LOCALDATE.nullable(false), this, "対象日")
-
-    /**
-     * The column <code>public.member_availabilities.start_time</code>. 開始時刻
-     */
-    val START_TIME: TableField<MemberAvailabilitiesRecord, LocalTime?> = createField(DSL.name("start_time"), SQLDataType.LOCALTIME(6).nullable(false), this, "開始時刻")
-
-    /**
-     * The column <code>public.member_availabilities.end_time</code>. 終了時刻
-     */
-    val END_TIME: TableField<MemberAvailabilitiesRecord, LocalTime?> = createField(DSL.name("end_time"), SQLDataType.LOCALTIME(6).nullable(false), this, "終了時刻")
-
-    /**
-     * The column <code>public.member_availabilities.memo</code>. メモ
-     */
-    val MEMO: TableField<MemberAvailabilitiesRecord, String?> = createField(DSL.name("memo"), SQLDataType.CLOB, this, "メモ")
 
     /**
      * The column <code>public.member_availabilities.is_deleted</code>. 論理削除フラグ
@@ -141,8 +125,9 @@ open class MemberAvailabilities(
 
     constructor(child: Table<out Record>, key: ForeignKey<out Record, MemberAvailabilitiesRecord>): this(Internal.createPathAlias(child, key), child, key, MEMBER_AVAILABILITIES, null)
     override fun getSchema(): Schema? = if (aliased()) null else Public.PUBLIC
-    override fun getIndexes(): List<Index> = listOf(IDX_MEMBER_AVAILABILITIES_MEMBER_DATE, IDX_MEMBER_AVAILABILITIES_MEMBER_ID, IDX_MEMBER_AVAILABILITIES_TARGET_DATE)
+    override fun getIndexes(): List<Index> = listOf(IDX_MEMBER_AVAILABILITIES_MEMBER_ID, IDX_MEMBER_AVAILABILITIES_TARGET_DATE)
     override fun getPrimaryKey(): UniqueKey<MemberAvailabilitiesRecord> = MEMBER_AVAILABILITIES_PKEY
+    override fun getUniqueKeys(): List<UniqueKey<MemberAvailabilitiesRecord>> = listOf(UQ_MEMBER_TARGET_DATE)
     override fun getReferences(): List<ForeignKey<MemberAvailabilitiesRecord, *>> = listOf(MEMBER_AVAILABILITIES__MEMBER_AVAILABILITIES_MEMBER_ID_FKEY)
 
     private lateinit var _members: Members
@@ -159,9 +144,6 @@ open class MemberAvailabilities(
 
     val members: Members
         get(): Members = members()
-    override fun getChecks(): List<Check<MemberAvailabilitiesRecord>> = listOf(
-        Internal.createCheck(this, DSL.name("chk_time_order"), "((start_time < end_time))", true)
-    )
     override fun `as`(alias: String): MemberAvailabilities = MemberAvailabilities(DSL.name(alias), this)
     override fun `as`(alias: Name): MemberAvailabilities = MemberAvailabilities(alias, this)
     override fun `as`(alias: Table<*>): MemberAvailabilities = MemberAvailabilities(alias.getQualifiedName(), this)
@@ -182,18 +164,18 @@ open class MemberAvailabilities(
     override fun rename(name: Table<*>): MemberAvailabilities = MemberAvailabilities(name.getQualifiedName(), null)
 
     // -------------------------------------------------------------------------
-    // Row9 type methods
+    // Row6 type methods
     // -------------------------------------------------------------------------
-    override fun fieldsRow(): Row9<UUID?, UUID?, LocalDate?, LocalTime?, LocalTime?, String?, Boolean?, OffsetDateTime?, OffsetDateTime?> = super.fieldsRow() as Row9<UUID?, UUID?, LocalDate?, LocalTime?, LocalTime?, String?, Boolean?, OffsetDateTime?, OffsetDateTime?>
+    override fun fieldsRow(): Row6<UUID?, UUID?, LocalDate?, Boolean?, OffsetDateTime?, OffsetDateTime?> = super.fieldsRow() as Row6<UUID?, UUID?, LocalDate?, Boolean?, OffsetDateTime?, OffsetDateTime?>
 
     /**
      * Convenience mapping calling {@link SelectField#convertFrom(Function)}.
      */
-    fun <U> mapping(from: (UUID?, UUID?, LocalDate?, LocalTime?, LocalTime?, String?, Boolean?, OffsetDateTime?, OffsetDateTime?) -> U): SelectField<U> = convertFrom(Records.mapping(from))
+    fun <U> mapping(from: (UUID?, UUID?, LocalDate?, Boolean?, OffsetDateTime?, OffsetDateTime?) -> U): SelectField<U> = convertFrom(Records.mapping(from))
 
     /**
      * Convenience mapping calling {@link SelectField#convertFrom(Class,
      * Function)}.
      */
-    fun <U> mapping(toType: Class<U>, from: (UUID?, UUID?, LocalDate?, LocalTime?, LocalTime?, String?, Boolean?, OffsetDateTime?, OffsetDateTime?) -> U): SelectField<U> = convertFrom(toType, Records.mapping(from))
+    fun <U> mapping(toType: Class<U>, from: (UUID?, UUID?, LocalDate?, Boolean?, OffsetDateTime?, OffsetDateTime?) -> U): SelectField<U> = convertFrom(toType, Records.mapping(from))
 }

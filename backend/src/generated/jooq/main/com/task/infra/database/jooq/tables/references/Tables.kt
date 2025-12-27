@@ -10,11 +10,12 @@ import com.task.infra.database.jooq.tables.TaskDefinitions
 import com.task.infra.database.jooq.tables.TaskExecutions
 import com.task.infra.database.jooq.tables.TaskRecurrences
 import com.task.infra.database.jooq.tables.TaskSnapshots
+import com.task.infra.database.jooq.tables.TimeSlots
 
 
 
 /**
- * メンバーの空き時間
+ * MemberAvailability集約ルート
  */
 val MEMBER_AVAILABILITIES: MemberAvailabilities = MemberAvailabilities.MEMBER_AVAILABILITIES
 
@@ -42,3 +43,8 @@ val TASK_RECURRENCES: TaskRecurrences = TaskRecurrences.TASK_RECURRENCES
  * タスクスナップショット（実行時点の凍結情報）
  */
 val TASK_SNAPSHOTS: TaskSnapshots = TaskSnapshots.TASK_SNAPSHOTS
+
+/**
+ * TimeSlot値オブジェクト（MemberAvailability集約の一部）
+ */
+val TIME_SLOTS: TimeSlots = TimeSlots.TIME_SLOTS

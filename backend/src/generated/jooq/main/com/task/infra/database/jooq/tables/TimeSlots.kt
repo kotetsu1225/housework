@@ -3,8 +3,11 @@
  */
 package com.task.infra.database.jooq.tables
 
+
 import com.task.infra.database.jooq.Public
+import com.task.infra.database.jooq.indexes.IDX_TIME_SLOTS_AVAILABILITY_ID
 import com.task.infra.database.jooq.keys.TIME_SLOTS_PKEY
+import com.task.infra.database.jooq.keys.TIME_SLOTS__TIME_SLOTS_MEMBER_AVAILABILITY_ID_FKEY
 import com.task.infra.database.jooq.tables.records.TimeSlotsRecord
 
 import java.time.LocalTime
@@ -17,6 +20,7 @@ import kotlin.collections.List
 import org.jooq.Check
 import org.jooq.Field
 import org.jooq.ForeignKey
+import org.jooq.Index
 import org.jooq.Name
 import org.jooq.Record
 import org.jooq.Records
@@ -121,9 +125,27 @@ open class TimeSlots(
 
     constructor(child: Table<out Record>, key: ForeignKey<out Record, TimeSlotsRecord>): this(Internal.createPathAlias(child, key), child, key, TIME_SLOTS, null)
     override fun getSchema(): Schema? = if (aliased()) null else Public.PUBLIC
+    override fun getIndexes(): List<Index> = listOf(IDX_TIME_SLOTS_AVAILABILITY_ID)
     override fun getPrimaryKey(): UniqueKey<TimeSlotsRecord> = TIME_SLOTS_PKEY
+    override fun getReferences(): List<ForeignKey<TimeSlotsRecord, *>> = listOf(TIME_SLOTS__TIME_SLOTS_MEMBER_AVAILABILITY_ID_FKEY)
+
+    private lateinit var _memberAvailabilities: MemberAvailabilities
+
+    /**
+     * Get the implicit join path to the
+     * <code>public.member_availabilities</code> table.
+     */
+    fun memberAvailabilities(): MemberAvailabilities {
+        if (!this::_memberAvailabilities.isInitialized)
+            _memberAvailabilities = MemberAvailabilities(this, TIME_SLOTS__TIME_SLOTS_MEMBER_AVAILABILITY_ID_FKEY)
+
+        return _memberAvailabilities;
+    }
+
+    val memberAvailabilities: MemberAvailabilities
+        get(): MemberAvailabilities = memberAvailabilities()
     override fun getChecks(): List<Check<TimeSlotsRecord>> = listOf(
-        Internal.createCheck(this, DSL.name("chk_time_order"), "(start_time < end_time)", true)
+        Internal.createCheck(this, DSL.name("chk_time_order"), "((start_time < end_time))", true)
     )
     override fun `as`(alias: String): TimeSlots = TimeSlots(DSL.name(alias), this)
     override fun `as`(alias: Name): TimeSlots = TimeSlots(alias, this)
@@ -153,4 +175,10 @@ open class TimeSlots(
      * Convenience mapping calling {@link SelectField#convertFrom(Function)}.
      */
     fun <U> mapping(from: (UUID?, UUID?, LocalTime?, LocalTime?, String?, OffsetDateTime?, OffsetDateTime?) -> U): SelectField<U> = convertFrom(Records.mapping(from))
+
+    /**
+     * Convenience mapping calling {@link SelectField#convertFrom(Class,
+     * Function)}.
+     */
+    fun <U> mapping(toType: Class<U>, from: (UUID?, UUID?, LocalTime?, LocalTime?, String?, OffsetDateTime?, OffsetDateTime?) -> U): SelectField<U> = convertFrom(toType, Records.mapping(from))
 }

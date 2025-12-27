@@ -27,17 +27,17 @@ open class TimeSlotsRecord private constructor() : UpdatableRecordImpl<TimeSlots
         set(value): Unit = set(0, value)
         get(): UUID? = get(0) as UUID?
 
-    open var memberAvailabilityId: UUID?
+    open var memberAvailabilityId: UUID
         set(value): Unit = set(1, value)
-        get(): UUID? = get(1) as UUID?
+        get(): UUID = get(1) as UUID
 
-    open var startTime: LocalTime?
+    open var startTime: LocalTime
         set(value): Unit = set(2, value)
-        get(): LocalTime? = get(2) as LocalTime?
+        get(): LocalTime = get(2) as LocalTime
 
-    open var endTime: LocalTime?
+    open var endTime: LocalTime
         set(value): Unit = set(3, value)
-        get(): LocalTime? = get(3) as LocalTime?
+        get(): LocalTime = get(3) as LocalTime
 
     open var memo: String?
         set(value): Unit = set(4, value)
@@ -71,52 +71,52 @@ open class TimeSlotsRecord private constructor() : UpdatableRecordImpl<TimeSlots
     override fun field6(): Field<OffsetDateTime?> = TimeSlots.TIME_SLOTS.CREATED_AT
     override fun field7(): Field<OffsetDateTime?> = TimeSlots.TIME_SLOTS.UPDATED_AT
     override fun component1(): UUID? = id
-    override fun component2(): UUID? = memberAvailabilityId
-    override fun component3(): LocalTime? = startTime
-    override fun component4(): LocalTime? = endTime
+    override fun component2(): UUID = memberAvailabilityId
+    override fun component3(): LocalTime = startTime
+    override fun component4(): LocalTime = endTime
     override fun component5(): String? = memo
     override fun component6(): OffsetDateTime? = createdAt
     override fun component7(): OffsetDateTime? = updatedAt
     override fun value1(): UUID? = id
-    override fun value2(): UUID? = memberAvailabilityId
-    override fun value3(): LocalTime? = startTime
-    override fun value4(): LocalTime? = endTime
+    override fun value2(): UUID = memberAvailabilityId
+    override fun value3(): LocalTime = startTime
+    override fun value4(): LocalTime = endTime
     override fun value5(): String? = memo
     override fun value6(): OffsetDateTime? = createdAt
     override fun value7(): OffsetDateTime? = updatedAt
 
     override fun value1(value: UUID?): TimeSlotsRecord {
-        this.id = value
+        set(0, value)
         return this
     }
 
     override fun value2(value: UUID?): TimeSlotsRecord {
-        this.memberAvailabilityId = value
+        set(1, value)
         return this
     }
 
     override fun value3(value: LocalTime?): TimeSlotsRecord {
-        this.startTime = value
+        set(2, value)
         return this
     }
 
     override fun value4(value: LocalTime?): TimeSlotsRecord {
-        this.endTime = value
+        set(3, value)
         return this
     }
 
     override fun value5(value: String?): TimeSlotsRecord {
-        this.memo = value
+        set(4, value)
         return this
     }
 
     override fun value6(value: OffsetDateTime?): TimeSlotsRecord {
-        this.createdAt = value
+        set(5, value)
         return this
     }
 
     override fun value7(value: OffsetDateTime?): TimeSlotsRecord {
-        this.updatedAt = value
+        set(6, value)
         return this
     }
 
@@ -134,7 +134,7 @@ open class TimeSlotsRecord private constructor() : UpdatableRecordImpl<TimeSlots
     /**
      * Create a detached, initialised TimeSlotsRecord
      */
-    constructor(id: UUID? = null, memberAvailabilityId: UUID? = null, startTime: LocalTime? = null, endTime: LocalTime? = null, memo: String? = null, createdAt: OffsetDateTime? = null, updatedAt: OffsetDateTime? = null): this() {
+    constructor(id: UUID? = null, memberAvailabilityId: UUID, startTime: LocalTime, endTime: LocalTime, memo: String? = null, createdAt: OffsetDateTime? = null, updatedAt: OffsetDateTime? = null): this() {
         this.id = id
         this.memberAvailabilityId = memberAvailabilityId
         this.startTime = startTime
@@ -143,5 +143,21 @@ open class TimeSlotsRecord private constructor() : UpdatableRecordImpl<TimeSlots
         this.createdAt = createdAt
         this.updatedAt = updatedAt
         resetChangedOnNotNull()
+    }
+
+    /**
+     * Create a detached, initialised TimeSlotsRecord
+     */
+    constructor(value: com.task.infra.database.jooq.tables.pojos.TimeSlots?): this() {
+        if (value != null) {
+            this.id = value.id
+            this.memberAvailabilityId = value.memberAvailabilityId
+            this.startTime = value.startTime
+            this.endTime = value.endTime
+            this.memo = value.memo
+            this.createdAt = value.createdAt
+            this.updatedAt = value.updatedAt
+            resetChangedOnNotNull()
+        }
     }
 }

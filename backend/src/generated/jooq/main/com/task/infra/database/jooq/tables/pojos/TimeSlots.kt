@@ -5,20 +5,21 @@ package com.task.infra.database.jooq.tables.pojos
 
 
 import java.io.Serializable
-import java.time.LocalDate
+import java.time.LocalTime
 import java.time.OffsetDateTime
 import java.util.UUID
 
 
 /**
- * MemberAvailability集約ルート
+ * TimeSlot値オブジェクト（MemberAvailability集約の一部）
  */
 @Suppress("UNCHECKED_CAST")
-data class MemberAvailabilities(
+data class TimeSlots(
     val id: UUID? = null,
-    val memberId: UUID,
-    val targetDate: LocalDate,
-    val isDeleted: Boolean? = null,
+    val memberAvailabilityId: UUID,
+    val startTime: LocalTime,
+    val endTime: LocalTime,
+    val memo: String? = null,
     val createdAt: OffsetDateTime? = null,
     val updatedAt: OffsetDateTime? = null
 ): Serializable {
@@ -30,22 +31,24 @@ data class MemberAvailabilities(
             return false
         if (this::class != other::class)
             return false
-        val o: MemberAvailabilities = other as MemberAvailabilities
+        val o: TimeSlots = other as TimeSlots
         if (this.id == null) {
             if (o.id != null)
                 return false
         }
         else if (this.id != o.id)
             return false
-        if (this.memberId != o.memberId)
+        if (this.memberAvailabilityId != o.memberAvailabilityId)
             return false
-        if (this.targetDate != o.targetDate)
+        if (this.startTime != o.startTime)
             return false
-        if (this.isDeleted == null) {
-            if (o.isDeleted != null)
+        if (this.endTime != o.endTime)
+            return false
+        if (this.memo == null) {
+            if (o.memo != null)
                 return false
         }
-        else if (this.isDeleted != o.isDeleted)
+        else if (this.memo != o.memo)
             return false
         if (this.createdAt == null) {
             if (o.createdAt != null)
@@ -66,21 +69,23 @@ data class MemberAvailabilities(
         val prime = 31
         var result = 1
         result = prime * result + (if (this.id == null) 0 else this.id.hashCode())
-        result = prime * result + this.memberId.hashCode()
-        result = prime * result + this.targetDate.hashCode()
-        result = prime * result + (if (this.isDeleted == null) 0 else this.isDeleted.hashCode())
+        result = prime * result + this.memberAvailabilityId.hashCode()
+        result = prime * result + this.startTime.hashCode()
+        result = prime * result + this.endTime.hashCode()
+        result = prime * result + (if (this.memo == null) 0 else this.memo.hashCode())
         result = prime * result + (if (this.createdAt == null) 0 else this.createdAt.hashCode())
         result = prime * result + (if (this.updatedAt == null) 0 else this.updatedAt.hashCode())
         return result
     }
 
     override fun toString(): String {
-        val sb = StringBuilder("MemberAvailabilities (")
+        val sb = StringBuilder("TimeSlots (")
 
         sb.append(id)
-        sb.append(", ").append(memberId)
-        sb.append(", ").append(targetDate)
-        sb.append(", ").append(isDeleted)
+        sb.append(", ").append(memberAvailabilityId)
+        sb.append(", ").append(startTime)
+        sb.append(", ").append(endTime)
+        sb.append(", ").append(memo)
         sb.append(", ").append(createdAt)
         sb.append(", ").append(updatedAt)
 

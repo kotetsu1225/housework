@@ -10,6 +10,7 @@ import com.task.infra.database.jooq.tables.TaskDefinitions
 import com.task.infra.database.jooq.tables.TaskExecutions
 import com.task.infra.database.jooq.tables.TaskRecurrences
 import com.task.infra.database.jooq.tables.TaskSnapshots
+import com.task.infra.database.jooq.tables.TimeSlots
 
 import kotlin.collections.List
 
@@ -32,7 +33,7 @@ open class Public : SchemaImpl("public", DefaultCatalog.DEFAULT_CATALOG) {
     }
 
     /**
-     * メンバーの空き時間
+     * MemberAvailability集約ルート
      */
     val MEMBER_AVAILABILITIES: MemberAvailabilities get() = MemberAvailabilities.MEMBER_AVAILABILITIES
 
@@ -61,6 +62,11 @@ open class Public : SchemaImpl("public", DefaultCatalog.DEFAULT_CATALOG) {
      */
     val TASK_SNAPSHOTS: TaskSnapshots get() = TaskSnapshots.TASK_SNAPSHOTS
 
+    /**
+     * TimeSlot値オブジェクト（MemberAvailability集約の一部）
+     */
+    val TIME_SLOTS: TimeSlots get() = TimeSlots.TIME_SLOTS
+
     override fun getCatalog(): Catalog = DefaultCatalog.DEFAULT_CATALOG
 
     override fun getTables(): List<Table<*>> = listOf(
@@ -69,6 +75,7 @@ open class Public : SchemaImpl("public", DefaultCatalog.DEFAULT_CATALOG) {
         TaskDefinitions.TASK_DEFINITIONS,
         TaskExecutions.TASK_EXECUTIONS,
         TaskRecurrences.TASK_RECURRENCES,
-        TaskSnapshots.TASK_SNAPSHOTS
+        TaskSnapshots.TASK_SNAPSHOTS,
+        TimeSlots.TIME_SLOTS
     )
 }

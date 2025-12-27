@@ -16,9 +16,6 @@ import java.time.OffsetDateTime
 @Singleton
 class TaskDefinitionRepositoryImpl : TaskDefinitionRepository {
 
-    // MULTISETフィールドを変数として定義することで型安全なアクセスを実現
-    // record.get(Field)は型パラメータからTaskRecurrencesRecord?を推論するため、キャスト不要
-    // 出典: https://blog.jooq.org/ad-hoc-data-type-conversion-with-jooq-3-15/
     private val recurrenceField: Field<TaskRecurrencesRecord?> = multiset(
         select(TASK_RECURRENCES.asterisk())
             .from(TASK_RECURRENCES)

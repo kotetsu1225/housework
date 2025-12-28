@@ -16,22 +16,22 @@ import org.jooq.Record
 import java.time.Instant
 import java.time.LocalDate
 import java.time.OffsetDateTime
-import java.time.ZoneId
+import com.task.domain.AppTimeZone
 import java.util.UUID
 
 @Singleton
 class TaskExecutionRepositoryImpl : TaskExecutionRepository {
 
     private fun Instant.toOffsetDateTime(): OffsetDateTime =
-        this.atZone(ZoneId.systemDefault()).toOffsetDateTime()
+        this.atZone(AppTimeZone.ZONE).toOffsetDateTime()
 
     private fun OffsetDateTime.toDomainInstant(): Instant = this.toInstant()
 
     private fun Instant.toLocalDate(): LocalDate =
-        this.atZone(ZoneId.systemDefault()).toLocalDate()
+        this.atZone(AppTimeZone.ZONE).toLocalDate()
 
     private fun LocalDate.toDomainInstant(): Instant =
-        this.atStartOfDay(ZoneId.systemDefault()).toInstant()
+        this.atStartOfDay(AppTimeZone.ZONE).toInstant()
 
     override fun create(taskExecution: TaskExecution.NotStarted, session: DSLContext): TaskExecution.NotStarted {
         val now = OffsetDateTime.now()
@@ -140,6 +140,22 @@ class TaskExecutionRepositoryImpl : TaskExecutionRepository {
             .orderBy(TASK_EXECUTIONS.SCHEDULED_DATE.desc(), TASK_EXECUTIONS.CREATED_AT.desc())
             .fetch()
             .map { reconstructFromRecord(it) }
+    }
+
+    override fun findByDefinitionAndDate(
+        taskDefinitionId: TaskDefinitionId,
+        scheduledDate: LocalDate,
+        session: DSLContext
+    ): TaskExecution? {
+        val record = session.select()
+            .from(TASK_EXECUTIONS)
+            .leftJoin(TASK_SNAPSHOTS)
+            .on(TASK_EXECUTIONS.ID.eq(TASK_SNAPSHOTS.TASK_EXECUTION_ID))
+            .where(TASK_EXECUTIONS.TASK_DEFINITION_ID.eq(taskDefinitionId.value))
+            .and(TASK_EXECUTIONS.SCHEDULED_DATE.eq(scheduledDate))
+            .fetchOne() ?: return null
+
+        return reconstructFromRecord(record)
     }
 
     private fun reconstructFromRecord(record: Record): TaskExecution {

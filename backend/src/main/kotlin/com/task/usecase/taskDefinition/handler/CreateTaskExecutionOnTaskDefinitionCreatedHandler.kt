@@ -8,8 +8,8 @@ import com.task.domain.taskDefinition.event.TaskDefinitionCreated
 import com.task.domain.taskExecution.TaskExecution.*
 import com.task.domain.taskExecution.TaskExecutionId
 import com.task.domain.taskExecution.TaskExecutionRepository
+import com.task.domain.AppTimeZone
 import org.jooq.DSLContext
-import java.time.ZoneId
 
 class CreateTaskExecutionOnTaskDefinitionCreatedHandler @Inject constructor(
     private val taskExecutionRepository: TaskExecutionRepository,
@@ -29,7 +29,7 @@ class CreateTaskExecutionOnTaskDefinitionCreatedHandler @Inject constructor(
         }
 
         val scheduledDate = schedule.deadline
-            .atStartOfDay(ZoneId.of("Asia/Tokyo"))
+            .atStartOfDay(AppTimeZone.ZONE)
             .toInstant()
 
         val taskExecution = NotStarted(

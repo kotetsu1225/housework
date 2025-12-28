@@ -215,11 +215,14 @@ export function Members() {
         </section>
 
         {/* メンバー一覧 */}
-        <section className="space-y-4">
-          <h2 className="text-lg font-bold text-white">メンバー一覧</h2>
-          {membersWithStats.map((member) => (
-            <MemberCard key={member.id} member={member} />
-          ))}
+        <section>
+          <h2 className="text-lg font-bold text-white mb-4">メンバー一覧</h2>
+          {/* モバイル: 縦並び、タブレット以上: グリッド */}
+          <div className="space-y-4 md:space-y-0 md:grid md:grid-cols-2 md:gap-4">
+            {membersWithStats.map((member) => (
+              <MemberCard key={member.id} member={member} />
+            ))}
+          </div>
         </section>
 
         {/* 追加モーダル */}

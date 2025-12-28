@@ -19,7 +19,11 @@ import type { User, FamilyRole } from '../types'
 /** ローカルストレージのキー */
 const STORAGE_KEYS = {
   CURRENT_USER: 'housework_currentUser',
+  SESSION_EXPIRY: 'housework_sessionExpiry',
 } as const
+
+/** セッション有効期限（7日間） */
+const SESSION_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000
 
 /**
  * 認証コンテキストの型定義
@@ -29,7 +33,9 @@ interface AuthContextType {
   user: User | null
   /** 認証状態 */
   isAuthenticated: boolean
-  /** ローディング状態 */
+  /** 初期化中（セッション復元中） */
+  isInitializing: boolean
+  /** ローディング状態（認証操作中） */
   loading: boolean
   /** エラーメッセージ */
   error: string | null
@@ -73,30 +79,65 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined)
  */
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
+  const [isInitializing, setIsInitializing] = useState(true)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  /**
+   * セッション有効期限をチェック
+   */
+  const isSessionValid = useCallback((): boolean => {
+    const expiryStr = localStorage.getItem(STORAGE_KEYS.SESSION_EXPIRY)
+    if (!expiryStr) return false
+
+    const expiry = parseInt(expiryStr, 10)
+    return Date.now() < expiry
+  }, [])
+
+  /**
+   * セッション有効期限を設定
+   */
+  const setSessionExpiry = useCallback(() => {
+    const expiry = Date.now() + SESSION_EXPIRY_MS
+    localStorage.setItem(STORAGE_KEYS.SESSION_EXPIRY, expiry.toString())
+  }, [])
+
+  /**
+   * セッションをクリア
+   */
+  const clearSession = useCallback(() => {
+    localStorage.removeItem(STORAGE_KEYS.CURRENT_USER)
+    localStorage.removeItem(STORAGE_KEYS.SESSION_EXPIRY)
+  }, [])
 
   /**
    * 初期化: ローカルストレージから現在のユーザーを復元
    */
   useEffect(() => {
     const storedUser = localStorage.getItem(STORAGE_KEYS.CURRENT_USER)
-    if (storedUser) {
+    if (storedUser && isSessionValid()) {
       try {
         const parsed = JSON.parse(storedUser) as User
         setUser(parsed)
+        // セッションを延長
+        setSessionExpiry()
       } catch {
-        localStorage.removeItem(STORAGE_KEYS.CURRENT_USER)
+        clearSession()
       }
+    } else if (storedUser) {
+      // セッション期限切れの場合はクリア
+      clearSession()
     }
-  }, [])
+    setIsInitializing(false)
+  }, [isSessionValid, setSessionExpiry, clearSession])
 
   /**
-   * ユーザーをローカルストレージに保存
+   * ユーザーをローカルストレージに保存（セッション有効期限も設定）
    */
   const saveUserToStorage = useCallback((userData: User) => {
     localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(userData))
-  }, [])
+    setSessionExpiry()
+  }, [setSessionExpiry])
 
   /**
    * ログイン処理
@@ -205,8 +246,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = useCallback(() => {
     setUser(null)
     setError(null)
-    localStorage.removeItem(STORAGE_KEYS.CURRENT_USER)
-  }, [])
+    clearSession()
+  }, [clearSession])
 
   /**
    * エラーをクリア
@@ -220,6 +261,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       value={{
         user,
         isAuthenticated: !!user,
+        isInitializing,
         loading,
         error,
         login,

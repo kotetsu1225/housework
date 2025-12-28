@@ -9,10 +9,17 @@ const navItems = [
   { to: '/availability', icon: Clock, label: '空き時間' },
 ]
 
+/**
+ * ボトムナビゲーション
+ *
+ * レスポンシブ対応:
+ * - モバイル: max-w-lg
+ * - タブレット/デスクトップ: max-w-2xl/max-w-4xl
+ */
 export function BottomNav() {
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-dark-900/90 backdrop-blur-lg border-t border-dark-800 safe-bottom z-50">
-      <div className="flex items-center justify-around h-16 max-w-lg mx-auto px-4">
+      <div className="flex items-center justify-around h-16 max-w-lg md:max-w-2xl lg:max-w-4xl mx-auto px-4 md:px-6 lg:px-8">
         {navItems.map(({ to, icon: Icon, label }) => (
           <NavLink
             key={to}

@@ -6,3 +6,7 @@
 .gemini/
 gha-creds-*.json
 .github/
+
+# Build artifacts
+frontend/dist/
+node_modules/

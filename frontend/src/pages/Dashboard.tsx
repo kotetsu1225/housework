@@ -2,14 +2,10 @@
  * ダッシュボードページ
  *
  * 今日のタスク一覧と進捗サマリーを表示するホーム画面
- *
- * @note TaskExecution APIはバックエンドで未実装のため、現在はモックデータを使用しています。
- *       バックエンドのTaskExecutions Presentation層が実装されると、実際のAPIを呼び出すようになります。
- * @see docs/BACKEND_ISSUES.md - 1. TaskExecutions Presentation層の欠落
  */
 
 import { useEffect, useMemo, useCallback, useState } from 'react'
-import { RefreshCw } from 'lucide-react'
+import { RefreshCw, Plus } from 'lucide-react'
 import { Header } from '../components/layout/Header'
 import { PageContainer } from '../components/layout/PageContainer'
 import { Button } from '../components/ui/Button'
@@ -22,17 +18,7 @@ import {
 import { useTaskExecution, useMember } from '../hooks'
 import { useAuth } from '../contexts'
 import { formatJa, toISODateString } from '../utils'
-import { MOCK_TASK_EXECUTIONS } from '../mocks'
 import type { TaskExecution, Member } from '../types'
-
-/**
- * バックエンドのTaskExecution APIが実装されているかどうかのフラグ
- *
- * @note バックエンドのTaskExecutions Presentation層が実装されたら、
- *       このフラグをtrueに変更してください。
- * @see docs/BACKEND_ISSUES.md
- */
-const USE_REAL_TASK_EXECUTION_API = false
 
 /**
  * メンバーIDからメンバー情報を取得するヘルパー
@@ -82,8 +68,8 @@ export function Dashboard() {
   const todayStr = toISODateString(today)
   const { user } = useAuth()
 
-  // API未実装時のモックデータ使用フラグ
-  const [usingMockData, setUsingMockData] = useState(!USE_REAL_TASK_EXECUTION_API)
+  // タスク生成中フラグ
+  const [isGenerating, setIsGenerating] = useState(false)
 
   // タスク実行管理フック
   const {
@@ -93,7 +79,7 @@ export function Dashboard() {
     fetchTaskExecutions,
     startTask,
     completeTask,
-    setTaskExecutions,
+    generateTasks,
     clearError: clearTaskError,
   } = useTaskExecution()
 
@@ -113,22 +99,9 @@ export function Dashboard() {
    * 初回マウント時にデータを取得
    */
   useEffect(() => {
-    // Member APIは実装済みなので、実際のAPIを呼び出す
     fetchMembers()
-
-    if (USE_REAL_TASK_EXECUTION_API) {
-      // TaskExecution APIが実装されている場合
-      fetchTaskExecutions({ date: todayStr })
-      setUsingMockData(false)
-    } else {
-      // TaskExecution APIが未実装の場合、モックデータを使用
-      const todayMockTasks = MOCK_TASK_EXECUTIONS.filter(
-        (t) => t.scheduledDate === todayStr
-      )
-      setTaskExecutions(todayMockTasks)
-      setUsingMockData(true)
-    }
-  }, [todayStr, fetchMembers, fetchTaskExecutions, setTaskExecutions])
+    fetchTaskExecutions({ date: todayStr })
+  }, [todayStr, fetchMembers, fetchTaskExecutions])
 
   /**
    * エラー自動クリア（5秒後）
@@ -166,75 +139,42 @@ export function Dashboard() {
    * データ再取得ハンドラー
    */
   const handleRefresh = useCallback(async () => {
-    // Member APIを再取得
     await fetchMembers()
+    await fetchTaskExecutions({ date: todayStr })
+  }, [todayStr, fetchMembers, fetchTaskExecutions])
 
-    if (USE_REAL_TASK_EXECUTION_API) {
+  /**
+   * タスク生成ハンドラー
+   */
+  const handleGenerateTasks = useCallback(async () => {
+    setIsGenerating(true)
+    const success = await generateTasks(todayStr)
+    if (success) {
+      // 生成後にタスク一覧を再取得
       await fetchTaskExecutions({ date: todayStr })
-    } else {
-      // モックデータをリセット
-      const todayMockTasks = MOCK_TASK_EXECUTIONS.filter(
-        (t) => t.scheduledDate === todayStr
-      )
-      setTaskExecutions(todayMockTasks)
     }
-  }, [todayStr, fetchMembers, fetchTaskExecutions, setTaskExecutions])
+    setIsGenerating(false)
+  }, [todayStr, generateTasks, fetchTaskExecutions])
 
   /**
    * ステータスアイコンクリック時の処理
-   *
-   * @note TaskExecution APIが未実装のため、現在はローカル状態のみ更新します。
-   *       APIが実装されると、バックエンドと同期されます。
    */
   const handleStatusClick = useCallback(
     async (task: TaskExecution) => {
       if (!user) return
 
-      if (USE_REAL_TASK_EXECUTION_API) {
-        // 実際のAPIを呼び出す
-        switch (task.status) {
-          case 'NOT_STARTED':
-            await startTask(task.id, user.id)
-            break
-          case 'IN_PROGRESS':
-            await completeTask(task.id, user.id)
-            break
-          default:
-            break
-        }
-      } else {
-        // モックモード: ローカル状態のみ更新
-        setTaskExecutions((prev) =>
-          prev.map((t) => {
-            if (t.id !== task.id) return t
-
-            switch (t.status) {
-              case 'NOT_STARTED':
-                return {
-                  ...t,
-                  status: 'IN_PROGRESS' as const,
-                  assigneeMemberId: user.id,
-                  startedAt: new Date().toISOString(),
-                  taskSnapshot: {
-                    ...t.taskSnapshot,
-                    createdAt: new Date().toISOString(),
-                  },
-                }
-              case 'IN_PROGRESS':
-                return {
-                  ...t,
-                  status: 'COMPLETED' as const,
-                  completedAt: new Date().toISOString(),
-                  completedByMemberId: user.id,
-                }
-              default:
-                return t
-            }
-          })
-        )
+      switch (task.status) {
+        case 'NOT_STARTED':
+          await startTask(task.id, user.id)
+          break
+        case 'IN_PROGRESS':
+          await completeTask(task.id, user.id)
+          break
+        default:
+          break
       }
     },
-    [user, startTask, completeTask, setTaskExecutions]
+    [user, startTask, completeTask]
   )
 
   /**
@@ -270,13 +210,6 @@ export function Dashboard() {
         }
       />
       <PageContainer>
-        {/* 開発用: モックデータ使用時の通知 */}
-        {usingMockData && (
-          <Alert variant="info" className="mb-4">
-            タスクデータはモックを使用しています（バックエンドAPI未実装）
-          </Alert>
-        )}
-
         {/* エラーメッセージ */}
         {error && (
           <Alert variant="error" className="mb-4">
@@ -296,9 +229,17 @@ export function Dashboard() {
         <section>
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-bold text-white">今日のタスク</h2>
-            <Button variant="ghost" size="sm">
-              すべて見る
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={handleGenerateTasks}
+                disabled={isGenerating || loading}
+              >
+                <Plus className="w-4 h-4 mr-1" />
+                {isGenerating ? '生成中...' : '生成'}
+              </Button>
+            </div>
           </div>
 
           <div className="space-y-3">
@@ -313,8 +254,21 @@ export function Dashboard() {
                 />
               ))
             ) : (
-              <div className="text-center py-8 text-white/50">
-                {loading ? '読み込み中...' : '今日のタスクはありません'}
+              <div className="text-center py-8">
+                <p className="text-white/50 mb-4">
+                  {loading ? '読み込み中...' : '今日のタスクはありません'}
+                </p>
+                {!loading && (
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    onClick={handleGenerateTasks}
+                    disabled={isGenerating}
+                  >
+                    <Plus className="w-4 h-4 mr-1" />
+                    今日のタスクを生成
+                  </Button>
+                )}
               </div>
             )}
           </div>
@@ -323,7 +277,8 @@ export function Dashboard() {
         {/* メンバーの状況 */}
         <section className="mt-8">
           <h2 className="text-lg font-bold text-white mb-4">メンバー</h2>
-          <div className="flex gap-4 overflow-x-auto pb-2 -mx-4 px-4">
+          {/* モバイル: 横スクロール、タブレット以上: グリッド */}
+          <div className="flex gap-4 overflow-x-auto pb-2 -mx-4 px-4 md:mx-0 md:px-0 md:grid md:grid-cols-2 lg:grid-cols-4 md:overflow-visible">
             {memberSummaries.map(({ member, completed, total }) => (
               <MemberSummaryCard
                 key={member.id}

@@ -476,7 +476,7 @@ export function Availability() {
         <section className="mt-8">
           <h2 className="text-lg font-bold text-white mb-4">メンバー別</h2>
           {members.length > 0 ? (
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
               {members.map((member) => (
                 <Card
                   key={member.id}

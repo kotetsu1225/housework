@@ -59,6 +59,8 @@ sealed class TaskExecution {
             newAssigneeMemberId: MemberId
         ): NotStarted{
             return copy(assigneeMemberId = newAssigneeMemberId)
+        }
+
         fun cancelByDefinitionDeletion(): Cancelled {
             return Cancelled(
                 id = this.id,
@@ -113,6 +115,10 @@ sealed class TaskExecution {
                 startedAt = this.startedAt,
                 cancelledAt = Instant.now()
             )
+        }
+
+        fun assign(newAssigneeMemberId: MemberId): InProgress {
+            return copy(assigneeMemberId = newAssigneeMemberId)
         }
 
         fun cancelByDefinitionDeletion(): Cancelled {

@@ -46,6 +46,7 @@ class CompleteTaskExecutionUseCaseImpl @Inject constructor(
                 id = completedExecution.id,
                 taskDefinitionId = taskDefinition.id,
                 scheduledDate = completedExecution.scheduledDate,
+                taskSnapshot = completedExecution.taskSnapshot,
                 completedAt = completedExecution.completedAt,
                 completedMemberId = completedExecution.completedByMemberId
             )

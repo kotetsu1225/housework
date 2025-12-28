@@ -4,6 +4,7 @@ import com.google.inject.ImplementedBy
 import com.task.domain.member.MemberId
 import com.task.domain.taskDefinition.TaskDefinitionId
 import com.task.domain.taskExecution.TaskExecutionId
+import com.task.domain.taskExecution.TaskSnapshot
 import java.time.Instant
 
 @ImplementedBy(CompleteTaskExecutionUseCaseImpl::class)
@@ -17,6 +18,7 @@ interface CompleteTaskExecutionUseCase {
         val id: TaskExecutionId,
         val taskDefinitionId: TaskDefinitionId,
         val scheduledDate: Instant,
+        val taskSnapshot: TaskSnapshot?,
         val completedAt: Instant,
         val completedMemberId: MemberId,
     )

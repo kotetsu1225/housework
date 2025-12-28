@@ -30,7 +30,6 @@ class TaskExecutions {
         val parent: TaskExecutions = TaskExecutions(),
         val limit: Int = 20,
         val offset: Int = 0,
-        // フィルタパラメータ（全てオプション）
         val scheduledDate: String? = null,  // YYYY-MM-DD形式
         val status: String? = null,         // NOT_STARTED, IN_PROGRESS, COMPLETED, CANCELLED
         val assigneeMemberId: String? = null // UUID形式

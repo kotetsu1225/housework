@@ -158,6 +158,17 @@ class TaskExecutionRepositoryImpl : TaskExecutionRepository {
         return reconstructFromRecord(record)
     }
 
+    override fun findByDefinitionId(definitionId: TaskDefinitionId, session: DSLContext): List<TaskExecution>? {
+        return session.select()
+            .from(TASK_EXECUTIONS)
+            .leftJoin(TASK_SNAPSHOTS)
+            .on(TASK_EXECUTIONS.ID.eq(TASK_SNAPSHOTS.TASK_EXECUTION_ID))
+            .where(TASK_EXECUTIONS.TASK_DEFINITION_ID.eq(definitionId.value))
+            .orderBy(TASK_EXECUTIONS.SCHEDULED_DATE.desc(), TASK_EXECUTIONS.CREATED_AT.desc())
+            .fetch()
+            .map { reconstructFromRecord(it) }
+    }
+
     private fun reconstructFromRecord(record: Record): TaskExecution {
         val id = TaskExecutionId(record.get(TASK_EXECUTIONS.ID)!!)
         val taskDefinitionId = TaskDefinitionId(record.get(TASK_EXECUTIONS.TASK_DEFINITION_ID)!!)

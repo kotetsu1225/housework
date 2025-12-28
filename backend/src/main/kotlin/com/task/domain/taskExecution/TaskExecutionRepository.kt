@@ -60,4 +60,6 @@ interface TaskExecutionRepository {
         scheduledDate: LocalDate,
         session: DSLContext
     ): TaskExecution?
+
+    fun findByDefinitionId(definitionId: TaskDefinitionId, session: DSLContext): List<TaskExecution>?
 }

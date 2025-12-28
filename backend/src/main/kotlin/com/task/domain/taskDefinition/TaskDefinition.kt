@@ -3,6 +3,7 @@ package com.task.domain.taskDefinition
 import com.task.domain.AggregateRoot
 import com.task.domain.member.MemberId
 import com.task.domain.taskDefinition.event.TaskDefinitionCreated
+import com.task.domain.taskDefinition.event.TaskDefinitionDeleted
 import java.util.UUID
 
 class TaskDefinition private constructor(
@@ -51,7 +52,7 @@ class TaskDefinition private constructor(
     }
 
     fun delete(): TaskDefinition {
-        return TaskDefinition(
+        val taskDefinition = TaskDefinition(
             id = this.id,
             name = this.name,
             description = this.description,
@@ -62,6 +63,20 @@ class TaskDefinition private constructor(
             version = this.version,
             isDeleted = true
         )
+
+        taskDefinition.addDomainEvent(
+            TaskDefinitionDeleted(
+                taskDefinitionId = taskDefinition.id,
+                name = taskDefinition.name,
+                description = taskDefinition.description,
+                estimatedMinutes = taskDefinition.estimatedMinutes,
+                scope = taskDefinition.scope,
+                ownerMemberId = taskDefinition.ownerMemberId,
+                schedule = taskDefinition.schedule,
+            )
+        )
+
+        return taskDefinition
     }
 
 

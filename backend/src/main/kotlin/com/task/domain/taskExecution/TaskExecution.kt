@@ -54,6 +54,18 @@ sealed class TaskExecution {
                 cancelledAt = Instant.now()
             )
         }
+
+        fun cancelByDefinitionDeletion(): Cancelled {
+            return Cancelled(
+                id = this.id,
+                taskDefinitionId = this.taskDefinitionId,
+                scheduledDate = this.scheduledDate,
+                assigneeMemberId = this.assigneeMemberId,
+                taskSnapshot = null,
+                startedAt = null,
+                cancelledAt = Instant.now()
+            )
+        }
     }
 
     data class InProgress(
@@ -88,6 +100,18 @@ sealed class TaskExecution {
             require(!definitionIsDeleted) {
                 "削除されたタスクはキャンセルできません。"
             }
+            return Cancelled(
+                id = this.id,
+                taskDefinitionId = this.taskDefinitionId,
+                scheduledDate = this.scheduledDate,
+                assigneeMemberId = this.assigneeMemberId,
+                taskSnapshot = this.taskSnapshot,
+                startedAt = this.startedAt,
+                cancelledAt = Instant.now()
+            )
+        }
+
+        fun cancelByDefinitionDeletion(): Cancelled {
             return Cancelled(
                 id = this.id,
                 taskDefinitionId = this.taskDefinitionId,

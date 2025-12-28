@@ -11,8 +11,11 @@ import com.task.domain.taskExecution.TaskExecutionRepository
 import com.task.domain.taskExecution.TaskSnapshot
 import com.task.infra.database.jooq.tables.references.TASK_EXECUTIONS
 import com.task.infra.database.jooq.tables.references.TASK_SNAPSHOTS
+import com.task.usecase.taskExecution.get.GetTaskExecutionsUseCase
+import org.jooq.Condition
 import org.jooq.DSLContext
 import org.jooq.Record
+import org.jooq.impl.DSL
 import java.time.Instant
 import java.time.LocalDate
 import java.time.OffsetDateTime
@@ -118,6 +121,61 @@ class TaskExecutionRepositoryImpl : TaskExecutionRepository {
         return session.selectCount()
             .from(TASK_EXECUTIONS)
             .fetchOne(0, Int::class.java) ?: 0
+    }
+
+    override fun findAllWithFilter(
+        session: DSLContext,
+        limit: Int,
+        offset: Int,
+        filter: GetTaskExecutionsUseCase.FilterSpec
+    ): List<TaskExecution> {
+        val condition = buildFilterCondition(filter)
+
+        return session.select()
+            .from(TASK_EXECUTIONS)
+            .leftJoin(TASK_SNAPSHOTS)
+            .on(TASK_EXECUTIONS.ID.eq(TASK_SNAPSHOTS.TASK_EXECUTION_ID))
+            .where(condition)
+            .orderBy(TASK_EXECUTIONS.SCHEDULED_DATE.desc(), TASK_EXECUTIONS.CREATED_AT.desc())
+            .limit(limit)
+            .offset(offset)
+            .fetch()
+            .map { reconstructFromRecord(it) }
+    }
+
+    override fun countWithFilter(session: DSLContext, filter: GetTaskExecutionsUseCase.FilterSpec): Int {
+        val condition = buildFilterCondition(filter)
+
+        return session.selectCount()
+            .from(TASK_EXECUTIONS)
+            .where(condition)
+            .fetchOne(0, Int::class.java) ?: 0
+    }
+
+    /**
+     * FilterSpecからJOOQ Conditionを動的に構築する
+     *
+     * JOOQ Conditionのチェーン:
+     * - DSL.noCondition() は常にtrueを返す空条件（初期値として使用）
+     * - .and() で条件を追加していく
+     * - nullの場合は条件を追加しない
+     */
+    private fun buildFilterCondition(filter: GetTaskExecutionsUseCase.FilterSpec): Condition {
+        var condition: Condition = DSL.noCondition()
+
+        filter.scheduledDate?.let { date ->
+            condition = condition.and(TASK_EXECUTIONS.SCHEDULED_DATE.eq(date))
+        }
+
+        filter.status?.let { status ->
+            condition = condition.and(TASK_EXECUTIONS.STATUS.eq(status))
+        }
+
+        filter.assigneeMemberId?.let { memberId ->
+            condition = condition.and(TASK_EXECUTIONS.ASSIGNEE_MEMBER_ID.eq(memberId.value))
+        }
+
+        return condition
     }
 
     override fun findByScheduledDate(scheduledDate: LocalDate, session: DSLContext): List<TaskExecution> {

@@ -5,12 +5,27 @@ import com.task.domain.member.MemberId
 import com.task.domain.taskDefinition.TaskDefinitionId
 import com.task.domain.taskExecution.TaskExecutionId
 import java.time.Instant
+import java.time.LocalDate
 
 @ImplementedBy(GetTaskExecutionsUseCaseImpl::class)
 interface GetTaskExecutionsUseCase {
+
+    data class FilterSpec(
+        val scheduledDate: LocalDate? = null,
+        val status: String? = null,
+        val assigneeMemberId: MemberId? = null
+    ) {
+        companion object {
+            fun empty() = FilterSpec()
+        }
+
+        fun isEmpty(): Boolean = scheduledDate == null && status == null && assigneeMemberId == null
+    }
+
     data class Input(
         val limit: Int = 20,
-        val offset: Int = 0
+        val offset: Int = 0,
+        val filter: FilterSpec = FilterSpec.empty()
     )
 
     data class Output(

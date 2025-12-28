@@ -4,6 +4,7 @@ import com.google.inject.ImplementedBy
 import com.task.domain.member.MemberId
 import com.task.domain.taskDefinition.TaskDefinitionId
 import com.task.infra.taskExecution.TaskExecutionRepositoryImpl
+import com.task.usecase.taskExecution.get.GetTaskExecutionsUseCase
 import org.jooq.DSLContext
 import java.time.LocalDate
 
@@ -44,6 +45,22 @@ interface TaskExecutionRepository {
      * 総件数を取得
      */
     fun count(session: DSLContext): Int
+
+    /**
+     * フィルタ条件付きで全件取得（ページネーション対応）
+     * Specification Patternを使用して動的にWHERE句を構築
+     */
+    fun findAllWithFilter(
+        session: DSLContext,
+        limit: Int,
+        offset: Int,
+        filter: GetTaskExecutionsUseCase.FilterSpec
+    ): List<TaskExecution>
+
+    /**
+     * フィルタ条件付きで総件数を取得
+     */
+    fun countWithFilter(session: DSLContext, filter: GetTaskExecutionsUseCase.FilterSpec): Int
 
     /**
      * 特定の日付のTaskExecutionを取得

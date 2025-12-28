@@ -15,8 +15,20 @@ class GetTaskExecutionsUseCaseImpl @Inject constructor(
 
     override fun execute(input: GetTaskExecutionsUseCase.Input): GetTaskExecutionsUseCase.Output {
         return database.withTransaction { session ->
-            val items = taskExecutionRepository.findAll(session, input.limit, input.offset)
-            val totalCount = taskExecutionRepository.count(session)
+            val (items, totalCount) = if (input.filter.isEmpty()) {
+                val items = taskExecutionRepository.findAll(session, input.limit, input.offset)
+                val count = taskExecutionRepository.count(session)
+                items to count
+            } else {
+                val items = taskExecutionRepository.findAllWithFilter(
+                    session,
+                    input.limit,
+                    input.offset,
+                    input.filter
+                )
+                val count = taskExecutionRepository.countWithFilter(session, input.filter)
+                items to count
+            }
 
             GetTaskExecutionsUseCase.Output(
                 items = items.map { toOutput(it) },

@@ -64,6 +64,12 @@ dependencies {
     // Logging
     implementation("ch.qos.logback:logback-classic:$logbackVersion")
 
+    // JWT
+    implementation("io.ktor:ktor-server-auth-jvm:${ktorVersion}")
+    implementation("io.ktor:ktor-server-auth-jwt-jvm:${ktorVersion}")
+    // パスワードハッシュ化
+    implementation("org.mindrot:jbcrypt:0.4")
+
     // Testing
     testImplementation("io.ktor:ktor-server-tests-jvm:$ktorVersion")
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit:$kotlinVersion")

@@ -146,6 +146,19 @@ class TaskDefinitionRepositoryImpl : TaskDefinitionRepository {
             .fetchOne(0, Int::class.java) ?: 0
     }
 
+    override fun findAllRecurringActive(session: DSLContext): List<TaskDefinition> {
+        return session
+            .select(TASK_DEFINITIONS.asterisk(), recurrenceField)
+            .from(TASK_DEFINITIONS)
+            .where(TASK_DEFINITIONS.IS_DELETED.eq(false))
+            .and(TASK_DEFINITIONS.SCHEDULE_TYPE.eq("RECURRING"))
+            .fetch { record ->
+                val definitionRecord = record.into(TaskDefinitionsRecord::class.java)
+                val recurrenceRecord = record.get(recurrenceField)
+                reconstructFromRecords(definitionRecord, recurrenceRecord)
+            }
+    }
+
     private fun reconstructFromRecords(
         definitionRecord: TaskDefinitionsRecord,
         recurrenceRecord: TaskRecurrencesRecord?

@@ -2,6 +2,7 @@ package com.task.domain.taskExecution
 
 import com.google.inject.ImplementedBy
 import com.task.domain.member.MemberId
+import com.task.domain.taskDefinition.TaskDefinitionId
 import com.task.infra.taskExecution.TaskExecutionRepositoryImpl
 import org.jooq.DSLContext
 import java.time.LocalDate
@@ -53,4 +54,10 @@ interface TaskExecutionRepository {
      * 特定メンバーに割り当てられたTaskExecutionを取得
      */
     fun findByAssigneeMemberId(memberId: MemberId, session: DSLContext): List<TaskExecution>
+
+    fun findByDefinitionAndDate(
+        taskDefinitionId: TaskDefinitionId,
+        scheduledDate: LocalDate,
+        session: DSLContext
+    ): TaskExecution?
 }

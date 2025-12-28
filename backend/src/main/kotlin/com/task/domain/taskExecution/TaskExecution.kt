@@ -59,6 +59,16 @@ sealed class TaskExecution {
             newAssigneeMemberId: MemberId
         ): NotStarted{
             return copy(assigneeMemberId = newAssigneeMemberId)
+        fun cancelByDefinitionDeletion(): Cancelled {
+            return Cancelled(
+                id = this.id,
+                taskDefinitionId = this.taskDefinitionId,
+                scheduledDate = this.scheduledDate,
+                assigneeMemberId = this.assigneeMemberId,
+                taskSnapshot = null,
+                startedAt = null,
+                cancelledAt = Instant.now()
+            )
         }
     }
 
@@ -94,6 +104,18 @@ sealed class TaskExecution {
             require(!definitionIsDeleted) {
                 "削除されたタスクはキャンセルできません。"
             }
+            return Cancelled(
+                id = this.id,
+                taskDefinitionId = this.taskDefinitionId,
+                scheduledDate = this.scheduledDate,
+                assigneeMemberId = this.assigneeMemberId,
+                taskSnapshot = this.taskSnapshot,
+                startedAt = this.startedAt,
+                cancelledAt = Instant.now()
+            )
+        }
+
+        fun cancelByDefinitionDeletion(): Cancelled {
             return Cancelled(
                 id = this.id,
                 taskDefinitionId = this.taskDefinitionId,

@@ -2,3 +2,7 @@
 /要件定義.md
 .idea/
 /docs/
+
+.gemini/
+gha-creds-*.json
+.github/

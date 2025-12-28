@@ -41,6 +41,7 @@ import com.task.usecase.taskDefinition.get.GetTaskDefinitionUseCaseImpl
 import com.task.usecase.taskDefinition.get.GetTaskDefinitionsUseCase
 import com.task.usecase.taskDefinition.get.GetTaskDefinitionsUseCaseImpl
 import com.task.usecase.taskDefinition.handler.CreateTaskExecutionOnTaskDefinitionCreatedHandler
+import com.task.usecase.taskDefinition.handler.TaskDefinitionDeletedHandler
 import com.task.usecase.taskDefinition.update.UpdateTaskDefinitionUseCase
 import com.task.usecase.taskDefinition.update.UpdateTaskDefinitionUseCaseImpl
 import kotlin.jvm.java
@@ -84,5 +85,6 @@ class AppModule : AbstractModule() {
             object : TypeLiteral<DomainEventHandler<*>>() {}
         )
         handlerBinder.addBinding().to(CreateTaskExecutionOnTaskDefinitionCreatedHandler::class.java)
+        handlerBinder.addBinding().to(TaskDefinitionDeletedHandler::class.java)
     }
 }

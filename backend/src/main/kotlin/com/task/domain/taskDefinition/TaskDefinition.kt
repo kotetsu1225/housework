@@ -1,6 +1,8 @@
 package com.task.domain.taskDefinition
 
+import com.task.domain.AggregateRoot
 import com.task.domain.member.MemberId
+import com.task.domain.taskDefinition.event.TaskDefinitionCreated
 import java.util.UUID
 
 class TaskDefinition private constructor(
@@ -13,7 +15,7 @@ class TaskDefinition private constructor(
     val schedule: TaskSchedule,
     val version: Int,
     val isDeleted: Boolean,
-) {
+) : AggregateRoot() {
     init {
         require(estimatedMinutes in 1..1440) {
             "推定時間は1分以上1440分以下である必要があります: $estimatedMinutes"
@@ -72,7 +74,7 @@ class TaskDefinition private constructor(
             ownerMemberId: MemberId?,
             schedule: TaskSchedule,
         ): TaskDefinition {
-            return TaskDefinition(
+            val taskDefinition = TaskDefinition(
                 id = TaskDefinitionId.generate(),
                 name = name,
                 description = description,
@@ -83,6 +85,21 @@ class TaskDefinition private constructor(
                 version = 1,
                 isDeleted = false,
             )
+
+            // ここでドメインイベントを蓄積のみ行う
+            taskDefinition.addDomainEvent(
+                TaskDefinitionCreated(
+                    taskDefinitionId = taskDefinition.id,
+                    name = taskDefinition.name,
+                    description = taskDefinition.description,
+                    estimatedMinutes = taskDefinition.estimatedMinutes,
+                    scope = taskDefinition.scope,
+                    ownerMemberId = taskDefinition.ownerMemberId,
+                    schedule = taskDefinition.schedule,
+                )
+            )
+
+            return taskDefinition
         }
 
         fun reconstruct(

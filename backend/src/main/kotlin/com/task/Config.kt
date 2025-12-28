@@ -1,14 +1,17 @@
 package com.task
 
 import com.google.inject.AbstractModule
+import com.google.inject.TypeLiteral
+import com.google.inject.multibindings.Multibinder
+import com.task.domain.event.DomainEventDispatcher
+import com.task.domain.event.DomainEventHandler
 import com.task.domain.member.MemberRepository
 import com.task.domain.memberAvailability.MemberAvailabilityRepository
 import com.task.domain.taskDefinition.TaskDefinitionRepository
 import com.task.infra.database.Database
+import com.task.infra.event.InMemoryDomainEventDispatcher
 import com.task.infra.member.MemberRepositoryImpl
 import com.task.infra.memberAvailability.MemberAvailabilityRepositoryImpl
-// TaskDefinitionRepositoryImpl: ドメイン層のインターフェースをインフラ層の実装に接続
-// DDDの依存性逆転の原則（DIP）に従い、ビジネスロジックを技術的詳細から分離
 import com.task.infra.taskDefinition.TaskDefinitionRepositoryImpl
 // Member UseCases
 import com.task.usecase.member.CreateMemberUseCase
@@ -37,6 +40,7 @@ import com.task.usecase.taskDefinition.get.GetTaskDefinitionUseCase
 import com.task.usecase.taskDefinition.get.GetTaskDefinitionUseCaseImpl
 import com.task.usecase.taskDefinition.get.GetTaskDefinitionsUseCase
 import com.task.usecase.taskDefinition.get.GetTaskDefinitionsUseCaseImpl
+import com.task.usecase.taskDefinition.handler.CreateTaskExecutionOnTaskDefinitionCreatedHandler
 import com.task.usecase.taskDefinition.update.UpdateTaskDefinitionUseCase
 import com.task.usecase.taskDefinition.update.UpdateTaskDefinitionUseCaseImpl
 import kotlin.jvm.java
@@ -72,5 +76,13 @@ class AppModule : AbstractModule() {
         // 追加: GETエンドポイント用UseCase（ページネーション対応）
         bind(GetTaskDefinitionsUseCase::class.java).to(GetTaskDefinitionsUseCaseImpl::class.java)
         bind(GetTaskDefinitionUseCase::class.java).to(GetTaskDefinitionUseCaseImpl::class.java)
+
+        bind(DomainEventDispatcher::class.java).to(InMemoryDomainEventDispatcher::class.java)
+
+        val handlerBinder = Multibinder.newSetBinder(
+            binder(),
+            object : TypeLiteral<DomainEventHandler<*>>() {}
+        )
+        handlerBinder.addBinding().to(CreateTaskExecutionOnTaskDefinitionCreatedHandler::class.java)
     }
 }

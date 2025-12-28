@@ -2,6 +2,7 @@ package com.task.usecase.taskDefinition.create
 
 import com.google.inject.Inject
 import com.google.inject.Singleton
+import com.task.domain.event.DomainEventDispatcher
 import com.task.domain.taskDefinition.TaskDefinition
 import com.task.domain.taskDefinition.TaskDefinitionRepository
 import com.task.infra.database.Database
@@ -9,7 +10,8 @@ import com.task.infra.database.Database
 @Singleton
 class CreateTaskDefinitionUseCaseImpl @Inject constructor(
     private val database: Database,
-    private val taskDefinitionRepository: TaskDefinitionRepository
+    private val taskDefinitionRepository: TaskDefinitionRepository,
+    private val domainEventDispatcher: DomainEventDispatcher
 ) : CreateTaskDefinitionUseCase {
 
     override fun execute(input: CreateTaskDefinitionUseCase.Input): CreateTaskDefinitionUseCase.Output {
@@ -24,6 +26,10 @@ class CreateTaskDefinitionUseCaseImpl @Inject constructor(
             )
 
             val taskDefinition = taskDefinitionRepository.create(newTaskDefinition, session)
+
+            // ドメインイベントの蓄積を呼び出す
+            domainEventDispatcher.dispatchAll(taskDefinition.domainEvents, session)
+            taskDefinition.clearDomainEvents()
 
             CreateTaskDefinitionUseCase.Output(
                 id = taskDefinition.id,

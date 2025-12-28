@@ -1,9 +1,13 @@
 package com.task
 
 import com.task.presentation.GuicePlugin
+import com.task.presentation.guiceInjectorKey
 import com.task.presentation.members
 import com.task.presentation.memberAvailabilities
 import com.task.presentation.taskDefinitions
+import com.task.presentation.taskGenerations
+import com.task.scheduler.DailyTaskGenerationScheduler
+import com.task.usecase.task.GenerateDailyExecutionsUseCase
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpMethod
 import io.ktor.serialization.kotlinx.json.*
@@ -17,6 +21,7 @@ import io.ktor.server.resources.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.ktor.http.HttpStatusCode
+import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 
 fun main() {
@@ -60,6 +65,19 @@ fun Application.module() {
         }
     }
 
+    val injector = attributes[guiceInjectorKey]
+    val scheduler = DailyTaskGenerationScheduler(
+        injector.getInstance(GenerateDailyExecutionsUseCase::class.java),
+    )
+
+    launch{
+        scheduler.start(this)
+    }
+
+    environment.monitor.subscribe(ApplicationStopped) {
+        scheduler.stop()
+    }
+
     routing {
         get("/health") {
             call.respondText("ok")
@@ -68,5 +86,6 @@ fun Application.module() {
         members()
         memberAvailabilities()
         taskDefinitions()
+        taskGenerations()
     }
 }

@@ -330,6 +330,10 @@ export function useTaskExecution(
 
   /**
    * タスク実行を一括生成
+   *
+   * @note バックエンドは生成されたTaskExecutionのIDのみを返します。
+   *       生成後にタスク一覧を最新化したい場合は、別途fetchTaskExecutionsを呼び出してください。
+   * @see docs/BACKEND_ISSUES.md - 4. APIエンドポイントの命名不整合
    */
   const generateTasks = useCallback(
     async (targetDate: string): Promise<boolean> => {
@@ -337,16 +341,15 @@ export function useTaskExecution(
       setError(null)
 
       try {
-        const response = await generateTaskExecutions({ targetDate })
-        const newTaskExecs = response.generatedExecutions.map(responseToTaskExecution)
+        const response = await generateTaskExecutions(targetDate)
 
-        // 既存のタスクと重複しないように追加
-        setTaskExecutions((prev) => {
-          const existingIds = new Set(prev.map((t) => t.id))
-          const uniqueNewTasks = newTaskExecs.filter((t) => !existingIds.has(t.id))
-          return [...prev, ...uniqueNewTasks]
-        })
+        // バックエンドはIDのみを返すため、生成成功をログに記録
+        console.log(
+          `${response.generatedCount}件のタスクを生成しました (${response.targetDate})`
+        )
 
+        // 生成されたタスクをリストに追加する場合は、fetchTaskExecutionsで再取得が必要
+        // ここでは生成成功のみを返す
         return true
       } catch (err) {
         handleError(err, 'タスクの生成に失敗しました')

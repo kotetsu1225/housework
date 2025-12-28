@@ -1,15 +1,24 @@
-import { useState } from 'react'
+/**
+ * 新規登録ページ
+ *
+ * 新しいメンバーを作成するためのフォームを提供
+ * @see backend/src/main/kotlin/com/task/presentation/Members.kt
+ */
+
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { UserPlus } from 'lucide-react'
+import { clsx } from 'clsx'
 import { Header } from '../components/layout/Header'
 import { PageContainer } from '../components/layout/PageContainer'
 import { Card } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
+import { Alert } from '../components/ui/Alert'
 import { useAuth } from '../contexts/AuthContext'
 import type { FamilyRole } from '../types'
-import { clsx } from 'clsx'
 
+/** 役割選択オプション */
 const roleOptions: { value: FamilyRole; label: string; icon: string }[] = [
   { value: 'FATHER', label: '父', icon: '/familyIcons/father.svg.jpg' },
   { value: 'MOTHER', label: '母', icon: '/familyIcons/mother.svg.jpg' },
@@ -19,33 +28,39 @@ const roleOptions: { value: FamilyRole; label: string; icon: string }[] = [
 
 export function Register() {
   const navigate = useNavigate()
-  const { register } = useAuth()
+  const { register, loading, error, clearError } = useAuth()
   const [name, setName] = useState('')
   const [selectedRole, setSelectedRole] = useState<FamilyRole>('FATHER')
-  const [error, setError] = useState('')
-  const [isLoading, setIsLoading] = useState(false)
+  const [localError, setLocalError] = useState('')
 
   const selectedRoleOption = roleOptions.find((r) => r.value === selectedRole)
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // コンポーネントマウント時にエラーをクリア
+  useEffect(() => {
+    clearError()
+  }, [clearError])
+
+  /**
+   * 登録フォーム送信ハンドラー
+   */
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setError('')
+    setLocalError('')
 
     if (!name.trim()) {
-      setError('名前を入力してください')
+      setLocalError('名前を入力してください')
       return
     }
 
-    setIsLoading(true)
-    try {
-      register(name.trim(), selectedRole)
+    const success = await register(name.trim(), selectedRole)
+
+    if (success) {
       navigate('/')
-    } catch {
-      setError('登録に失敗しました')
-    } finally {
-      setIsLoading(false)
     }
   }
+
+  // エラーメッセージ（ローカルエラーまたはAPIエラー）
+  const displayError = localError || error
 
   return (
     <>
@@ -60,13 +75,19 @@ export function Register() {
                 <h2 className="text-lg font-bold text-white">アカウント作成</h2>
               </div>
 
+              {displayError && (
+                <Alert variant="error" className="mb-4">
+                  {displayError}
+                </Alert>
+              )}
+
               <form onSubmit={handleSubmit} className="space-y-6">
                 <Input
                   label="名前"
                   placeholder="名前を入力"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  error={error}
+                  disabled={loading}
                 />
 
                 <div>
@@ -79,11 +100,13 @@ export function Register() {
                         key={role.value}
                         type="button"
                         onClick={() => setSelectedRole(role.value)}
+                        disabled={loading}
                         className={clsx(
                           'p-4 rounded-xl border-2 transition-all duration-200',
                           selectedRole === role.value
                             ? 'border-coral-500 bg-coral-500/10'
-                            : 'border-dark-700 bg-dark-800 hover:border-dark-600'
+                            : 'border-dark-700 bg-dark-800 hover:border-dark-600',
+                          loading && 'opacity-50 cursor-not-allowed'
                         )}
                       >
                         <div className="flex flex-col items-center gap-2">
@@ -112,7 +135,8 @@ export function Register() {
                   type="submit"
                   variant="primary"
                   className="w-full"
-                  loading={isLoading}
+                  loading={loading}
+                  disabled={!name.trim()}
                 >
                   登録する
                 </Button>
@@ -123,6 +147,7 @@ export function Register() {
                     type="button"
                     onClick={() => navigate('/login')}
                     className="text-coral-400 hover:text-coral-300"
+                    disabled={loading}
                   >
                     ログイン
                   </button>

@@ -2,10 +2,13 @@
  * ダッシュボードページ
  *
  * 今日のタスク一覧と進捗サマリーを表示するホーム画面
- * @see docs/TASK_EXECUTION_API.md
+ *
+ * @note TaskExecution APIはバックエンドで未実装のため、現在はモックデータを使用しています。
+ *       バックエンドのTaskExecutions Presentation層が実装されると、実際のAPIを呼び出すようになります。
+ * @see docs/BACKEND_ISSUES.md - 1. TaskExecutions Presentation層の欠落
  */
 
-import { useEffect, useMemo, useCallback } from 'react'
+import { useEffect, useMemo, useCallback, useState } from 'react'
 import { RefreshCw } from 'lucide-react'
 import { Header } from '../components/layout/Header'
 import { PageContainer } from '../components/layout/PageContainer'
@@ -19,8 +22,17 @@ import {
 import { useTaskExecution, useMember } from '../hooks'
 import { useAuth } from '../contexts'
 import { formatJa, toISODateString } from '../utils'
-import { MOCK_TASK_EXECUTIONS, MOCK_MEMBERS } from '../mocks'
+import { MOCK_TASK_EXECUTIONS } from '../mocks'
 import type { TaskExecution, Member } from '../types'
+
+/**
+ * バックエンドのTaskExecution APIが実装されているかどうかのフラグ
+ *
+ * @note バックエンドのTaskExecutions Presentation層が実装されたら、
+ *       このフラグをtrueに変更してください。
+ * @see docs/BACKEND_ISSUES.md
+ */
+const USE_REAL_TASK_EXECUTION_API = false
 
 /**
  * メンバーIDからメンバー情報を取得するヘルパー
@@ -64,14 +76,14 @@ function calculateMemberTaskSummary(
 
 /**
  * ダッシュボードページ
- *
- * @note 現在はモックデータを使用。バックエンドAPI実装後、
- *       useEffect内のfetchTaskExecutions呼び出しを有効化する。
  */
 export function Dashboard() {
   const today = new Date()
   const todayStr = toISODateString(today)
   const { user } = useAuth()
+
+  // API未実装時のモックデータ使用フラグ
+  const [usingMockData, setUsingMockData] = useState(!USE_REAL_TASK_EXECUTION_API)
 
   // タスク実行管理フック
   const {
@@ -85,31 +97,42 @@ export function Dashboard() {
     clearError: clearTaskError,
   } = useTaskExecution()
 
-  // メンバー管理フック
+  // メンバー管理フック（Member APIは実装済み）
   const {
     members,
     loading: membersLoading,
     error: membersError,
     fetchMembers,
-    setMembers,
     clearError: clearMemberError,
   } = useMember()
 
   const loading = tasksLoading || membersLoading
   const error = tasksError || membersError
 
-  // 初回マウント時にデータを取得
+  /**
+   * 初回マウント時にデータを取得
+   */
   useEffect(() => {
-    // TODO: バックエンドAPI実装後、以下のコメントを解除
-    // fetchTaskExecutions({ date: todayStr })
-    // fetchMembers()
+    // Member APIは実装済みなので、実際のAPIを呼び出す
+    fetchMembers()
 
-    // 現在はモックデータを使用
-    setTaskExecutions(MOCK_TASK_EXECUTIONS.filter((t) => t.scheduledDate === todayStr))
-    setMembers(MOCK_MEMBERS)
-  }, [todayStr, setTaskExecutions, setMembers])
+    if (USE_REAL_TASK_EXECUTION_API) {
+      // TaskExecution APIが実装されている場合
+      fetchTaskExecutions({ date: todayStr })
+      setUsingMockData(false)
+    } else {
+      // TaskExecution APIが未実装の場合、モックデータを使用
+      const todayMockTasks = MOCK_TASK_EXECUTIONS.filter(
+        (t) => t.scheduledDate === todayStr
+      )
+      setTaskExecutions(todayMockTasks)
+      setUsingMockData(true)
+    }
+  }, [todayStr, fetchMembers, fetchTaskExecutions, setTaskExecutions])
 
-  // エラー自動クリア
+  /**
+   * エラー自動クリア（5秒後）
+   */
   useEffect(() => {
     if (error) {
       const timer = setTimeout(() => {
@@ -139,48 +162,92 @@ export function Dashboard() {
     [members, taskExecutions]
   )
 
-  // データ再取得
+  /**
+   * データ再取得ハンドラー
+   */
   const handleRefresh = useCallback(async () => {
-    // TODO: バックエンドAPI実装後、以下のコメントを解除
-    // await Promise.all([
-    //   fetchTaskExecutions({ date: todayStr }),
-    //   fetchMembers(),
-    // ])
+    // Member APIを再取得
+    await fetchMembers()
 
-    // 現在はモックデータをリセット
-    setTaskExecutions(MOCK_TASK_EXECUTIONS.filter((t) => t.scheduledDate === todayStr))
-    setMembers(MOCK_MEMBERS)
-  }, [todayStr, setTaskExecutions, setMembers])
+    if (USE_REAL_TASK_EXECUTION_API) {
+      await fetchTaskExecutions({ date: todayStr })
+    } else {
+      // モックデータをリセット
+      const todayMockTasks = MOCK_TASK_EXECUTIONS.filter(
+        (t) => t.scheduledDate === todayStr
+      )
+      setTaskExecutions(todayMockTasks)
+    }
+  }, [todayStr, fetchMembers, fetchTaskExecutions, setTaskExecutions])
 
-  // ステータスアイコンクリック時の処理
+  /**
+   * ステータスアイコンクリック時の処理
+   *
+   * @note TaskExecution APIが未実装のため、現在はローカル状態のみ更新します。
+   *       APIが実装されると、バックエンドと同期されます。
+   */
   const handleStatusClick = useCallback(
     async (task: TaskExecution) => {
       if (!user) return
 
-      switch (task.status) {
-        case 'NOT_STARTED':
-          // 未着手 → 開始
-          await startTask(task.id, user.id)
-          break
-        case 'IN_PROGRESS':
-          // 実行中 → 完了
-          await completeTask(task.id, user.id)
-          break
-        default:
-          // COMPLETED, CANCELLED は何もしない
-          break
+      if (USE_REAL_TASK_EXECUTION_API) {
+        // 実際のAPIを呼び出す
+        switch (task.status) {
+          case 'NOT_STARTED':
+            await startTask(task.id, user.id)
+            break
+          case 'IN_PROGRESS':
+            await completeTask(task.id, user.id)
+            break
+          default:
+            break
+        }
+      } else {
+        // モックモード: ローカル状態のみ更新
+        setTaskExecutions((prev) =>
+          prev.map((t) => {
+            if (t.id !== task.id) return t
+
+            switch (t.status) {
+              case 'NOT_STARTED':
+                return {
+                  ...t,
+                  status: 'IN_PROGRESS' as const,
+                  assigneeMemberId: user.id,
+                  startedAt: new Date().toISOString(),
+                  taskSnapshot: {
+                    ...t.taskSnapshot,
+                    createdAt: new Date().toISOString(),
+                  },
+                }
+              case 'IN_PROGRESS':
+                return {
+                  ...t,
+                  status: 'COMPLETED' as const,
+                  completedAt: new Date().toISOString(),
+                  completedByMemberId: user.id,
+                }
+              default:
+                return t
+            }
+          })
+        )
       }
     },
-    [user, startTask, completeTask]
+    [user, startTask, completeTask, setTaskExecutions]
   )
 
-  // タスクカードクリック時の処理
+  /**
+   * タスクカードクリック時の処理
+   */
   const handleTaskClick = useCallback((task: TaskExecution) => {
     // TODO: タスク詳細画面への遷移を実装
     console.log('Task clicked:', task.id)
   }, [])
 
-  // メンバーカードクリック時の処理
+  /**
+   * メンバーカードクリック時の処理
+   */
   const handleMemberClick = useCallback((member: Member) => {
     // TODO: メンバー詳細画面への遷移を実装
     console.log('Member clicked:', member.id)
@@ -203,6 +270,13 @@ export function Dashboard() {
         }
       />
       <PageContainer>
+        {/* 開発用: モックデータ使用時の通知 */}
+        {usingMockData && (
+          <Alert variant="info" className="mb-4">
+            タスクデータはモックを使用しています（バックエンドAPI未実装）
+          </Alert>
+        )}
+
         {/* エラーメッセージ */}
         {error && (
           <Alert variant="error" className="mb-4">

@@ -1,4 +1,11 @@
-import { useState } from 'react'
+/**
+ * ログインページ
+ *
+ * 既存のメンバーとしてログインするためのフォームを提供
+ * @see backend/src/main/kotlin/com/task/presentation/Members.kt
+ */
+
+import { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { LogIn } from 'lucide-react'
 import { Header } from '../components/layout/Header'
@@ -6,37 +13,44 @@ import { PageContainer } from '../components/layout/PageContainer'
 import { Card } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
+import { Alert } from '../components/ui/Alert'
 import { useAuth } from '../contexts/AuthContext'
 
 export function Login() {
   const navigate = useNavigate()
   const location = useLocation()
-  const { login } = useAuth()
+  const { login, loading, error, clearError } = useAuth()
   const [name, setName] = useState('')
-  const [error, setError] = useState('')
-  const [isLoading, setIsLoading] = useState(false)
+  const [localError, setLocalError] = useState('')
 
   const from = (location.state as { from?: { pathname: string } })?.from?.pathname || '/'
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // コンポーネントマウント時にエラーをクリア
+  useEffect(() => {
+    clearError()
+  }, [clearError])
+
+  /**
+   * ログインフォーム送信ハンドラー
+   */
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setError('')
+    setLocalError('')
 
     if (!name.trim()) {
-      setError('名前を入力してください')
+      setLocalError('名前を入力してください')
       return
     }
 
-    setIsLoading(true)
-    const success = login(name.trim())
-    setIsLoading(false)
+    const success = await login(name.trim())
 
     if (success) {
       navigate(from, { replace: true })
-    } else {
-      setError('ユーザーが見つかりませんでした')
     }
   }
+
+  // エラーメッセージ（ローカルエラーまたはAPI エラー）
+  const displayError = localError || error
 
   return (
     <>
@@ -51,20 +65,27 @@ export function Login() {
                 <h2 className="text-lg font-bold text-white">ログイン</h2>
               </div>
 
+              {displayError && (
+                <Alert variant="error" className="mb-4">
+                  {displayError}
+                </Alert>
+              )}
+
               <form onSubmit={handleSubmit} className="space-y-6">
                 <Input
                   label="名前"
                   placeholder="登録した名前を入力"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  error={error}
+                  disabled={loading}
                 />
 
                 <Button
                   type="submit"
                   variant="primary"
                   className="w-full"
-                  loading={isLoading}
+                  loading={loading}
+                  disabled={!name.trim()}
                 >
                   ログイン
                 </Button>
@@ -75,6 +96,7 @@ export function Login() {
                     type="button"
                     onClick={() => navigate('/register')}
                     className="text-coral-400 hover:text-coral-300"
+                    disabled={loading}
                   >
                     新規登録
                   </button>

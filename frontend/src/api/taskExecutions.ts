@@ -12,7 +12,6 @@ import type {
   StartTaskExecutionRequest,
   CompleteTaskExecutionRequest,
   AssignTaskExecutionRequest,
-  GenerateTaskExecutionsRequest,
   GenerateTaskExecutionsResponse,
 } from '../types/api'
 
@@ -198,28 +197,54 @@ export async function assignTaskExecution(
 
 /**
  * 指定日のTaskExecutionを一括生成する
- * POST /api/task-executions/generate
+ * POST /api/task-generations/daily/{date}
  *
- * @param request - 生成リクエスト（対象日）
- * @returns 生成されたTaskExecution一覧と件数
+ * @param targetDate - 対象日（YYYY-MM-DD形式）
+ * @returns 生成されたTaskExecution IDリストと件数
+ *
+ * @note この操作は冪等です。同じ日付で複数回呼び出しても、
+ *       既に存在するTaskExecutionは再生成されません。
+ *
+ * @note バックエンドは `/api/task-generations/daily/{date}` を使用しています。
+ *       将来的に `/api/task-executions/generate` に統一される可能性があります。
+ *       @see docs/BACKEND_ISSUES.md - 4. APIエンドポイントの命名不整合
+ *
+ * @example
+ * ```typescript
+ * const { generatedCount, taskExecutionIds, targetDate } = await generateTaskExecutions('2024-12-27')
+ * console.log(`${generatedCount}件のタスクを生成しました`)
+ * ```
+ */
+export async function generateTaskExecutions(
+  targetDate: string
+): Promise<GenerateTaskExecutionsResponse> {
+  // バックエンドの実際のエンドポイントを使用
+  // POST /api/task-generations/daily/{date}
+  return apiPost<GenerateTaskExecutionsResponse, Record<string, never>>(
+    `/task-generations/daily/${targetDate}`,
+    {}
+  )
+}
+
+/**
+ * 当日のTaskExecutionを一括生成する
+ * POST /api/task-generations/daily
+ *
+ * @returns 生成されたTaskExecution IDリストと件数
  *
  * @note この操作は冪等です。同じ日付で複数回呼び出しても、
  *       既に存在するTaskExecutionは再生成されません。
  *
  * @example
  * ```typescript
- * const { generatedExecutions, count } = await generateTaskExecutions({
- *   targetDate: '2024-12-27'
- * })
- * console.log(`${count}件のタスクを生成しました`)
+ * const { generatedCount, taskExecutionIds, targetDate } = await generateTodayTaskExecutions()
+ * console.log(`${generatedCount}件のタスクを生成しました`)
  * ```
  */
-export async function generateTaskExecutions(
-  request: GenerateTaskExecutionsRequest
-): Promise<GenerateTaskExecutionsResponse> {
-  return apiPost<GenerateTaskExecutionsResponse, GenerateTaskExecutionsRequest>(
-    '/task-executions/generate',
-    request
+export async function generateTodayTaskExecutions(): Promise<GenerateTaskExecutionsResponse> {
+  return apiPost<GenerateTaskExecutionsResponse, Record<string, never>>(
+    '/task-generations/daily',
+    {}
   )
 }
 

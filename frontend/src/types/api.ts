@@ -361,19 +361,20 @@ export interface AssignTaskExecutionRequest {
 }
 
 /**
- * TaskExecution一括生成リクエスト
- * POST /api/task-executions/generate
- */
-export interface GenerateTaskExecutionsRequest {
-  targetDate: string // YYYY-MM-DD format
-}
-
-/**
  * TaskExecution一括生成レスポンス
+ * POST /api/task-generations/daily または POST /api/task-generations/daily/{date}
+ *
+ * @note バックエンドは `/api/task-generations/` エンドポイントを使用しています。
+ *       @see docs/BACKEND_ISSUES.md - 4. APIエンドポイントの命名不整合
+ * @see backend/src/main/kotlin/com/task/presentation/TaskGenerations.kt
  */
 export interface GenerateTaskExecutionsResponse {
-  generatedExecutions: TaskExecutionResponse[]
-  count: number
+  /** 生成されたTaskExecutionの件数 */
+  generatedCount: number
+  /** 生成されたTaskExecutionのID一覧 */
+  taskExecutionIds: string[]
+  /** 対象日（YYYY-MM-DD形式） */
+  targetDate: string
 }
 
 // ==========================================

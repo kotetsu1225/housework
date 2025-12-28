@@ -34,6 +34,7 @@ export {
   cancelTaskExecution,
   assignTaskExecution,
   generateTaskExecutions,
+  generateTodayTaskExecutions,
 } from './taskExecutions'
 export type { GetTaskExecutionsOptions } from './taskExecutions'
 

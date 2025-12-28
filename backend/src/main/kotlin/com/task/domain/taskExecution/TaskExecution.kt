@@ -55,6 +55,10 @@ sealed class TaskExecution {
             )
         }
 
+        fun assign(
+            newAssigneeMemberId: MemberId
+        ): NotStarted{
+            return copy(assigneeMemberId = newAssigneeMemberId)
         fun cancelByDefinitionDeletion(): Cancelled {
             return Cancelled(
                 id = this.id,

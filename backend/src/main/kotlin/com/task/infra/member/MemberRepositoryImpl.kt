@@ -6,6 +6,7 @@ import com.task.domain.member.Member
 import com.task.domain.member.MemberId
 import com.task.domain.member.MemberName
 import com.task.domain.member.MemberRepository
+import com.task.domain.member.PasswordHash
 import com.task.infra.database.jooq.tables.Members.Companion.MEMBERS
 import com.task.infra.database.jooq.tables.records.MembersRecord
 import org.jooq.DSLContext
@@ -20,6 +21,7 @@ class MemberRepositoryImpl : MemberRepository {
         record.id = member.id.value
         record.name = member.name.value
         record.role = member.familyRole.value
+        record.passwordHash = member.password.value
         record.createdAt = OffsetDateTime.now()
         record.updatedAt = OffsetDateTime.now()
 
@@ -33,6 +35,7 @@ class MemberRepositoryImpl : MemberRepository {
             .update(MEMBERS)
             .set(MEMBERS.NAME, member.name.value)
             .set(MEMBERS.ROLE, member.familyRole.value)
+            .set(MEMBERS.PASSWORD_HASH, member.password.value)
             .set(MEMBERS.UPDATED_AT, OffsetDateTime.now())
             .where(MEMBERS.ID.eq(member.id.value))
             .execute()
@@ -45,6 +48,15 @@ class MemberRepositoryImpl : MemberRepository {
         val record = session
             .selectFrom(MEMBERS)
             .where(MEMBERS.ID.eq(id.value))
+            .fetchOne()
+
+        return record?.toDomain()
+    }
+
+    override fun findByName(name: MemberName, session: DSLContext): Member? {
+        val record = session
+            .selectFrom(MEMBERS)
+            .where(MEMBERS.NAME.eq(name.value))
             .fetchOne()
 
         return record?.toDomain()
@@ -72,7 +84,8 @@ class MemberRepositoryImpl : MemberRepository {
         return Member.reconstruct(
             id = MemberId(this.id!!),
             name = MemberName(this.name),
-            familyRole = FamilyRole.get(this.role)
+            familyRole = FamilyRole.get(this.role),
+            password = PasswordHash(this.passwordHash),
         )
     }
 }

@@ -6,6 +6,7 @@ class Member private constructor(
     val id: MemberId,
     val name: MemberName,
     val familyRole: FamilyRole,
+    val password: PasswordHash,
 ) {
     fun updateName(newName: MemberName, existingMembersName: List<MemberName>): Member {
         validateNoDuplicationExistingMembersName(existingMembersName, newName)
@@ -13,7 +14,8 @@ class Member private constructor(
         return Member(
             id = this.id,
             name = newName,
-            familyRole = this.familyRole
+            familyRole = this.familyRole,
+            password = this.password,
         )
     }
 
@@ -21,7 +23,8 @@ class Member private constructor(
         return Member(
             id = this.id,
             name = this.name,
-            familyRole = newRole
+            familyRole = newRole,
+            password = this.password,
         )
     }
 
@@ -29,6 +32,7 @@ class Member private constructor(
         fun create(
             name: MemberName,
             familyRole: FamilyRole,
+            password: PasswordHash,
             existingMembersName: List<MemberName>
         ): Member {
             validateNoDuplicationExistingMembersName(existingMembersName, name)
@@ -37,6 +41,7 @@ class Member private constructor(
                 id = MemberId.generate(),
                 name = name,
                 familyRole = familyRole,
+                password = password,
             )
         }
 
@@ -44,11 +49,13 @@ class Member private constructor(
             id: MemberId,
             name: MemberName,
             familyRole: FamilyRole,
+            password: PasswordHash,
         ): Member {
             return Member(
                 id = id,
                 name = name,
                 familyRole = familyRole,
+                password = password,
             )
         }
 
@@ -95,5 +102,22 @@ enum class FamilyRole(val value: String) {
         MOTHER -> "母"
         SISTER -> "妹"
         BROTHER -> "兄"
+    }
+}
+
+@JvmInline
+value class PlainPassword(val value: String) {
+    init {
+        require(value.length >= 5) { "パスワードは5文字以上である必要があります" }
+        require(value.length <= 72) { "パスワードは72文字以下である必要があります" }
+    }
+}
+
+@JvmInline
+value class PasswordHash(val value: String) {
+    init {
+        require(value.isNotBlank()) {
+            "パスワードハッシュは必須です。"
+        }
     }
 }

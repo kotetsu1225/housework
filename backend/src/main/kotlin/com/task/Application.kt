@@ -5,6 +5,7 @@ import com.task.presentation.guiceInjectorKey
 import com.task.presentation.members
 import com.task.presentation.memberAvailabilities
 import com.task.presentation.taskDefinitions
+import com.task.presentation.taskExecutions
 import com.task.presentation.taskGenerations
 import com.task.scheduler.DailyTaskGenerationScheduler
 import com.task.usecase.task.GenerateDailyExecutionsUseCase
@@ -86,6 +87,7 @@ fun Application.module() {
         members()
         memberAvailabilities()
         taskDefinitions()
+        taskExecutions()
         taskGenerations()
     }
 }

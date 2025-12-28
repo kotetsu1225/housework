@@ -54,6 +54,12 @@ sealed class TaskExecution {
                 cancelledAt = Instant.now()
             )
         }
+
+        fun assign(
+            newAssigneeMemberId: MemberId
+        ): NotStarted{
+            return copy(assigneeMemberId = newAssigneeMemberId)
+        }
     }
 
     data class InProgress(

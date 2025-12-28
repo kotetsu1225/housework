@@ -4,6 +4,9 @@ import java.time.DayOfWeek
 import java.time.LocalDate
 
 sealed class TaskSchedule {
+
+    abstract fun isShouldCarryOut(date: LocalDate): Boolean
+
     data class Recurring(
         val pattern: RecurrencePattern,
         val startDate: LocalDate,
@@ -16,21 +19,50 @@ sealed class TaskSchedule {
                 }
             }
         }
+        override fun isShouldCarryOut(date: LocalDate): Boolean {
+            if (date < startDate) {
+                return false
+            }
+
+            if (endDate != null && date > endDate) {
+                return false
+            }
+
+            return pattern.matchesDate(date)
+        }
     }
 
     data class OneTime(
         val deadline: LocalDate
-    ) : TaskSchedule()
+    ) : TaskSchedule() {
+        override fun isShouldCarryOut(date: LocalDate): Boolean{
+            return false
+        }
+    }
 }
 
 sealed class RecurrencePattern {
+    abstract fun matchesDate(date: LocalDate): Boolean
+
     data class Daily(
         val skipWeekends: Boolean
-    ) : RecurrencePattern()
+    ) : RecurrencePattern() {
+        override fun matchesDate(date: LocalDate): Boolean {
+            if (skipWeekends) {
+                val dayOfWeek = date.dayOfWeek
+                return dayOfWeek != DayOfWeek.SATURDAY && dayOfWeek != DayOfWeek.SUNDAY
+            }
+            return true
+        }
+    }
 
     data class Weekly(
         val dayOfWeek: DayOfWeek
-    ) : RecurrencePattern()
+    ) : RecurrencePattern() {
+        override fun matchesDate(date: LocalDate): Boolean {
+            return date.dayOfWeek == dayOfWeek
+        }
+    }
 
     data class Monthly(
         val dayOfMonth: Int
@@ -40,6 +72,11 @@ sealed class RecurrencePattern {
                 "dayOfMonthは1以上28以下である必要があります: $dayOfMonth"
             }
         }
+
+        override fun matchesDate(date: LocalDate): Boolean {
+            return date.dayOfMonth == dayOfMonth
+        }
+
     }
 }
 

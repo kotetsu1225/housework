@@ -10,7 +10,6 @@ import java.time.Instant
 interface CompleteTaskExecutionUseCase {
     data class Input(
         val id: TaskExecutionId,
-        val taskDefinitionId: TaskDefinitionId,
         val completedMemberId: MemberId,
     )
 

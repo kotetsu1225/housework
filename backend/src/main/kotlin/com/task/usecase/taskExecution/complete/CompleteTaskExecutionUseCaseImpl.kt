@@ -17,10 +17,10 @@ class CompleteTaskExecutionUseCaseImpl @Inject constructor(
 
     override fun execute(input: CompleteTaskExecutionUseCase.Input): CompleteTaskExecutionUseCase.Output {
         return database.withTransaction { session ->
-            val taskDefinition = taskDefinitionRepository.findById(input.taskDefinitionId, session)
-                ?: throw IllegalArgumentException("タスク定義が見つかりません。:${input.taskDefinitionId}")
             val taskExecution = taskExecutionRepository.findById(input.id, session)
-                ?: throw IllegalArgumentException("タスク実行が見つかりません。:${input.id}")
+                ?: throw IllegalArgumentException("タスク実行が見つかりません: ${input.id}")
+            val taskDefinition = taskDefinitionRepository.findById(taskExecution.taskDefinitionId, session)
+                ?: throw IllegalArgumentException("タスク定義が見つかりません: ${taskExecution.taskDefinitionId}")
 
             val completedExecution = when(taskExecution){
                 is TaskExecution.InProgress -> {

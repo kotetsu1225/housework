@@ -5,12 +5,14 @@
  * @see backend/src/main/kotlin/com/task/presentation/Members.kt
  */
 
-import { apiPost } from './client'
+import { apiGet, apiPost } from './client'
 import type {
   CreateMemberRequest,
   CreateMemberResponse,
   UpdateMemberRequest,
   UpdateMemberResponse,
+  GetMembersResponse,
+  MemberResponse,
 } from '../types/api'
 
 /**
@@ -69,21 +71,32 @@ export async function updateMember(
 
 /**
  * メンバー一覧を取得する
+ * GET /api/member
  *
- * @note バックエンドにGETエンドポイントが存在しないため、現在は使用不可
- * @see docs/BACKEND_ISSUES.md - 問題3: GETエンドポイントの欠如
+ * @returns メンバー一覧
+ *
+ * @example
+ * ```typescript
+ * const { members } = await getMembers()
+ * ```
  */
-// export async function getMembers(): Promise<GetMembersResponse> {
-//   return apiGet<GetMembersResponse>('/member')
-// }
+export async function getMembers(): Promise<GetMembersResponse> {
+  return apiGet<GetMembersResponse>('/member')
+}
 
 /**
  * 個別メンバーを取得する
+ * GET /api/member/{memberId}
  *
- * @note バックエンドにGETエンドポイントが存在しないため、現在は使用不可
- * @see docs/BACKEND_ISSUES.md - 問題3: GETエンドポイントの欠如
+ * @param memberId - 取得対象のメンバーID
+ * @returns メンバー情報
+ *
+ * @example
+ * ```typescript
+ * const member = await getMember('uuid')
+ * ```
  */
-// export async function getMember(memberId: string): Promise<MemberResponse> {
-//   return apiGet<MemberResponse>(`/member/${memberId}`)
-// }
+export async function getMember(memberId: string): Promise<MemberResponse> {
+  return apiGet<MemberResponse>(`/member/${memberId}`)
+}
 

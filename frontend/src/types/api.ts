@@ -144,6 +144,21 @@ export interface DeleteMemberAvailabilitySlotsResponse {
   slots: TimeSlotResponse[]
 }
 
+/**
+ * メンバー別空き時間一覧取得レスポンス
+ * GET /api/member-availabilities/member/{memberId}
+ */
+export interface GetMemberAvailabilitiesResponse {
+  availabilities: MemberAvailabilityResponse[]
+}
+
+export interface MemberAvailabilityResponse {
+  id: string
+  memberId: string
+  targetDate: string
+  slots: TimeSlotResponse[]
+}
+
 // ==========================================
 // TaskDefinition API Types
 // ==========================================
@@ -253,6 +268,112 @@ export interface DeleteTaskDefinitionResponse {
   ownerMemberId?: string | null
   schedule: ScheduleDto
   version: number
+}
+
+/**
+ * タスク定義一覧取得レスポンス
+ * GET /api/task-definitions
+ */
+export interface GetTaskDefinitionsResponse {
+  taskDefinitions: TaskDefinitionResponse[]
+  total: number
+  hasMore: boolean
+}
+
+export interface TaskDefinitionResponse {
+  id: string
+  name: string
+  description: string
+  estimatedMinutes: number
+  scope: string
+  ownerMemberId?: string | null
+  schedule: ScheduleDto
+  version: number
+}
+
+// ==========================================
+// TaskExecution API Types
+// ==========================================
+
+/**
+ * TaskExecution一覧取得レスポンス
+ * GET /api/task-executions
+ * @see docs/TASK_EXECUTION_API.md
+ */
+export interface GetTaskExecutionsResponse {
+  taskExecutions: TaskExecutionResponse[]
+  total: number
+  hasMore: boolean
+}
+
+/**
+ * TaskExecutionレスポンス
+ * 単一取得・一覧取得の共通型
+ */
+export interface TaskExecutionResponse {
+  id: string
+  taskDefinitionId: string
+  assigneeMemberId: string | null
+  scheduledDate: string // YYYY-MM-DD format
+  status: 'NOT_STARTED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED'
+  taskSnapshot: TaskSnapshotResponse | null // NOT_STARTEDの場合はnull
+  startedAt: string | null // ISO8601 format
+  completedAt: string | null
+  completedByMemberId: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+/**
+ * TaskSnapshotレスポンス
+ * タスク開始時点の凍結情報
+ */
+export interface TaskSnapshotResponse {
+  name: string
+  description: string | null
+  estimatedMinutes: number
+  definitionVersion: number
+  createdAt: string
+}
+
+/**
+ * TaskExecution開始リクエスト
+ * POST /api/task-executions/{id}/start
+ */
+export interface StartTaskExecutionRequest {
+  memberId: string
+}
+
+/**
+ * TaskExecution完了リクエスト
+ * POST /api/task-executions/{id}/complete
+ */
+export interface CompleteTaskExecutionRequest {
+  memberId: string
+}
+
+/**
+ * TaskExecution担当者割り当てリクエスト
+ * POST /api/task-executions/{id}/assign
+ */
+export interface AssignTaskExecutionRequest {
+  memberId: string
+}
+
+/**
+ * TaskExecution一括生成リクエスト
+ * POST /api/task-executions/generate
+ */
+export interface GenerateTaskExecutionsRequest {
+  targetDate: string // YYYY-MM-DD format
+}
+
+/**
+ * TaskExecution一括生成レスポンス
+ */
+export interface GenerateTaskExecutionsResponse {
+  generatedExecutions: TaskExecutionResponse[]
+  count: number
 }
 
 // ==========================================

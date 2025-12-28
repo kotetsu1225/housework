@@ -4,8 +4,9 @@
  * 空き時間の取得・作成・更新・削除機能を提供
  */
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, type SetStateAction } from 'react'
 import {
+  getMemberAvailabilities,
   createMemberAvailability,
   updateMemberAvailability,
   deleteMemberAvailabilitySlots,
@@ -54,6 +55,10 @@ interface UseMemberAvailabilityState {
  */
 interface UseMemberAvailabilityActions {
   /**
+   * メンバーの空き時間一覧をAPIから取得
+   */
+  fetchAvailabilities: (memberId: string) => Promise<void>
+  /**
    * 空き時間を作成
    */
   addAvailability: (
@@ -76,9 +81,9 @@ interface UseMemberAvailabilityActions {
     slots: TimeSlotRequest[]
   ) => Promise<boolean>
   /**
-   * 空き時間一覧をセット（初期データ設定用）
+   * 空き時間一覧をセット（手動データ設定用）
    */
-  setAvailabilities: (availabilities: MemberAvailability[]) => void
+  setAvailabilities: (value: SetStateAction<MemberAvailability[]>) => void
   /**
    * エラーをクリア
    */
@@ -115,6 +120,41 @@ export function useMemberAvailability(
   )
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  /**
+   * メンバーの空き時間一覧をAPIから取得
+   */
+  const fetchAvailabilities = useCallback(async (memberId: string): Promise<void> => {
+    setLoading(true)
+    setError(null)
+
+    try {
+      const response = await getMemberAvailabilities(memberId)
+
+      const fetchedAvailabilities: MemberAvailability[] = response.availabilities.map((a) => ({
+        id: a.id,
+        memberId: a.memberId,
+        targetDate: a.targetDate,
+        slots: a.slots.map((slot) => ({
+          startTime: slot.startTime,
+          endTime: slot.endTime,
+          memo: slot.memo,
+        })),
+      }))
+
+      setAvailabilities(fetchedAvailabilities)
+    } catch (err) {
+      if (err instanceof ApiError) {
+        setError(err.message)
+      } else if (err instanceof Error) {
+        setError(err.message)
+      } else {
+        setError('空き時間の取得に失敗しました')
+      }
+    } finally {
+      setLoading(false)
+    }
+  }, [])
 
   /**
    * 空き時間を作成
@@ -265,6 +305,7 @@ export function useMemberAvailability(
     availabilities,
     loading,
     error,
+    fetchAvailabilities,
     addAvailability,
     editAvailability,
     removeSlots,

@@ -1,6 +1,6 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { addDays, startOfWeek, isSameDay } from 'date-fns'
-import { ChevronLeft, ChevronRight, Plus, Clock, Trash2 } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Plus, Clock, Trash2, RefreshCw } from 'lucide-react'
 import { Header } from '../components/layout/Header'
 import { PageContainer } from '../components/layout/PageContainer'
 import { Card } from '../components/ui/Card'
@@ -9,9 +9,8 @@ import { Avatar } from '../components/ui/Avatar'
 import { Input } from '../components/ui/Input'
 import { Modal } from '../components/ui/Modal'
 import { Alert } from '../components/ui/Alert'
-import { useMemberAvailability } from '../hooks'
+import { useMember, useMemberAvailability } from '../hooks'
 import { isParentRole, formatJa, toISODateString } from '../utils'
-import { MOCK_MEMBERS, createMockAvailabilities } from '../mocks'
 import type { Member, MemberAvailability, TimeSlot } from '../types'
 import type { TimeSlotRequest } from '../types/api'
 import { clsx } from 'clsx'
@@ -240,16 +239,49 @@ export function Availability() {
     memo: '',
   })
 
+  // メンバー管理フック
+  const { members, fetchMembers, loading: membersLoading } = useMember()
+
   // 空き時間管理フック
   const {
     availabilities,
-    loading,
+    loading: availabilityLoading,
     error,
+    fetchAvailabilities,
     addAvailability,
     removeSlots,
     setAvailabilities,
     clearError,
-  } = useMemberAvailability(createMockAvailabilities())
+  } = useMemberAvailability()
+
+  const loading = membersLoading || availabilityLoading
+
+  // 全メンバーの空き時間を取得
+  const fetchAllAvailabilities = useCallback(async () => {
+    if (members.length === 0) return
+
+    // 各メンバーの空き時間を取得して結合
+    const allAvailabilities: MemberAvailability[] = []
+    for (const member of members) {
+      await fetchAvailabilities(member.id)
+    }
+  }, [members, fetchAvailabilities])
+
+  // 初回マウント時にメンバー一覧を取得
+  useEffect(() => {
+    fetchMembers()
+  }, [fetchMembers])
+
+  // メンバー取得後に空き時間を取得
+  useEffect(() => {
+    if (members.length > 0) {
+      // 最初のメンバーの空き時間を取得（デモ用）
+      // 実際には全メンバー分を取得するか、選択されたメンバー分のみ取得
+      members.forEach(member => {
+        fetchAvailabilities(member.id)
+      })
+    }
+  }, [members, fetchAvailabilities])
 
   // エラー時の自動クリア
   useEffect(() => {
@@ -362,16 +394,34 @@ export function Availability() {
     ])
   }
 
+  /**
+   * データ再取得ハンドラー
+   */
+  const handleRefresh = async () => {
+    await fetchMembers()
+    // メンバー取得後、useEffectでavailabilitiesが再取得される
+  }
+
   return (
     <>
       <Header
         title="空き時間"
         subtitle="家族の予定を管理"
         action={
-          <Button variant="primary" size="sm" onClick={() => setShowAddModal(true)}>
-            <Plus className="w-4 h-4 mr-1" />
-            登録
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={handleRefresh}
+              disabled={loading}
+            >
+              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+            </Button>
+            <Button variant="primary" size="sm" onClick={() => setShowAddModal(true)}>
+              <Plus className="w-4 h-4 mr-1" />
+              登録
+            </Button>
+          </div>
         }
       />
       <PageContainer>
@@ -400,7 +450,7 @@ export function Availability() {
 
           {selectedDateAvailabilities.length > 0 ? (
             <div className="space-y-3">
-              {MOCK_MEMBERS.map((member) => {
+              {members.map((member) => {
                 const memberAvailabilities = selectedDateAvailabilities.filter(
                   (av) => av.memberId === member.id
                 )
@@ -425,28 +475,36 @@ export function Availability() {
         {/* メンバー別サマリー */}
         <section className="mt-8">
           <h2 className="text-lg font-bold text-white mb-4">メンバー別</h2>
-          <div className="grid grid-cols-3 gap-3">
-            {MOCK_MEMBERS.map((member) => (
-              <Card
-                key={member.id}
-                variant="glass"
-                hoverable
-                className="text-center"
-                onClick={() => setSelectedMember(member.id)}
-              >
-                <Avatar
-                  name={member.name}
-                  size="lg"
-                  variant={isParentRole(member.role) ? 'parent' : 'child'}
-                  className="mx-auto mb-2"
-                />
-                <p className="font-medium text-white text-sm">{member.name}</p>
-                <p className="text-xs text-dark-400">
-                  {getTotalSlotsForMember(member.id)}件の登録
-                </p>
-              </Card>
-            ))}
-          </div>
+          {members.length > 0 ? (
+            <div className="grid grid-cols-3 gap-3">
+              {members.map((member) => (
+                <Card
+                  key={member.id}
+                  variant="glass"
+                  hoverable
+                  className="text-center"
+                  onClick={() => setSelectedMember(member.id)}
+                >
+                  <Avatar
+                    name={member.name}
+                    size="lg"
+                    variant={isParentRole(member.role) ? 'parent' : 'child'}
+                    className="mx-auto mb-2"
+                  />
+                  <p className="font-medium text-white text-sm">{member.name}</p>
+                  <p className="text-xs text-dark-400">
+                    {getTotalSlotsForMember(member.id)}件の登録
+                  </p>
+                </Card>
+              ))}
+            </div>
+          ) : (
+            <Card variant="glass" className="text-center py-4">
+              <p className="text-dark-400">
+                {membersLoading ? '読み込み中...' : 'メンバーがいません'}
+              </p>
+            </Card>
+          )}
         </section>
 
         {/* 追加モーダル */}
@@ -483,7 +541,7 @@ export function Availability() {
           )}
 
           <MemberSelector
-            members={MOCK_MEMBERS}
+            members={members}
             selectedMemberId={selectedMember}
             onSelect={setSelectedMember}
           />

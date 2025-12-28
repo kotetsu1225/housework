@@ -6,6 +6,7 @@
 
 import { useState, useCallback } from 'react'
 import {
+  getTaskDefinitions,
   createTaskDefinition,
   updateTaskDefinition,
   deleteTaskDefinition,
@@ -35,6 +36,10 @@ interface UseTaskDefinitionState {
  */
 interface UseTaskDefinitionActions {
   /**
+   * タスク定義一覧をAPIから取得
+   */
+  fetchTaskDefinitions: (limit?: number, offset?: number) => Promise<void>
+  /**
    * タスク定義を追加（ローカル状態 + API）
    */
   addTaskDefinition: (request: CreateTaskDefinitionRequest) => Promise<boolean>
@@ -50,7 +55,7 @@ interface UseTaskDefinitionActions {
    */
   removeTaskDefinition: (id: string) => Promise<boolean>
   /**
-   * タスク定義一覧をセット（初期データ設定用）
+   * タスク定義一覧をセット（手動データ設定用）
    */
   setTaskDefinitions: (taskDefinitions: TaskDefinition[]) => void
   /**
@@ -143,6 +148,50 @@ export function useTaskDefinition(
   )
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  /**
+   * タスク定義一覧をAPIから取得
+   */
+  const fetchTaskDefinitions = useCallback(
+    async (limit?: number, offset?: number): Promise<void> => {
+      setLoading(true)
+      setError(null)
+
+      try {
+        const response = await getTaskDefinitions(limit, offset)
+
+        const fetchedTaskDefs: TaskDefinition[] = response.taskDefinitions.map((td) => {
+          const scheduleInfo = scheduleDtoToTaskDefinition(td.schedule)
+          return {
+            id: td.id,
+            name: td.name,
+            description: td.description,
+            estimatedMinutes: td.estimatedMinutes,
+            scope: td.scope as 'FAMILY' | 'PERSONAL',
+            ownerMemberId: td.ownerMemberId ?? undefined,
+            ...scheduleInfo,
+            version: td.version,
+            isDeleted: false,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          }
+        })
+
+        setTaskDefinitions(fetchedTaskDefs)
+      } catch (err) {
+        if (err instanceof ApiError) {
+          setError(err.message)
+        } else if (err instanceof Error) {
+          setError(err.message)
+        } else {
+          setError('タスク定義の取得に失敗しました')
+        }
+      } finally {
+        setLoading(false)
+      }
+    },
+    []
+  )
 
   /**
    * タスク定義を追加
@@ -278,6 +327,7 @@ export function useTaskDefinition(
     taskDefinitions,
     loading,
     error,
+    fetchTaskDefinitions,
     addTaskDefinition,
     editTaskDefinition,
     removeTaskDefinition,

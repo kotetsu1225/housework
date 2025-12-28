@@ -46,6 +46,12 @@ import com.task.usecase.taskDefinition.update.UpdateTaskDefinitionUseCase
 import com.task.usecase.taskDefinition.update.UpdateTaskDefinitionUseCaseImpl
 import kotlin.jvm.java
 
+import com.task.infra.security.JwtConfig
+import com.task.infra.security.JwtService
+import com.task.usecase.auth.LoginUseCase
+import com.task.usecase.auth.LoginUseCaseImpl
+import com.typesafe.config.ConfigFactory
+
 class AppModule : AbstractModule() {
     override fun configure() {
         bind(Database::class.java).asEagerSingleton()
@@ -80,11 +86,29 @@ class AppModule : AbstractModule() {
 
         bind(DomainEventDispatcher::class.java).to(InMemoryDomainEventDispatcher::class.java)
 
+        // Auth UseCase bindings
+        bind(LoginUseCase::class.java).to(LoginUseCaseImpl::class.java)
+
         val handlerBinder = Multibinder.newSetBinder(
             binder(),
             object : TypeLiteral<DomainEventHandler<*>>() {}
         )
         handlerBinder.addBinding().to(CreateTaskExecutionOnTaskDefinitionCreatedHandler::class.java)
         handlerBinder.addBinding().to(TaskDefinitionDeletedHandler::class.java)
+
+        val appConfig = ConfigFactory.load()
+        val jwtConfig = JwtConfig(
+            secret = appConfig.getString("jwt.secret"),
+            issuer =  appConfig.getString("jwt.issuer"),
+            audience =  appConfig.getString("jwt.audience"),
+            realm =  appConfig.getString("jwt.realm"),
+            expiresInMs =  appConfig.getLong("jwt.expiresInMs")
+        )
+
+        // JwtConfigをシングルトンとして登録
+        bind(JwtConfig::class.java).toInstance(jwtConfig)
+
+        // JwtServiceをシングルトンとして登録
+        bind(JwtService::class.java).toInstance(JwtService(jwtConfig))
     }
 }

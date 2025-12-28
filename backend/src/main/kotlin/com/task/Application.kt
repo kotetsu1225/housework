@@ -1,6 +1,9 @@
 package com.task
 
+import com.task.infra.security.JwtConfig
 import com.task.presentation.GuicePlugin
+import com.task.presentation.auth
+import com.task.presentation.configureJwtAuth
 import com.task.presentation.guiceInjectorKey
 import com.task.presentation.members
 import com.task.presentation.memberAvailabilities
@@ -22,6 +25,7 @@ import io.ktor.server.resources.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.ktor.http.HttpStatusCode
+import io.ktor.server.auth.authenticate
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 
@@ -67,6 +71,11 @@ fun Application.module() {
     }
 
     val injector = attributes[guiceInjectorKey]
+
+    // JWT認証を設定
+    val jwtConfig = injector.getInstance(JwtConfig::class.java)
+    configureJwtAuth(jwtConfig)
+
     val scheduler = DailyTaskGenerationScheduler(
         injector.getInstance(GenerateDailyExecutionsUseCase::class.java),
     )
@@ -83,11 +92,15 @@ fun Application.module() {
         get("/health") {
             call.respondText("ok")
         }
+        auth()
 
-        members()
-        memberAvailabilities()
-        taskDefinitions()
-        taskExecutions()
-        taskGenerations()
+        authenticate("jwt") {
+            members()
+            memberAvailabilities()
+            taskDefinitions()
+            taskExecutions()
+            taskGenerations()
+        }
+
     }
 }

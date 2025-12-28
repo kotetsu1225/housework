@@ -3,6 +3,7 @@ package com.task.presentation
 import com.task.domain.member.FamilyRole
 import com.task.domain.member.MemberId
 import com.task.domain.member.MemberName
+import com.task.domain.member.PlainPassword
 import com.task.usecase.member.CreateMemberUseCase
 import com.task.usecase.member.GetMemberUseCase
 import com.task.usecase.member.GetMembersUseCase
@@ -60,6 +61,7 @@ class Members{
         data class Request(
             val name: String,
             val familyRole: String,
+            val password: String,
         )
         @Serializable
         data class Response(
@@ -134,7 +136,8 @@ fun Route.members() {
         val output = instance<CreateMemberUseCase>().execute(
             CreateMemberUseCase.Input(
                 name = MemberName(request.name),
-                familyRole = FamilyRole.get(request.familyRole)
+                familyRole = FamilyRole.get(request.familyRole),
+                password = PlainPassword(request.password)
             )
         )
 

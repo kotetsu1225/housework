@@ -5,6 +5,7 @@ package com.task.infra.database.jooq.tables
 
 
 import com.task.infra.database.jooq.Public
+import com.task.infra.database.jooq.indexes.IDX_MEMBERS_NAME
 import com.task.infra.database.jooq.indexes.IDX_MEMBERS_ROLE
 import com.task.infra.database.jooq.keys.MEMBERS_PKEY
 import com.task.infra.database.jooq.tables.records.MembersRecord
@@ -22,7 +23,7 @@ import org.jooq.Index
 import org.jooq.Name
 import org.jooq.Record
 import org.jooq.Records
-import org.jooq.Row5
+import org.jooq.Row6
 import org.jooq.Schema
 import org.jooq.SelectField
 import org.jooq.Table
@@ -94,6 +95,12 @@ open class Members(
      */
     val UPDATED_AT: TableField<MembersRecord, OffsetDateTime?> = createField(DSL.name("updated_at"), SQLDataType.TIMESTAMPWITHTIMEZONE(6).nullable(false).defaultValue(DSL.field(DSL.raw("CURRENT_TIMESTAMP"), SQLDataType.TIMESTAMPWITHTIMEZONE)), this, "更新日時")
 
+    /**
+     * The column <code>public.members.password_hash</code>.
+     * BCryptでハッシュ化されたパスワード
+     */
+    val PASSWORD_HASH: TableField<MembersRecord, String?> = createField(DSL.name("password_hash"), SQLDataType.VARCHAR(255).nullable(false), this, "BCryptでハッシュ化されたパスワード")
+
     private constructor(alias: Name, aliased: Table<MembersRecord>?): this(alias, null, null, aliased, null)
     private constructor(alias: Name, aliased: Table<MembersRecord>?, parameters: Array<Field<*>?>?): this(alias, null, null, aliased, parameters)
 
@@ -114,7 +121,7 @@ open class Members(
 
     constructor(child: Table<out Record>, key: ForeignKey<out Record, MembersRecord>): this(Internal.createPathAlias(child, key), child, key, MEMBERS, null)
     override fun getSchema(): Schema? = if (aliased()) null else Public.PUBLIC
-    override fun getIndexes(): List<Index> = listOf(IDX_MEMBERS_ROLE)
+    override fun getIndexes(): List<Index> = listOf(IDX_MEMBERS_NAME, IDX_MEMBERS_ROLE)
     override fun getPrimaryKey(): UniqueKey<MembersRecord> = MEMBERS_PKEY
     override fun getChecks(): List<Check<MembersRecord>> = listOf(
         Internal.createCheck(this, DSL.name("members_role_check"), "(((role)::text = ANY ((ARRAY['FATHER'::character varying, 'MOTHER'::character varying, 'SISTER'::character varying, 'BROTHER'::character varying])::text[])))", true)
@@ -139,18 +146,18 @@ open class Members(
     override fun rename(name: Table<*>): Members = Members(name.getQualifiedName(), null)
 
     // -------------------------------------------------------------------------
-    // Row5 type methods
+    // Row6 type methods
     // -------------------------------------------------------------------------
-    override fun fieldsRow(): Row5<UUID?, String?, String?, OffsetDateTime?, OffsetDateTime?> = super.fieldsRow() as Row5<UUID?, String?, String?, OffsetDateTime?, OffsetDateTime?>
+    override fun fieldsRow(): Row6<UUID?, String?, String?, OffsetDateTime?, OffsetDateTime?, String?> = super.fieldsRow() as Row6<UUID?, String?, String?, OffsetDateTime?, OffsetDateTime?, String?>
 
     /**
      * Convenience mapping calling {@link SelectField#convertFrom(Function)}.
      */
-    fun <U> mapping(from: (UUID?, String?, String?, OffsetDateTime?, OffsetDateTime?) -> U): SelectField<U> = convertFrom(Records.mapping(from))
+    fun <U> mapping(from: (UUID?, String?, String?, OffsetDateTime?, OffsetDateTime?, String?) -> U): SelectField<U> = convertFrom(Records.mapping(from))
 
     /**
      * Convenience mapping calling {@link SelectField#convertFrom(Class,
      * Function)}.
      */
-    fun <U> mapping(toType: Class<U>, from: (UUID?, String?, String?, OffsetDateTime?, OffsetDateTime?) -> U): SelectField<U> = convertFrom(toType, Records.mapping(from))
+    fun <U> mapping(toType: Class<U>, from: (UUID?, String?, String?, OffsetDateTime?, OffsetDateTime?, String?) -> U): SelectField<U> = convertFrom(toType, Records.mapping(from))
 }

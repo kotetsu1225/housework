@@ -11,8 +11,8 @@ import java.util.UUID
 
 import org.jooq.Field
 import org.jooq.Record1
-import org.jooq.Record5
-import org.jooq.Row5
+import org.jooq.Record6
+import org.jooq.Row6
 import org.jooq.impl.UpdatableRecordImpl
 
 
@@ -20,7 +20,7 @@ import org.jooq.impl.UpdatableRecordImpl
  * 家族メンバー
  */
 @Suppress("UNCHECKED_CAST")
-open class MembersRecord private constructor() : UpdatableRecordImpl<MembersRecord>(Members.MEMBERS), Record5<UUID?, String?, String?, OffsetDateTime?, OffsetDateTime?> {
+open class MembersRecord private constructor() : UpdatableRecordImpl<MembersRecord>(Members.MEMBERS), Record6<UUID?, String?, String?, OffsetDateTime?, OffsetDateTime?, String?> {
 
     open var id: UUID?
         set(value): Unit = set(0, value)
@@ -42,6 +42,10 @@ open class MembersRecord private constructor() : UpdatableRecordImpl<MembersReco
         set(value): Unit = set(4, value)
         get(): OffsetDateTime? = get(4) as OffsetDateTime?
 
+    open var passwordHash: String
+        set(value): Unit = set(5, value)
+        get(): String = get(5) as String
+
     // -------------------------------------------------------------------------
     // Primary key information
     // -------------------------------------------------------------------------
@@ -49,26 +53,29 @@ open class MembersRecord private constructor() : UpdatableRecordImpl<MembersReco
     override fun key(): Record1<UUID?> = super.key() as Record1<UUID?>
 
     // -------------------------------------------------------------------------
-    // Record5 type implementation
+    // Record6 type implementation
     // -------------------------------------------------------------------------
 
-    override fun fieldsRow(): Row5<UUID?, String?, String?, OffsetDateTime?, OffsetDateTime?> = super.fieldsRow() as Row5<UUID?, String?, String?, OffsetDateTime?, OffsetDateTime?>
-    override fun valuesRow(): Row5<UUID?, String?, String?, OffsetDateTime?, OffsetDateTime?> = super.valuesRow() as Row5<UUID?, String?, String?, OffsetDateTime?, OffsetDateTime?>
+    override fun fieldsRow(): Row6<UUID?, String?, String?, OffsetDateTime?, OffsetDateTime?, String?> = super.fieldsRow() as Row6<UUID?, String?, String?, OffsetDateTime?, OffsetDateTime?, String?>
+    override fun valuesRow(): Row6<UUID?, String?, String?, OffsetDateTime?, OffsetDateTime?, String?> = super.valuesRow() as Row6<UUID?, String?, String?, OffsetDateTime?, OffsetDateTime?, String?>
     override fun field1(): Field<UUID?> = Members.MEMBERS.ID
     override fun field2(): Field<String?> = Members.MEMBERS.NAME
     override fun field3(): Field<String?> = Members.MEMBERS.ROLE
     override fun field4(): Field<OffsetDateTime?> = Members.MEMBERS.CREATED_AT
     override fun field5(): Field<OffsetDateTime?> = Members.MEMBERS.UPDATED_AT
+    override fun field6(): Field<String?> = Members.MEMBERS.PASSWORD_HASH
     override fun component1(): UUID? = id
     override fun component2(): String = name
     override fun component3(): String = role
     override fun component4(): OffsetDateTime? = createdAt
     override fun component5(): OffsetDateTime? = updatedAt
+    override fun component6(): String = passwordHash
     override fun value1(): UUID? = id
     override fun value2(): String = name
     override fun value3(): String = role
     override fun value4(): OffsetDateTime? = createdAt
     override fun value5(): OffsetDateTime? = updatedAt
+    override fun value6(): String = passwordHash
 
     override fun value1(value: UUID?): MembersRecord {
         set(0, value)
@@ -95,24 +102,31 @@ open class MembersRecord private constructor() : UpdatableRecordImpl<MembersReco
         return this
     }
 
-    override fun values(value1: UUID?, value2: String?, value3: String?, value4: OffsetDateTime?, value5: OffsetDateTime?): MembersRecord {
+    override fun value6(value: String?): MembersRecord {
+        set(5, value)
+        return this
+    }
+
+    override fun values(value1: UUID?, value2: String?, value3: String?, value4: OffsetDateTime?, value5: OffsetDateTime?, value6: String?): MembersRecord {
         this.value1(value1)
         this.value2(value2)
         this.value3(value3)
         this.value4(value4)
         this.value5(value5)
+        this.value6(value6)
         return this
     }
 
     /**
      * Create a detached, initialised MembersRecord
      */
-    constructor(id: UUID? = null, name: String, role: String, createdAt: OffsetDateTime? = null, updatedAt: OffsetDateTime? = null): this() {
+    constructor(id: UUID? = null, name: String, role: String, createdAt: OffsetDateTime? = null, updatedAt: OffsetDateTime? = null, passwordHash: String): this() {
         this.id = id
         this.name = name
         this.role = role
         this.createdAt = createdAt
         this.updatedAt = updatedAt
+        this.passwordHash = passwordHash
         resetChangedOnNotNull()
     }
 
@@ -126,6 +140,7 @@ open class MembersRecord private constructor() : UpdatableRecordImpl<MembersReco
             this.role = value.role
             this.createdAt = value.createdAt
             this.updatedAt = value.updatedAt
+            this.passwordHash = value.passwordHash
             resetChangedOnNotNull()
         }
     }

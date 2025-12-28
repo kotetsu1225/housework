@@ -22,6 +22,7 @@ import org.jooq.impl.Internal
 
 val IDX_MEMBER_AVAILABILITIES_MEMBER_ID: Index = Internal.createIndex(DSL.name("idx_member_availabilities_member_id"), MemberAvailabilities.MEMBER_AVAILABILITIES, arrayOf(MemberAvailabilities.MEMBER_AVAILABILITIES.MEMBER_ID), false)
 val IDX_MEMBER_AVAILABILITIES_TARGET_DATE: Index = Internal.createIndex(DSL.name("idx_member_availabilities_target_date"), MemberAvailabilities.MEMBER_AVAILABILITIES, arrayOf(MemberAvailabilities.MEMBER_AVAILABILITIES.TARGET_DATE), false)
+val IDX_MEMBERS_NAME: Index = Internal.createIndex(DSL.name("idx_members_name"), Members.MEMBERS, arrayOf(Members.MEMBERS.NAME), true)
 val IDX_MEMBERS_ROLE: Index = Internal.createIndex(DSL.name("idx_members_role"), Members.MEMBERS, arrayOf(Members.MEMBERS.ROLE), false)
 val IDX_TASK_DEFINITIONS_IS_DELETED: Index = Internal.createIndex(DSL.name("idx_task_definitions_is_deleted"), TaskDefinitions.TASK_DEFINITIONS, arrayOf(TaskDefinitions.TASK_DEFINITIONS.IS_DELETED), false)
 val IDX_TASK_DEFINITIONS_OWNER: Index = Internal.createIndex(DSL.name("idx_task_definitions_owner"), TaskDefinitions.TASK_DEFINITIONS, arrayOf(TaskDefinitions.TASK_DEFINITIONS.OWNER_MEMBER_ID), false)

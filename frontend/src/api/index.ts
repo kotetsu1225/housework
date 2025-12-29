@@ -53,3 +53,14 @@ export {
 } from './taskExecutions'
 export type { GetTaskExecutionsOptions } from './taskExecutions'
 
+// Dashboard API (CQRS Query)
+export { getDashboardData } from './dashboard'
+export type {
+  DashboardResponse,
+  TodayTaskDto,
+  MemberTaskDto,
+  MemberTaskSummaryDto,
+  TimeSlotDto,
+  MemberAvailabilityTodayDto,
+} from './dashboard'
+

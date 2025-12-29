@@ -54,6 +54,9 @@ import com.typesafe.config.ConfigFactory
 import com.task.domain.mail.MailSender
 import com.task.infra.mail.LoggingMailSender
 import com.task.infra.event.handler.EmailNotificationHandler
+// Query Services (CQRS)
+import com.task.usecase.query.dashboard.DashboardQueryService
+import com.task.infra.query.DashboardQueryServiceImpl
 
 class AppModule : AbstractModule() {
     override fun configure() {
@@ -94,6 +97,9 @@ class AppModule : AbstractModule() {
 
         // Auth UseCase bindings
         bind(LoginUseCase::class.java).to(LoginUseCaseImpl::class.java)
+
+        // Query Services (CQRS)
+        bind(DashboardQueryService::class.java).to(DashboardQueryServiceImpl::class.java)
 
         val handlerBinder = Multibinder.newSetBinder(
             binder(),

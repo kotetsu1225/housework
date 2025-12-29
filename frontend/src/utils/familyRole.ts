@@ -31,3 +31,27 @@ export function getRoleVariant(role: FamilyRole): 'parent' | 'child' {
   return isParentRole(role) ? 'parent' : 'child'
 }
 
+/**
+ * FamilyRoleの日本語ラベルを取得
+ *
+ * @param role - FamilyRole
+ * @returns 日本語表示名
+ *
+ * @example
+ * ```typescript
+ * getFamilyRoleLabel('FATHER') // '父'
+ * getFamilyRoleLabel('MOTHER') // '母'
+ * getFamilyRoleLabel('BROTHER') // '兄弟'
+ * getFamilyRoleLabel('SISTER') // '姉妹'
+ * ```
+ */
+export function getFamilyRoleLabel(role: FamilyRole): string {
+  const labels: Record<FamilyRole, string> = {
+    FATHER: '父',
+    MOTHER: '母',
+    BROTHER: '兄弟',
+    SISTER: '姉妹',
+  }
+  return labels[role] || role
+}
+

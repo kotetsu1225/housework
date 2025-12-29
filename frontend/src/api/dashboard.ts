@@ -1,0 +1,96 @@
+/**
+ * Dashboard API関数
+ *
+ * ダッシュボード画面用のAPI呼び出しを提供
+ * CQRSパターン: 複数集約のデータを1リクエストで取得
+ */
+
+import { apiGet } from './client'
+
+/**
+ * 今日のタスクDTO
+ */
+export interface TodayTaskDto {
+  taskExecutionId: string
+  taskDefinitionId: string
+  taskName: string
+  taskDescription: string | null
+  estimatedMinutes: number
+  scope: 'FAMILY' | 'PERSONAL'
+  status: 'NOT_STARTED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED'
+  assigneeMemberId: string | null
+  assigneeMemberName: string | null
+  scheduledDate: string
+}
+
+/**
+ * メンバーの個別タスクDTO
+ */
+export interface MemberTaskDto {
+  taskExecutionId: string
+  taskName: string
+  status: 'NOT_STARTED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED'
+}
+
+/**
+ * メンバーごとのタスクサマリーDTO
+ */
+export interface MemberTaskSummaryDto {
+  memberId: string
+  memberName: string
+  familyRole: string
+  completedCount: number
+  totalCount: number
+  tasks: MemberTaskDto[]
+}
+
+/**
+ * 時間スロットDTO
+ */
+export interface TimeSlotDto {
+  startTime: string // HH:mm
+  endTime: string
+  memo: string | null
+}
+
+/**
+ * メンバーの本日の空き時間DTO
+ */
+export interface MemberAvailabilityTodayDto {
+  memberId: string
+  memberName: string
+  familyRole: string
+  slots: TimeSlotDto[]
+}
+
+/**
+ * ダッシュボードAPIレスポンス
+ */
+export interface DashboardResponse {
+  todayTasks: TodayTaskDto[]
+  memberSummaries: MemberTaskSummaryDto[]
+  memberAvailabilities: MemberAvailabilityTodayDto[]
+}
+
+/**
+ * ダッシュボードデータを取得する
+ *
+ * GET /api/dashboard?date=YYYY-MM-DD
+ *
+ * @param date - 対象日（YYYY-MM-DD形式）、省略時は今日
+ * @returns ダッシュボードデータ（今日のタスク、メンバーサマリー、空き時間）
+ *
+ * @example
+ * ```typescript
+ * // 今日のデータを取得
+ * const data = await getDashboardData()
+ *
+ * // 特定の日のデータを取得
+ * const data = await getDashboardData('2025-12-29')
+ * ```
+ */
+export async function getDashboardData(date?: string): Promise<DashboardResponse> {
+  const endpoint = date ? `/dashboard?date=${date}` : '/dashboard'
+  return apiGet<DashboardResponse>(endpoint)
+}
+

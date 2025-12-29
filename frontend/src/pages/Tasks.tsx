@@ -387,8 +387,8 @@ export function Tasks() {
   return (
     <>
       <Header
-        title="タスク定義"
-        subtitle={`${filteredTasks.length}件のタスク`}
+        title="タスク設定"
+        subtitle={`${filteredTasks.length}件の設定`}
         action={
           <div className="flex gap-2">
             <Button
@@ -463,7 +463,10 @@ export function Tasks() {
           {filteredTasks.length === 0 && (
             <div className="text-center py-12">
               <Filter className="w-12 h-12 text-white/20 mx-auto mb-4" />
-              <p className="text-white/50">タスクが見つかりません</p>
+              <p className="text-white/50">タスク設定が見つかりません</p>
+              <p className="text-sm text-white/30 mt-2">
+                「追加」ボタンから新しいタスクを作成してください
+              </p>
             </div>
           )}
         </section>
@@ -472,7 +475,7 @@ export function Tasks() {
         <Modal
           isOpen={showAddModal}
           onClose={handleCloseModal}
-          title="タスク定義を追加"
+          title="新しいタスクを作成"
           footer={
             <>
               <Button
@@ -690,7 +693,7 @@ export function Tasks() {
             setShowDeleteConfirm(false)
             setTaskToDelete(null)
           }}
-          title="タスク定義の削除"
+          title="タスクの削除"
           footer={
             <>
               <Button
@@ -724,7 +727,7 @@ export function Tasks() {
         <Modal
           isOpen={showEditModal}
           onClose={handleCloseEditModal}
-          title="タスク定義を編集"
+          title="タスクを編集"
           footer={
             <>
               <Button

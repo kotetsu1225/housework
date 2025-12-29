@@ -1,63 +1,163 @@
 /**
  * ダッシュボードページ
  *
- * 今日のタスク一覧と進捗サマリーを表示するホーム画面
+ * 今日のタスク一覧、メンバー進捗、空き時間を表示するホーム画面
+ * CQRSパターン: DashboardQueryServiceを使用して一括データ取得
  */
 
-import { useEffect, useMemo, useCallback, useState } from 'react'
-import { RefreshCw, Plus } from 'lucide-react'
+import { useState, useCallback, useMemo } from 'react'
+import { RefreshCw, ListTodo, Users, Clock, CheckCircle2, Circle, PlayCircle } from 'lucide-react'
 import { Header } from '../components/layout/Header'
 import { PageContainer } from '../components/layout/PageContainer'
 import { Button } from '../components/ui/Button'
 import { Alert } from '../components/ui/Alert'
-import {
-  TaskCard,
-  ProgressSummaryCard,
-  MemberSummaryCard,
-} from '../components/dashboard'
-import { useTaskExecution, useMember } from '../hooks'
+import { Card } from '../components/ui/Card'
+import { Badge } from '../components/ui/Badge'
+import { Avatar } from '../components/ui/Avatar'
+import { ProgressSummaryCard } from '../components/dashboard'
+import { TaskActionModal } from '../components/dashboard/TaskActionModal'
+import { MemberAvailabilitySection } from '../components/dashboard/MemberAvailabilitySection'
+import { useDashboard, useMember } from '../hooks'
 import { useAuth } from '../contexts'
-import { formatJa, toISODateString } from '../utils'
-import type { TaskExecution, Member } from '../types'
+import { formatJa, toISODateString, isParentRole } from '../utils'
+import { getFamilyRoleLabel } from '../utils/familyRole'
+import type { TodayTaskDto, MemberTaskSummaryDto } from '../api/dashboard'
+import type { FamilyRole, Member } from '../types'
 
 /**
- * メンバーIDからメンバー情報を取得するヘルパー
+ * ステータスに応じたアイコンを取得
  */
-function getMemberById(members: Member[], memberId?: string): Member | undefined {
-  if (!memberId) return undefined
-  return members.find((m) => m.id === memberId)
+function getStatusIcon(status: string) {
+  switch (status) {
+    case 'COMPLETED':
+      return <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+    case 'IN_PROGRESS':
+      return <PlayCircle className="w-5 h-5 text-shazam-400" />
+    default:
+      return <Circle className="w-5 h-5 text-white/30" />
+  }
 }
 
 /**
- * タスク実行とメンバー情報を結合する
+ * ステータスに応じたバッジを取得
  */
-function enrichTasksWithMembers(
-  tasks: TaskExecution[],
-  members: Member[]
-): (TaskExecution & { assignee?: Member })[] {
-  return tasks.map((task) => ({
-    ...task,
-    assignee: getMemberById(members, task.assigneeMemberId),
-  }))
+function getStatusBadge(status: string) {
+  switch (status) {
+    case 'COMPLETED':
+      return <Badge variant="success">完了</Badge>
+    case 'IN_PROGRESS':
+      return <Badge variant="info">進行中</Badge>
+    default:
+      return <Badge variant="default">やること</Badge>
+  }
 }
 
 /**
- * メンバーごとのタスクサマリーを計算する
+ * 今日のタスクカードコンポーネント
  */
-function calculateMemberTaskSummary(
-  members: Member[],
-  tasks: TaskExecution[]
-): { member: Member; completed: number; total: number }[] {
-  return members.map((member) => {
-    const memberTasks = tasks.filter((t) => t.assigneeMemberId === member.id)
-    const completedTasks = memberTasks.filter((t) => t.status === 'COMPLETED')
+interface TodayTaskCardProps {
+  task: TodayTaskDto
+  onClick: (task: TodayTaskDto) => void
+}
 
-    return {
-      member,
-      completed: completedTasks.length,
-      total: memberTasks.length,
-    }
-  })
+function TodayTaskCard({ task, onClick }: TodayTaskCardProps) {
+  const handleClick = () => onClick(task)
+
+  return (
+    <Card
+      variant="glass"
+      hoverable
+      className="flex items-center gap-4 cursor-pointer"
+      onClick={handleClick}
+    >
+      {/* ステータスアイコン */}
+      <div className="flex-shrink-0">
+        {getStatusIcon(task.status)}
+      </div>
+
+      {/* タスク情報 */}
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 mb-1">
+          <span
+            className={`font-medium truncate ${
+              task.status === 'COMPLETED'
+                ? 'text-white/50 line-through'
+                : 'text-white'
+            }`}
+          >
+            {task.taskName}
+          </span>
+          {getStatusBadge(task.status)}
+        </div>
+        <div className="flex items-center gap-3 text-sm text-white/50">
+          {task.estimatedMinutes > 0 && (
+            <span className="flex items-center gap-1">
+              <Clock className="w-3.5 h-3.5" />
+              {task.estimatedMinutes}分
+            </span>
+          )}
+          <span className="flex items-center gap-1">
+            {task.scope === 'FAMILY' ? (
+              <Users className="w-3.5 h-3.5" />
+            ) : (
+              <span className="w-3.5 h-3.5">👤</span>
+            )}
+            {task.scope === 'FAMILY' ? '家族' : '個人'}
+          </span>
+          {task.assigneeMemberName && (
+            <span className="text-coral-400">
+              {task.assigneeMemberName}
+            </span>
+          )}
+        </div>
+      </div>
+    </Card>
+  )
+}
+
+/**
+ * メンバー進捗カードコンポーネント
+ */
+interface MemberProgressCardProps {
+  summary: MemberTaskSummaryDto
+}
+
+function MemberProgressCard({ summary }: MemberProgressCardProps) {
+  const progress = summary.totalCount > 0
+    ? Math.round((summary.completedCount / summary.totalCount) * 100)
+    : 0
+  const familyRole = summary.familyRole as FamilyRole
+
+  return (
+    <Card variant="glass" className="min-w-[140px] flex-shrink-0">
+      <div className="flex flex-col items-center gap-2">
+        <Avatar
+          name={summary.memberName}
+          size="lg"
+          variant={isParentRole(familyRole) ? 'parent' : 'child'}
+        />
+        <div className="text-center">
+          <p className="font-medium text-white text-sm">{summary.memberName}</p>
+          <p className="text-xs text-white/50">
+            {getFamilyRoleLabel(familyRole)}
+          </p>
+        </div>
+        <div className="text-center">
+          <p className="text-lg font-bold text-coral-400">
+            {summary.completedCount}/{summary.totalCount}
+          </p>
+          <p className="text-xs text-white/50">完了</p>
+        </div>
+        {/* プログレスバー */}
+        <div className="w-full h-1.5 bg-dark-700 rounded-full overflow-hidden">
+          <div
+            className="h-full bg-gradient-to-r from-coral-500 to-shazam-500 transition-all duration-300"
+            style={{ width: `${progress}%` }}
+          />
+        </div>
+      </div>
+    </Card>
+  )
 }
 
 /**
@@ -68,130 +168,88 @@ export function Dashboard() {
   const todayStr = toISODateString(today)
   const { user } = useAuth()
 
-  // タスク生成中フラグ
-  const [isGenerating, setIsGenerating] = useState(false)
+  // 選択中のタスク（モーダル表示用）
+  const [selectedTask, setSelectedTask] = useState<TodayTaskDto | null>(null)
+  const [showTaskModal, setShowTaskModal] = useState(false)
 
-  // タスク実行管理フック
+  // ダッシュボードデータ取得（CQRS Query）
   const {
-    taskExecutions,
-    loading: tasksLoading,
-    error: tasksError,
-    fetchTaskExecutions,
+    todayTasks,
+    memberSummaries,
+    memberAvailabilities,
+    loading,
+    error,
+    refetch,
     startTask,
     completeTask,
-    generateTasks,
-    clearError: clearTaskError,
-  } = useTaskExecution()
+    assignTask,
+    clearError,
+  } = useDashboard(todayStr)
 
-  // メンバー管理フック（Member APIは実装済み）
-  const {
-    members,
-    loading: membersLoading,
-    error: membersError,
-    fetchMembers,
-    clearError: clearMemberError,
-  } = useMember()
+  // メンバー一覧取得（モーダルの担当者選択用）
+  const { members, fetchMembers } = useMember()
 
-  const loading = tasksLoading || membersLoading
-  const error = tasksError || membersError
-
-  /**
-   * 初回マウント時にデータを取得
-   */
-  useEffect(() => {
+  // 初回ロード時にメンバーも取得
+  useState(() => {
     fetchMembers()
-    fetchTaskExecutions({ scheduledDate: todayStr })
-  }, [todayStr, fetchMembers, fetchTaskExecutions])
+  })
 
-  /**
-   * エラー自動クリア（5秒後）
-   */
-  useEffect(() => {
-    if (error) {
-      const timer = setTimeout(() => {
-        clearTaskError()
-        clearMemberError()
-      }, 5000)
-      return () => clearTimeout(timer)
-    }
-  }, [error, clearTaskError, clearMemberError])
-
-  // タスクにメンバー情報を結合
-  const enrichedTasks = useMemo(
-    () => enrichTasksWithMembers(taskExecutions, members),
-    [taskExecutions, members]
-  )
-
-  // 進捗サマリーの計算（キャンセル以外のタスクを対象）
+  // 進捗サマリーの計算
   const { completedCount, totalCount } = useMemo(() => {
-    const activeTasks = taskExecutions.filter((t) => t.status !== 'CANCELLED')
+    const activeTasks = todayTasks.filter((t) => t.status !== 'CANCELLED')
     const completed = activeTasks.filter((t) => t.status === 'COMPLETED').length
     return { completedCount: completed, totalCount: activeTasks.length }
-  }, [taskExecutions])
-
-  // メンバーごとのサマリー
-  const memberSummaries = useMemo(
-    () => calculateMemberTaskSummary(members, taskExecutions),
-    [members, taskExecutions]
-  )
+  }, [todayTasks])
 
   /**
-   * データ再取得ハンドラー
+   * タスククリック時の処理（モーダル表示）
+   */
+  const handleTaskClick = useCallback((task: TodayTaskDto) => {
+    setSelectedTask(task)
+    setShowTaskModal(true)
+  }, [])
+
+  /**
+   * モーダルを閉じる
+   */
+  const handleCloseModal = useCallback(() => {
+    setShowTaskModal(false)
+    setSelectedTask(null)
+  }, [])
+
+  /**
+   * タスク開始処理
+   */
+  const handleStartTask = useCallback(async (taskExecutionId: string) => {
+    return await startTask(taskExecutionId)
+  }, [startTask])
+
+  /**
+   * タスク完了処理
+   */
+  const handleCompleteTask = useCallback(async (taskExecutionId: string, completedByMemberId: string) => {
+    return await completeTask(taskExecutionId, completedByMemberId)
+  }, [completeTask])
+
+  /**
+   * 担当者割り当て処理
+   */
+  const handleAssignTask = useCallback(async (taskExecutionId: string, assigneeMemberId: string) => {
+    return await assignTask(taskExecutionId, assigneeMemberId)
+  }, [assignTask])
+
+  /**
+   * データ再取得
    */
   const handleRefresh = useCallback(async () => {
+    await refetch()
     await fetchMembers()
-    await fetchTaskExecutions({ scheduledDate: todayStr })
-  }, [todayStr, fetchMembers, fetchTaskExecutions])
+  }, [refetch, fetchMembers])
 
-  /**
-   * タスク生成ハンドラー
-   */
-  const handleGenerateTasks = useCallback(async () => {
-    setIsGenerating(true)
-    const success = await generateTasks(todayStr)
-    if (success) {
-      // 生成後にタスク一覧を再取得
-      await fetchTaskExecutions({ scheduledDate: todayStr })
-    }
-    setIsGenerating(false)
-  }, [todayStr, generateTasks, fetchTaskExecutions])
-
-  /**
-   * ステータスアイコンクリック時の処理
-   */
-  const handleStatusClick = useCallback(
-    async (task: TaskExecution) => {
-      if (!user) return
-
-      switch (task.status) {
-        case 'NOT_STARTED':
-          await startTask(task.id, user.id)
-          break
-        case 'IN_PROGRESS':
-          await completeTask(task.id, user.id)
-          break
-        default:
-          break
-      }
-    },
-    [user, startTask, completeTask]
-  )
-
-  /**
-   * タスクカードクリック時の処理
-   */
-  const handleTaskClick = useCallback((task: TaskExecution) => {
-    // TODO: タスク詳細画面への遷移を実装
-    console.log('Task clicked:', task.id)
-  }, [])
-
-  /**
-   * メンバーカードクリック時の処理
-   */
-  const handleMemberClick = useCallback((member: Member) => {
-    // TODO: メンバー詳細画面への遷移を実装
-    console.log('Member clicked:', member.id)
-  }, [])
+  // エラー自動クリア（5秒後）
+  if (error) {
+    setTimeout(() => clearError(), 5000)
+  }
 
   return (
     <>
@@ -225,71 +283,73 @@ export function Dashboard() {
           />
         </section>
 
-        {/* タスク一覧 */}
+        {/* 今日のタスク一覧 */}
         <section>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-bold text-white">今日のタスク</h2>
-            <div className="flex gap-2">
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={handleGenerateTasks}
-                disabled={isGenerating || loading}
-              >
-                <Plus className="w-4 h-4 mr-1" />
-                {isGenerating ? '生成中...' : '生成'}
-              </Button>
-            </div>
-          </div>
+          <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+            <ListTodo className="w-5 h-5 text-coral-400" />
+            今日のタスク
+          </h2>
 
           <div className="space-y-3">
-            {enrichedTasks.length > 0 ? (
-              enrichedTasks.map((task) => (
-                <TaskCard
-                  key={task.id}
+            {loading ? (
+              <div className="text-center py-8">
+                <p className="text-white/50">読み込み中...</p>
+              </div>
+            ) : todayTasks.length > 0 ? (
+              todayTasks.map((task) => (
+                <TodayTaskCard
+                  key={task.taskExecutionId}
                   task={task}
-                  assignee={task.assignee}
                   onClick={handleTaskClick}
-                  onStatusClick={handleStatusClick}
                 />
               ))
             ) : (
-              <div className="text-center py-8">
-                <p className="text-white/50 mb-4">
-                  {loading ? '読み込み中...' : '今日のタスクはありません'}
+              <Card variant="glass" className="text-center py-8">
+                <p className="text-white/50 mb-2">今日のタスクはありません</p>
+                <p className="text-sm text-white/30">
+                  タスク設定画面でタスクを作成してください
                 </p>
-                {!loading && (
-                  <Button
-                    variant="primary"
-                    size="sm"
-                    onClick={handleGenerateTasks}
-                    disabled={isGenerating}
-                  >
-                    <Plus className="w-4 h-4 mr-1" />
-                    今日のタスクを生成
-                  </Button>
-                )}
-              </div>
+              </Card>
             )}
           </div>
         </section>
 
-        {/* メンバーの状況 */}
+        {/* メンバー進捗 */}
         <section className="mt-8">
-          <h2 className="text-lg font-bold text-white mb-4">メンバー</h2>
-          {/* モバイル: 横スクロール、タブレット以上: グリッド */}
+          <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+            <Users className="w-5 h-5 text-coral-400" />
+            メンバーの進捗
+          </h2>
+          {/* 横スクロール可能なカードリスト */}
           <div className="flex gap-4 overflow-x-auto pb-2 -mx-4 px-4 md:mx-0 md:px-0 md:grid md:grid-cols-2 lg:grid-cols-4 md:overflow-visible">
-            {memberSummaries.map(({ member, completed, total }) => (
-              <MemberSummaryCard
-                key={member.id}
-                member={member}
-                completedCount={completed}
-                totalCount={total}
-                onClick={handleMemberClick}
+            {memberSummaries.map((summary) => (
+              <MemberProgressCard
+                key={summary.memberId}
+                summary={summary}
               />
             ))}
           </div>
         </section>
+
+        {/* メンバーの空き時間 */}
+        <section className="mt-8">
+          <MemberAvailabilitySection
+            availabilities={memberAvailabilities}
+            title="今日の空き時間"
+          />
+        </section>
+
+        {/* タスクアクションモーダル */}
+        <TaskActionModal
+          isOpen={showTaskModal}
+          onClose={handleCloseModal}
+          task={selectedTask}
+          members={members}
+          currentMemberId={user?.id}
+          onStart={handleStartTask}
+          onComplete={handleCompleteTask}
+          onAssign={handleAssignTask}
+        />
       </PageContainer>
     </>
   )

@@ -3,11 +3,38 @@
  *
  * fetch APIのラッパーで、型安全なAPI呼び出しを提供
  * エラーハンドリングとJSON変換を統一的に処理
+ * JWT認証トークンの自動付与機能を含む
  */
 
 import type { ApiErrorResponse } from '../types/api'
 
 const API_BASE = '/api'
+
+/** JWTトークン保存用のローカルストレージキー */
+export const TOKEN_STORAGE_KEY = 'housework_token'
+
+/**
+ * JWTトークンを取得する
+ * @returns 保存されているトークン、または null
+ */
+export function getStoredToken(): string | null {
+  return localStorage.getItem(TOKEN_STORAGE_KEY)
+}
+
+/**
+ * JWTトークンを保存する
+ * @param token - 保存するJWTトークン
+ */
+export function setStoredToken(token: string): void {
+  localStorage.setItem(TOKEN_STORAGE_KEY, token)
+}
+
+/**
+ * JWTトークンを削除する
+ */
+export function removeStoredToken(): void {
+  localStorage.removeItem(TOKEN_STORAGE_KEY)
+}
 
 /**
  * APIエラークラス
@@ -20,6 +47,13 @@ export class ApiError extends Error {
   ) {
     super(message)
     this.name = 'ApiError'
+  }
+
+  /**
+   * 認証エラー（401）かどうかを判定
+   */
+  get isUnauthorized(): boolean {
+    return this.status === 401
   }
 }
 
@@ -56,9 +90,20 @@ export async function apiClient<T>(
 ): Promise<T> {
   const { body, headers, ...restOptions } = options || {}
 
+  // JWTトークンをヘッダーに追加（認証エンドポイント以外）
+  const authHeaders: Record<string, string> = {}
+  const isAuthEndpoint = endpoint.startsWith('/auth/')
+  if (!isAuthEndpoint) {
+    const token = getStoredToken()
+    if (token) {
+      authHeaders['Authorization'] = `Bearer ${token}`
+    }
+  }
+
   const response = await fetch(`${API_BASE}${endpoint}`, {
     headers: {
       'Content-Type': 'application/json',
+      ...authHeaders,
       ...headers,
     },
     body: body ? JSON.stringify(body) : undefined,
@@ -78,6 +123,12 @@ export async function apiClient<T>(
         // JSONパース失敗時は無視
       }
     }
+
+    // 401エラーの場合はトークンを削除（セッション無効化）
+    if (response.status === 401) {
+      removeStoredToken()
+    }
+
     throw new ApiError(
       errorData?.error || `API Error: ${response.status}`,
       response.status,

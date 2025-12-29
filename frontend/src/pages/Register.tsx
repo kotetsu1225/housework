@@ -2,12 +2,12 @@
  * 新規登録ページ
  *
  * 新しいメンバーを作成するためのフォームを提供
- * @see backend/src/main/kotlin/com/task/presentation/Members.kt
+ * @see backend/src/main/kotlin/com/task/presentation/Auth.kt
  */
 
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { UserPlus } from 'lucide-react'
+import { UserPlus, Eye, EyeOff } from 'lucide-react'
 import { clsx } from 'clsx'
 import { Header } from '../components/layout/Header'
 import { PageContainer } from '../components/layout/PageContainer'
@@ -17,6 +17,11 @@ import { Input } from '../components/ui/Input'
 import { Alert } from '../components/ui/Alert'
 import { useAuth } from '../contexts/AuthContext'
 import type { FamilyRole } from '../types'
+
+/** パスワードの最小文字数（バックエンドと同期） */
+const PASSWORD_MIN_LENGTH = 5
+/** パスワードの最大文字数（バックエンドと同期） */
+const PASSWORD_MAX_LENGTH = 72
 
 /** 役割選択オプション */
 const roleOptions: { value: FamilyRole; label: string; icon: string }[] = [
@@ -31,6 +36,10 @@ export function Register() {
   const { register, loading, error, clearError } = useAuth()
   const [name, setName] = useState('')
   const [selectedRole, setSelectedRole] = useState<FamilyRole>('FATHER')
+  const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [localError, setLocalError] = useState('')
 
   const selectedRoleOption = roleOptions.find((r) => r.value === selectedRole)
@@ -39,6 +48,22 @@ export function Register() {
   useEffect(() => {
     clearError()
   }, [clearError])
+
+  /**
+   * パスワードバリデーション
+   */
+  const validatePassword = (value: string): string | null => {
+    if (!value) {
+      return 'パスワードを入力してください'
+    }
+    if (value.length < PASSWORD_MIN_LENGTH) {
+      return `パスワードは${PASSWORD_MIN_LENGTH}文字以上で入力してください`
+    }
+    if (value.length > PASSWORD_MAX_LENGTH) {
+      return `パスワードは${PASSWORD_MAX_LENGTH}文字以下で入力してください`
+    }
+    return null
+  }
 
   /**
    * 登録フォーム送信ハンドラー
@@ -52,12 +77,46 @@ export function Register() {
       return
     }
 
-    const success = await register(name.trim(), selectedRole)
+    const passwordError = validatePassword(password)
+    if (passwordError) {
+      setLocalError(passwordError)
+      return
+    }
+
+    if (password !== confirmPassword) {
+      setLocalError('パスワードが一致しません')
+      return
+    }
+
+    const success = await register(name.trim(), selectedRole, password)
 
     if (success) {
       navigate('/')
     }
   }
+
+  // パスワードの強度インジケーター
+  const getPasswordStrength = (): { label: string; color: string } | null => {
+    if (!password) return null
+    if (password.length < PASSWORD_MIN_LENGTH) {
+      return { label: '短すぎます', color: 'text-red-400' }
+    }
+    if (password.length < 8) {
+      return { label: '弱い', color: 'text-yellow-400' }
+    }
+    if (password.length < 12) {
+      return { label: '普通', color: 'text-blue-400' }
+    }
+    return { label: '強い', color: 'text-green-400' }
+  }
+
+  const passwordStrength = getPasswordStrength()
+
+  // フォームが有効かどうか
+  const isFormValid =
+    name.trim() &&
+    password.length >= PASSWORD_MIN_LENGTH &&
+    password === confirmPassword
 
   // エラーメッセージ（ローカルエラーまたはAPIエラー）
   const displayError = localError || error
@@ -88,6 +147,7 @@ export function Register() {
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   disabled={loading}
+                  autoComplete="username"
                 />
 
                 <div>
@@ -131,12 +191,77 @@ export function Register() {
                   />
                 </div>
 
+                <div className="space-y-1">
+                  <div className="relative">
+                    <Input
+                      label="パスワード"
+                      type={showPassword ? 'text' : 'password'}
+                      placeholder="パスワードを入力（5文字以上）"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      disabled={loading}
+                      autoComplete="new-password"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-9 text-dark-400 hover:text-dark-300"
+                      disabled={loading}
+                    >
+                      {showPassword ? (
+                        <EyeOff className="w-5 h-5" />
+                      ) : (
+                        <Eye className="w-5 h-5" />
+                      )}
+                    </button>
+                  </div>
+                  {passwordStrength && (
+                    <p className={clsx('text-xs', passwordStrength.color)}>
+                      パスワード強度: {passwordStrength.label}
+                    </p>
+                  )}
+                </div>
+
+                <div className="relative">
+                  <Input
+                    label="パスワード（確認）"
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    placeholder="パスワードを再入力"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    disabled={loading}
+                    autoComplete="new-password"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute right-3 top-9 text-dark-400 hover:text-dark-300"
+                    disabled={loading}
+                  >
+                    {showConfirmPassword ? (
+                      <EyeOff className="w-5 h-5" />
+                    ) : (
+                      <Eye className="w-5 h-5" />
+                    )}
+                  </button>
+                  {confirmPassword && password !== confirmPassword && (
+                    <p className="text-xs text-red-400 mt-1">
+                      パスワードが一致しません
+                    </p>
+                  )}
+                  {confirmPassword && password === confirmPassword && password.length >= PASSWORD_MIN_LENGTH && (
+                    <p className="text-xs text-green-400 mt-1">
+                      パスワードが一致しました
+                    </p>
+                  )}
+                </div>
+
                 <Button
                   type="submit"
                   variant="primary"
                   className="w-full"
                   loading={loading}
-                  disabled={!name.trim()}
+                  disabled={!isFormValid}
                 >
                   登録する
                 </Button>

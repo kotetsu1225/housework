@@ -3,7 +3,21 @@
  */
 
 // クライアント
-export { apiClient, apiGet, apiPost, apiPut, apiDelete, ApiError } from './client'
+export {
+  apiClient,
+  apiGet,
+  apiPost,
+  apiPut,
+  apiDelete,
+  ApiError,
+  TOKEN_STORAGE_KEY,
+  getStoredToken,
+  setStoredToken,
+  removeStoredToken,
+} from './client'
+
+// Auth API
+export { loginApi, registerApi } from './auth'
 
 // Member API
 export { getMembers, getMember, createMember, updateMember } from './members'
@@ -14,6 +28,7 @@ export {
   createMemberAvailability,
   updateMemberAvailability,
   deleteMemberAvailabilitySlots,
+  deleteMemberAvailability,
 } from './memberAvailabilities'
 
 // TaskDefinition API

@@ -67,6 +67,47 @@ export interface MemberResponse {
 }
 
 // ==========================================
+// Auth API Types
+// ==========================================
+
+/**
+ * ログインリクエスト
+ * POST /api/auth/login
+ * @see backend/src/main/kotlin/com/task/presentation/Auth.kt
+ */
+export interface LoginRequest {
+  name: string
+  password: string
+}
+
+/**
+ * ログインレスポンス
+ */
+export interface LoginResponse {
+  token: string
+  memberName: string
+}
+
+/**
+ * 新規登録リクエスト
+ * POST /api/auth/register
+ * @see backend/src/main/kotlin/com/task/presentation/Auth.kt
+ */
+export interface RegisterRequest {
+  name: string
+  familyRole: FamilyRole
+  password: string
+}
+
+/**
+ * 新規登録レスポンス
+ */
+export interface RegisterResponse {
+  token: string
+  memberName: string
+}
+
+// ==========================================
 // MemberAvailability API Types
 // ==========================================
 

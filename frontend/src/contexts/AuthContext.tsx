@@ -1,8 +1,8 @@
 /**
  * 認証コンテキスト
  *
- * メンバー認証の状態管理とバックエンドAPI連携を提供
- * @see backend/src/main/kotlin/com/task/presentation/Members.kt
+ * JWT認証によるメンバー認証の状態管理とバックエンドAPI連携を提供
+ * @see backend/src/main/kotlin/com/task/presentation/Auth.kt
  */
 
 import {
@@ -13,17 +13,59 @@ import {
   useCallback,
   ReactNode,
 } from 'react'
-import { getMembers, createMember, ApiError } from '../api'
+import {
+  loginApi,
+  registerApi,
+  ApiError,
+  getStoredToken,
+  setStoredToken,
+  removeStoredToken,
+  getMember,
+} from '../api'
 import type { User, FamilyRole } from '../types'
 
 /** ローカルストレージのキー */
 const STORAGE_KEYS = {
   CURRENT_USER: 'housework_currentUser',
-  SESSION_EXPIRY: 'housework_sessionExpiry',
 } as const
 
-/** セッション有効期限（7日間） */
-const SESSION_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000
+/**
+ * JWTトークンからペイロードをデコードする
+ * @param token - JWTトークン
+ * @returns デコードされたペイロード
+ */
+function decodeJwtPayload(token: string): {
+  sub: string // memberId
+  name: string
+  role: string
+  exp: number
+} | null {
+  try {
+    const base64Url = token.split('.')[1]
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/')
+    const jsonPayload = decodeURIComponent(
+      atob(base64)
+        .split('')
+        .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+        .join('')
+    )
+    return JSON.parse(jsonPayload)
+  } catch {
+    return null
+  }
+}
+
+/**
+ * トークンが有効期限内かチェックする
+ * @param token - JWTトークン
+ * @returns 有効期限内ならtrue
+ */
+function isTokenValid(token: string): boolean {
+  const payload = decodeJwtPayload(token)
+  if (!payload) return false
+  // exp はUNIXタイムスタンプ（秒単位）
+  return payload.exp * 1000 > Date.now()
+}
 
 /**
  * 認証コンテキストの型定義
@@ -40,20 +82,22 @@ interface AuthContextType {
   /** エラーメッセージ */
   error: string | null
   /**
-   * ログイン（バックエンドのメンバー一覧から検索）
+   * ログイン（バックエンドの/api/auth/loginを使用）
    * @param name - メンバー名
+   * @param password - パスワード
    * @returns ログイン成功したかどうか
    */
-  login: (name: string) => Promise<boolean>
+  login: (name: string, password: string) => Promise<boolean>
   /** ログアウト */
   logout: () => void
   /**
-   * 新規登録（バックエンドにメンバーを作成）
+   * 新規登録（バックエンドの/api/auth/registerを使用）
    * @param name - メンバー名
    * @param role - 家族の役割
+   * @param password - パスワード
    * @returns 登録成功したかどうか
    */
-  register: (name: string, role: FamilyRole) => Promise<boolean>
+  register: (name: string, role: FamilyRole, password: string) => Promise<boolean>
   /** エラーをクリア */
   clearError: () => void
 }
@@ -64,7 +108,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined)
  * 認証プロバイダー
  *
  * アプリケーション全体で認証状態を管理します。
- * バックエンドのMember APIと連携し、ログイン・登録機能を提供します。
+ * バックエンドのAuth APIと連携し、JWT認証によるログイン・登録機能を提供します。
  *
  * @example
  * ```tsx
@@ -84,99 +128,120 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState<string | null>(null)
 
   /**
-   * セッション有効期限をチェック
-   */
-  const isSessionValid = useCallback((): boolean => {
-    const expiryStr = localStorage.getItem(STORAGE_KEYS.SESSION_EXPIRY)
-    if (!expiryStr) return false
-
-    const expiry = parseInt(expiryStr, 10)
-    return Date.now() < expiry
-  }, [])
-
-  /**
-   * セッション有効期限を設定
-   */
-  const setSessionExpiry = useCallback(() => {
-    const expiry = Date.now() + SESSION_EXPIRY_MS
-    localStorage.setItem(STORAGE_KEYS.SESSION_EXPIRY, expiry.toString())
-  }, [])
-
-  /**
-   * セッションをクリア
+   * セッションをクリア（トークンとユーザー情報を削除）
    */
   const clearSession = useCallback(() => {
+    removeStoredToken()
     localStorage.removeItem(STORAGE_KEYS.CURRENT_USER)
-    localStorage.removeItem(STORAGE_KEYS.SESSION_EXPIRY)
+    setUser(null)
   }, [])
 
   /**
-   * 初期化: ローカルストレージから現在のユーザーを復元
-   */
-  useEffect(() => {
-    const storedUser = localStorage.getItem(STORAGE_KEYS.CURRENT_USER)
-    if (storedUser && isSessionValid()) {
-      try {
-        const parsed = JSON.parse(storedUser) as User
-        setUser(parsed)
-        // セッションを延長
-        setSessionExpiry()
-      } catch {
-        clearSession()
-      }
-    } else if (storedUser) {
-      // セッション期限切れの場合はクリア
-      clearSession()
-    }
-    setIsInitializing(false)
-  }, [isSessionValid, setSessionExpiry, clearSession])
-
-  /**
-   * ユーザーをローカルストレージに保存（セッション有効期限も設定）
+   * ユーザー情報をローカルストレージに保存
    */
   const saveUserToStorage = useCallback((userData: User) => {
     localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(userData))
-    setSessionExpiry()
-  }, [setSessionExpiry])
+  }, [])
+
+  /**
+   * トークンからユーザー情報を復元
+   */
+  const restoreUserFromToken = useCallback(async (token: string): Promise<User | null> => {
+    const payload = decodeJwtPayload(token)
+    if (!payload) return null
+
+    // ローカルストレージからユーザー情報を取得
+    const storedUser = localStorage.getItem(STORAGE_KEYS.CURRENT_USER)
+    if (storedUser) {
+      try {
+        return JSON.parse(storedUser) as User
+      } catch {
+        // パース失敗時はAPIから取得
+      }
+    }
+
+    // APIからメンバー情報を取得
+    try {
+      const member = await getMember(payload.sub)
+      return {
+        id: member.id,
+        name: member.name,
+        role: member.familyRole,
+        createdAt: new Date().toISOString(),
+      }
+    } catch {
+      return null
+    }
+  }, [])
+
+  /**
+   * 初期化: 保存されたトークンから認証状態を復元
+   */
+  useEffect(() => {
+    const initAuth = async () => {
+      const token = getStoredToken()
+
+      if (token && isTokenValid(token)) {
+        const userData = await restoreUserFromToken(token)
+        if (userData) {
+          setUser(userData)
+        } else {
+          // ユーザー情報の取得に失敗した場合はセッションクリア
+          clearSession()
+        }
+      } else if (token) {
+        // トークンが期限切れの場合はクリア
+        clearSession()
+      }
+
+      setIsInitializing(false)
+    }
+
+    initAuth()
+  }, [restoreUserFromToken, clearSession])
 
   /**
    * ログイン処理
    *
-   * バックエンドのメンバー一覧から名前でユーザーを検索し、
-   * 見つかった場合はセッションを開始します。
+   * バックエンドの/api/auth/loginエンドポイントを呼び出し、
+   * JWTトークンを取得してセッションを開始します。
    */
   const login = useCallback(
-    async (name: string): Promise<boolean> => {
+    async (name: string, password: string): Promise<boolean> => {
       setLoading(true)
       setError(null)
 
       try {
-        // バックエンドからメンバー一覧を取得
-        const response = await getMembers()
+        // バックエンドにログインリクエスト
+        const response = await loginApi({ name, password })
 
-        // 名前でメンバーを検索
-        const foundMember = response.members.find(
-          (m) => m.name.toLowerCase() === name.toLowerCase()
-        )
+        // トークンを保存
+        setStoredToken(response.token)
 
-        if (foundMember) {
-          const userData: User = {
-            id: foundMember.id,
-            name: foundMember.name,
-            role: foundMember.familyRole,
-            createdAt: new Date().toISOString(),
-          }
-
-          setUser(userData)
-          saveUserToStorage(userData)
-          return true
+        // トークンからユーザー情報を取得
+        const payload = decodeJwtPayload(response.token)
+        if (!payload) {
+          setError('トークンの解析に失敗しました')
+          return false
         }
 
-        setError('ユーザーが見つかりませんでした')
-        return false
+        const userData: User = {
+          id: payload.sub,
+          name: response.memberName,
+          role: payload.role as FamilyRole,
+          createdAt: new Date().toISOString(),
+        }
+
+        setUser(userData)
+        saveUserToStorage(userData)
+        return true
       } catch (err) {
         if (err instanceof ApiError) {
-          setError(err.message)
+          if (err.status === 401) {
+            setError('名前またはパスワードが正しくありません')
+          } else {
+            setError(err.message)
+          }
         } else if (err instanceof Error) {
           setError(err.message)
         } else {
@@ -193,26 +258,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   /**
    * 新規登録処理
    *
-   * バックエンドに新しいメンバーを作成し、
-   * 成功した場合は自動的にログイン状態にします。
+   * バックエンドの/api/auth/registerエンドポイントを呼び出し、
+   * メンバーを作成してJWTトークンを取得します。
    */
   const register = useCallback(
-    async (name: string, role: FamilyRole): Promise<boolean> => {
+    async (name: string, role: FamilyRole, password: string): Promise<boolean> => {
       setLoading(true)
       setError(null)
 
       try {
-        // バックエンドにメンバーを作成
-        const response = await createMember({
+        // バックエンドに登録リクエスト
+        const response = await registerApi({
           name,
           familyRole: role,
+          password,
         })
 
-        // 作成成功後、自動ログイン
+        // トークンを保存
+        setStoredToken(response.token)
+
+        // トークンからユーザー情報を取得
+        const payload = decodeJwtPayload(response.token)
+        if (!payload) {
+          setError('トークンの解析に失敗しました')
+          return false
+        }
+
         const userData: User = {
-          id: response.id,
-          name: response.name,
-          role: response.familyRole,
+          id: payload.sub,
+          name: response.memberName,
+          role: payload.role as FamilyRole,
           createdAt: new Date().toISOString(),
         }
 
@@ -222,7 +297,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } catch (err) {
         if (err instanceof ApiError) {
           // 名前重複エラーなどをユーザーにわかりやすく表示
-          if (err.message.includes('already exists')) {
+          if (err.message.includes('重複') || err.message.includes('already exists')) {
             setError('この名前は既に使用されています')
           } else {
             setError(err.message)
@@ -244,7 +319,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
    * ログアウト処理
    */
   const logout = useCallback(() => {
-    setUser(null)
     setError(null)
     clearSession()
   }, [clearSession])
@@ -288,7 +362,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
  *   const { user, login, logout, register } = useAuth()
  *
  *   const handleLogin = async () => {
- *     const success = await login('タロウ')
+ *     const success = await login('タロウ', 'password123')
  *     if (success) {
  *       console.log('ログイン成功')
  *     }

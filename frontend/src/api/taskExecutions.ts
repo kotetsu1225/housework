@@ -18,9 +18,13 @@ import type {
 /**
  * TaskExecution一覧取得のフィルタオプション
  */
+/**
+ * NOTE: This option replaces the previous 'date' field.
+ * The backend expects 'scheduledDate' as the query parameter name.
+ */
 export interface GetTaskExecutionsOptions {
   /** 実行予定日でフィルタ (YYYY-MM-DD) */
-  date?: string
+  scheduledDate?: string
   /** ステータスでフィルタ */
   status?: 'NOT_STARTED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED'
   /** 担当者IDでフィルタ */
@@ -57,7 +61,7 @@ export async function getTaskExecutions(
 ): Promise<GetTaskExecutionsResponse> {
   const params = new URLSearchParams()
 
-  if (options.date) params.append('date', options.date)
+  if (options.scheduledDate) params.append('scheduledDate', options.scheduledDate)
   if (options.status) params.append('status', options.status)
   if (options.memberId) params.append('memberId', options.memberId)
   if (options.limit !== undefined) params.append('limit', String(options.limit))

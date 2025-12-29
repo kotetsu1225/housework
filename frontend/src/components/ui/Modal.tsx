@@ -84,7 +84,7 @@ export function Modal({
 
   return (
     <div
-      className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-end justify-center z-50"
+      className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-end justify-center z-[60]"
       onClick={handleOverlayClick}
       role="dialog"
       aria-modal="true"

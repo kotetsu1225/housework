@@ -8,7 +8,24 @@
 
 import type { ApiErrorResponse } from '../types/api'
 
-const API_BASE = '/api'
+/// <reference types="vite/client" />
+
+interface ImportMetaEnv {
+  readonly VITE_API_URL?: string
+}
+
+interface ImportMeta {
+  readonly env: ImportMetaEnv
+}
+
+/**
+ * APIのベースURL
+ * - 環境変数 VITE_API_URL が設定されている場合: そのURLを使用（本番環境）
+ * - 設定されていない場合: '/api' を使用（開発環境、Viteのproxyを経由）
+ */
+const API_BASE = import.meta.env.VITE_API_URL 
+  ? `${import.meta.env.VITE_API_URL}/api`
+  : '/api'
 
 /** JWTトークン保存用のローカルストレージキー */
 export const TOKEN_STORAGE_KEY = 'housework_token'

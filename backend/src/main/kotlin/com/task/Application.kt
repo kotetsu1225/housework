@@ -50,6 +50,17 @@ fun Application.module() {
     }
 
     install(CORS) {
+        val allowedOriginsEnv = System.getenv("CORS_ALLOWED_ORIGINS")
+        val allowedOrigins = allowedOriginsEnv
+            ?.split(",")
+            ?.map { it.trim() }
+            ?: listOf("http://localhost:3000") 
+        
+        allowedOrigins.forEach { origin ->
+            allowHost(origin.removePrefix("http://").removePrefix("https://"), 
+                     schemes = listOf(if (origin.startsWith("https")) "https" else "http"))
+        }
+        
         allowMethod(HttpMethod.Options)
         allowMethod(HttpMethod.Get)
         allowMethod(HttpMethod.Post)
@@ -58,7 +69,7 @@ fun Application.module() {
         allowMethod(HttpMethod.Delete)
         allowHeader(HttpHeaders.Authorization)
         allowHeader(HttpHeaders.ContentType)
-        anyHost()
+        allowCredentials = true  // 認証情報（Cookie、Authorization）を許可
     }
 
     install(StatusPages) {

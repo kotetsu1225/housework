@@ -18,3 +18,9 @@ Thumbs.db
 # Logs
 *.log
 
+# Environment variables (機密情報を含むため)
+.env
+.env.local
+.env.*.local
+!.env.example
+

@@ -44,7 +44,6 @@ class MemberAvailabilityRepositoryImpl : MemberAvailabilityRepository {
                 id = memberAvailability.id.value
                 memberId = memberAvailability.memberId.value
                 targetDate = memberAvailability.targetDate
-                isDeleted = false
                 createdAt = now
                 updatedAt = now
             }
@@ -54,7 +53,6 @@ class MemberAvailabilityRepositoryImpl : MemberAvailabilityRepository {
                 .update(MEMBER_AVAILABILITIES)
                 .set(MEMBER_AVAILABILITIES.MEMBER_ID, memberAvailability.memberId.value)
                 .set(MEMBER_AVAILABILITIES.TARGET_DATE, memberAvailability.targetDate)
-                .set(MEMBER_AVAILABILITIES.IS_DELETED, false)
                 .set(MEMBER_AVAILABILITIES.UPDATED_AT, now)
                 .where(MEMBER_AVAILABILITIES.ID.eq(memberAvailability.id.value))
                 .execute()
@@ -89,7 +87,6 @@ class MemberAvailabilityRepositoryImpl : MemberAvailabilityRepository {
             .select(MEMBER_AVAILABILITIES.asterisk(), timeSlotsField)
             .from(MEMBER_AVAILABILITIES)
             .where(MEMBER_AVAILABILITIES.ID.eq(id.value))
-            .and(MEMBER_AVAILABILITIES.IS_DELETED.eq(false))
             .fetchOne { record ->
                 val availabilityRecord = record.into(MemberAvailabilitiesRecord::class.java)
                 // Field変数を使用した型安全なアクセス（キャスト不要）
@@ -110,7 +107,6 @@ class MemberAvailabilityRepositoryImpl : MemberAvailabilityRepository {
             .from(MEMBER_AVAILABILITIES)
             .where(MEMBER_AVAILABILITIES.MEMBER_ID.eq(memberId.value))
             .and(MEMBER_AVAILABILITIES.TARGET_DATE.eq(targetDate))
-            .and(MEMBER_AVAILABILITIES.IS_DELETED.eq(false))
             .fetchOne { record ->
                 val availabilityRecord = record.into(MemberAvailabilitiesRecord::class.java)
                 val timeSlotsRecords = record.get(timeSlotsField)
@@ -127,7 +123,6 @@ class MemberAvailabilityRepositoryImpl : MemberAvailabilityRepository {
             .select(MEMBER_AVAILABILITIES.asterisk(), timeSlotsField)
             .from(MEMBER_AVAILABILITIES)
             .where(MEMBER_AVAILABILITIES.MEMBER_ID.eq(memberId.value))
-            .and(MEMBER_AVAILABILITIES.IS_DELETED.eq(false))
             .orderBy(MEMBER_AVAILABILITIES.CREATED_AT.desc())
             .fetch { record ->
                 val memberAvailabilityRecord = record.into(MemberAvailabilitiesRecord::class.java)
@@ -138,10 +133,9 @@ class MemberAvailabilityRepositoryImpl : MemberAvailabilityRepository {
     }
 
     override fun delete(id: MemberAvailabilityId, session: DSLContext) {
+        // time_slots は ON DELETE CASCADE で自動削除される
         session
-            .update(MEMBER_AVAILABILITIES)
-            .set(MEMBER_AVAILABILITIES.IS_DELETED, true)
-            .set(MEMBER_AVAILABILITIES.UPDATED_AT, OffsetDateTime.now())
+            .deleteFrom(MEMBER_AVAILABILITIES)
             .where(MEMBER_AVAILABILITIES.ID.eq(id.value))
             .execute()
     }

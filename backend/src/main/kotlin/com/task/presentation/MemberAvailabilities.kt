@@ -4,6 +4,7 @@ import com.task.domain.member.MemberId
 import com.task.domain.memberAvailability.MemberAvailabilityId
 import com.task.domain.memberAvailability.TimeSlot
 import com.task.usecase.memberAvailability.create.CreateMemberAvailabilityUseCase
+import com.task.usecase.memberAvailability.delete.DeleteMemberAvailabilityUseCase
 import com.task.usecase.memberAvailability.get.GetMemberAvailabilitiesUseCase
 import com.task.usecase.memberAvailability.update.DeleteMemberAvailabilityTimeSlotsUseCase
 import com.task.usecase.memberAvailability.update.UpdateMemberAvailabilityTimeSlotsUseCase
@@ -13,9 +14,7 @@ import io.ktor.server.application.call
 import io.ktor.server.request.receive
 import io.ktor.server.response.respond
 import io.ktor.server.routing.Route
-// Ktor Resources: Type-safe routingを使用する場合は、
-// io.ktor.server.resources.get/postを使用する必要がある
-// 出典: https://ktor.io/docs/server-resources.html#routes
+import io.ktor.server.resources.delete
 import io.ktor.server.resources.get
 import io.ktor.server.resources.post
 import kotlinx.serialization.Serializable
@@ -151,6 +150,12 @@ class MemberAvailabilities {
             val memo: String?,
         )
     }
+
+    @Resource("/{availabilityId}")
+    class Delete(
+        val parent: MemberAvailabilities = MemberAvailabilities(),
+        val availabilityId: String,
+    )
 }
 
 fun Route.memberAvailabilities() {
@@ -283,5 +288,16 @@ fun Route.memberAvailabilities() {
                 }
             )
         )
+    }
+
+    // DELETE /api/member-availabilities/{availabilityId} - 空き時間を物理削除
+    delete<MemberAvailabilities.Delete> { resource ->
+        instance<DeleteMemberAvailabilityUseCase>().execute(
+            DeleteMemberAvailabilityUseCase.Input(
+                id = MemberAvailabilityId.from(resource.availabilityId)
+            )
+        )
+
+        call.respond(HttpStatusCode.NoContent)
     }
 }

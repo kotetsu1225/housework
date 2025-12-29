@@ -12,16 +12,16 @@ import java.util.UUID
 
 import org.jooq.Field
 import org.jooq.Record1
-import org.jooq.Record6
-import org.jooq.Row6
+import org.jooq.Record5
+import org.jooq.Row5
 import org.jooq.impl.UpdatableRecordImpl
 
 
 /**
- * MemberAvailability集約ルート
+ * メンバーの空き時間（物理削除方式）
  */
 @Suppress("UNCHECKED_CAST")
-open class MemberAvailabilitiesRecord private constructor() : UpdatableRecordImpl<MemberAvailabilitiesRecord>(MemberAvailabilities.MEMBER_AVAILABILITIES), Record6<UUID?, UUID?, LocalDate?, Boolean?, OffsetDateTime?, OffsetDateTime?> {
+open class MemberAvailabilitiesRecord private constructor() : UpdatableRecordImpl<MemberAvailabilitiesRecord>(MemberAvailabilities.MEMBER_AVAILABILITIES), Record5<UUID?, UUID?, LocalDate?, OffsetDateTime?, OffsetDateTime?> {
 
     open var id: UUID?
         set(value): Unit = set(0, value)
@@ -35,19 +35,13 @@ open class MemberAvailabilitiesRecord private constructor() : UpdatableRecordImp
         set(value): Unit = set(2, value)
         get(): LocalDate = get(2) as LocalDate
 
-    @Suppress("INAPPLICABLE_JVM_NAME")
-    @set:JvmName("setIsDeleted")
-    open var isDeleted: Boolean?
-        set(value): Unit = set(3, value)
-        get(): Boolean? = get(3) as Boolean?
-
     open var createdAt: OffsetDateTime?
-        set(value): Unit = set(4, value)
-        get(): OffsetDateTime? = get(4) as OffsetDateTime?
+        set(value): Unit = set(3, value)
+        get(): OffsetDateTime? = get(3) as OffsetDateTime?
 
     open var updatedAt: OffsetDateTime?
-        set(value): Unit = set(5, value)
-        get(): OffsetDateTime? = get(5) as OffsetDateTime?
+        set(value): Unit = set(4, value)
+        get(): OffsetDateTime? = get(4) as OffsetDateTime?
 
     // -------------------------------------------------------------------------
     // Primary key information
@@ -56,29 +50,26 @@ open class MemberAvailabilitiesRecord private constructor() : UpdatableRecordImp
     override fun key(): Record1<UUID?> = super.key() as Record1<UUID?>
 
     // -------------------------------------------------------------------------
-    // Record6 type implementation
+    // Record5 type implementation
     // -------------------------------------------------------------------------
 
-    override fun fieldsRow(): Row6<UUID?, UUID?, LocalDate?, Boolean?, OffsetDateTime?, OffsetDateTime?> = super.fieldsRow() as Row6<UUID?, UUID?, LocalDate?, Boolean?, OffsetDateTime?, OffsetDateTime?>
-    override fun valuesRow(): Row6<UUID?, UUID?, LocalDate?, Boolean?, OffsetDateTime?, OffsetDateTime?> = super.valuesRow() as Row6<UUID?, UUID?, LocalDate?, Boolean?, OffsetDateTime?, OffsetDateTime?>
+    override fun fieldsRow(): Row5<UUID?, UUID?, LocalDate?, OffsetDateTime?, OffsetDateTime?> = super.fieldsRow() as Row5<UUID?, UUID?, LocalDate?, OffsetDateTime?, OffsetDateTime?>
+    override fun valuesRow(): Row5<UUID?, UUID?, LocalDate?, OffsetDateTime?, OffsetDateTime?> = super.valuesRow() as Row5<UUID?, UUID?, LocalDate?, OffsetDateTime?, OffsetDateTime?>
     override fun field1(): Field<UUID?> = MemberAvailabilities.MEMBER_AVAILABILITIES.ID
     override fun field2(): Field<UUID?> = MemberAvailabilities.MEMBER_AVAILABILITIES.MEMBER_ID
     override fun field3(): Field<LocalDate?> = MemberAvailabilities.MEMBER_AVAILABILITIES.TARGET_DATE
-    override fun field4(): Field<Boolean?> = MemberAvailabilities.MEMBER_AVAILABILITIES.IS_DELETED
-    override fun field5(): Field<OffsetDateTime?> = MemberAvailabilities.MEMBER_AVAILABILITIES.CREATED_AT
-    override fun field6(): Field<OffsetDateTime?> = MemberAvailabilities.MEMBER_AVAILABILITIES.UPDATED_AT
+    override fun field4(): Field<OffsetDateTime?> = MemberAvailabilities.MEMBER_AVAILABILITIES.CREATED_AT
+    override fun field5(): Field<OffsetDateTime?> = MemberAvailabilities.MEMBER_AVAILABILITIES.UPDATED_AT
     override fun component1(): UUID? = id
     override fun component2(): UUID = memberId
     override fun component3(): LocalDate = targetDate
-    override fun component4(): Boolean? = isDeleted
-    override fun component5(): OffsetDateTime? = createdAt
-    override fun component6(): OffsetDateTime? = updatedAt
+    override fun component4(): OffsetDateTime? = createdAt
+    override fun component5(): OffsetDateTime? = updatedAt
     override fun value1(): UUID? = id
     override fun value2(): UUID = memberId
     override fun value3(): LocalDate = targetDate
-    override fun value4(): Boolean? = isDeleted
-    override fun value5(): OffsetDateTime? = createdAt
-    override fun value6(): OffsetDateTime? = updatedAt
+    override fun value4(): OffsetDateTime? = createdAt
+    override fun value5(): OffsetDateTime? = updatedAt
 
     override fun value1(value: UUID?): MemberAvailabilitiesRecord {
         set(0, value)
@@ -95,7 +86,7 @@ open class MemberAvailabilitiesRecord private constructor() : UpdatableRecordImp
         return this
     }
 
-    override fun value4(value: Boolean?): MemberAvailabilitiesRecord {
+    override fun value4(value: OffsetDateTime?): MemberAvailabilitiesRecord {
         set(3, value)
         return this
     }
@@ -105,29 +96,22 @@ open class MemberAvailabilitiesRecord private constructor() : UpdatableRecordImp
         return this
     }
 
-    override fun value6(value: OffsetDateTime?): MemberAvailabilitiesRecord {
-        set(5, value)
-        return this
-    }
-
-    override fun values(value1: UUID?, value2: UUID?, value3: LocalDate?, value4: Boolean?, value5: OffsetDateTime?, value6: OffsetDateTime?): MemberAvailabilitiesRecord {
+    override fun values(value1: UUID?, value2: UUID?, value3: LocalDate?, value4: OffsetDateTime?, value5: OffsetDateTime?): MemberAvailabilitiesRecord {
         this.value1(value1)
         this.value2(value2)
         this.value3(value3)
         this.value4(value4)
         this.value5(value5)
-        this.value6(value6)
         return this
     }
 
     /**
      * Create a detached, initialised MemberAvailabilitiesRecord
      */
-    constructor(id: UUID? = null, memberId: UUID, targetDate: LocalDate, isDeleted: Boolean? = null, createdAt: OffsetDateTime? = null, updatedAt: OffsetDateTime? = null): this() {
+    constructor(id: UUID? = null, memberId: UUID, targetDate: LocalDate, createdAt: OffsetDateTime? = null, updatedAt: OffsetDateTime? = null): this() {
         this.id = id
         this.memberId = memberId
         this.targetDate = targetDate
-        this.isDeleted = isDeleted
         this.createdAt = createdAt
         this.updatedAt = updatedAt
         resetChangedOnNotNull()
@@ -141,7 +125,6 @@ open class MemberAvailabilitiesRecord private constructor() : UpdatableRecordImp
             this.id = value.id
             this.memberId = value.memberId
             this.targetDate = value.targetDate
-            this.isDeleted = value.isDeleted
             this.createdAt = value.createdAt
             this.updatedAt = value.updatedAt
             resetChangedOnNotNull()

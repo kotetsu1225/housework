@@ -33,7 +33,7 @@ open class Public : SchemaImpl("public", DefaultCatalog.DEFAULT_CATALOG) {
     }
 
     /**
-     * MemberAvailability集約ルート
+     * メンバーの空き時間（物理削除方式）
      */
     val MEMBER_AVAILABILITIES: MemberAvailabilities get() = MemberAvailabilities.MEMBER_AVAILABILITIES
 

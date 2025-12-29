@@ -201,7 +201,7 @@ open class TaskExecutions(
         get(): Members = taskExecutionsCompletedByMemberIdFkey()
     override fun getChecks(): List<Check<TaskExecutionsRecord>> = listOf(
         Internal.createCheck(this, DSL.name("chk_completed"), "((((status)::text <> 'COMPLETED'::text) OR ((completed_at IS NOT NULL) AND (completed_by_member_id IS NOT NULL))))", true),
-        Internal.createCheck(this, DSL.name("chk_started_at"), "((((status)::text = 'NOT_STARTED'::text) OR (started_at IS NOT NULL)))", true),
+        Internal.createCheck(this, DSL.name("chk_started_at"), "((((status)::text = ANY ((ARRAY['NOT_STARTED'::character varying, 'CANCELLED'::character varying])::text[])) OR (started_at IS NOT NULL)))", true),
         Internal.createCheck(this, DSL.name("task_executions_status_check"), "(((status)::text = ANY ((ARRAY['NOT_STARTED'::character varying, 'IN_PROGRESS'::character varying, 'COMPLETED'::character varying, 'CANCELLED'::character varying])::text[])))", true)
     )
     override fun `as`(alias: String): TaskExecutions = TaskExecutions(DSL.name(alias), this)

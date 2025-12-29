@@ -25,7 +25,7 @@ import org.jooq.Index
 import org.jooq.Name
 import org.jooq.Record
 import org.jooq.Records
-import org.jooq.Row6
+import org.jooq.Row5
 import org.jooq.Schema
 import org.jooq.SelectField
 import org.jooq.Table
@@ -39,7 +39,7 @@ import org.jooq.impl.TableImpl
 
 
 /**
- * MemberAvailability集約ルート
+ * メンバーの空き時間（物理削除方式）
  */
 @Suppress("UNCHECKED_CAST")
 open class MemberAvailabilities(
@@ -55,7 +55,7 @@ open class MemberAvailabilities(
     path,
     aliased,
     parameters,
-    DSL.comment("MemberAvailability集約ルート"),
+    DSL.comment("メンバーの空き時間（物理削除方式）"),
     TableOptions.table()
 ) {
     companion object {
@@ -87,11 +87,6 @@ open class MemberAvailabilities(
      * The column <code>public.member_availabilities.target_date</code>. 対象日
      */
     val TARGET_DATE: TableField<MemberAvailabilitiesRecord, LocalDate?> = createField(DSL.name("target_date"), SQLDataType.LOCALDATE.nullable(false), this, "対象日")
-
-    /**
-     * The column <code>public.member_availabilities.is_deleted</code>. 論理削除フラグ
-     */
-    val IS_DELETED: TableField<MemberAvailabilitiesRecord, Boolean?> = createField(DSL.name("is_deleted"), SQLDataType.BOOLEAN.nullable(false).defaultValue(DSL.field(DSL.raw("false"), SQLDataType.BOOLEAN)), this, "論理削除フラグ")
 
     /**
      * The column <code>public.member_availabilities.created_at</code>. 作成日時
@@ -164,18 +159,18 @@ open class MemberAvailabilities(
     override fun rename(name: Table<*>): MemberAvailabilities = MemberAvailabilities(name.getQualifiedName(), null)
 
     // -------------------------------------------------------------------------
-    // Row6 type methods
+    // Row5 type methods
     // -------------------------------------------------------------------------
-    override fun fieldsRow(): Row6<UUID?, UUID?, LocalDate?, Boolean?, OffsetDateTime?, OffsetDateTime?> = super.fieldsRow() as Row6<UUID?, UUID?, LocalDate?, Boolean?, OffsetDateTime?, OffsetDateTime?>
+    override fun fieldsRow(): Row5<UUID?, UUID?, LocalDate?, OffsetDateTime?, OffsetDateTime?> = super.fieldsRow() as Row5<UUID?, UUID?, LocalDate?, OffsetDateTime?, OffsetDateTime?>
 
     /**
      * Convenience mapping calling {@link SelectField#convertFrom(Function)}.
      */
-    fun <U> mapping(from: (UUID?, UUID?, LocalDate?, Boolean?, OffsetDateTime?, OffsetDateTime?) -> U): SelectField<U> = convertFrom(Records.mapping(from))
+    fun <U> mapping(from: (UUID?, UUID?, LocalDate?, OffsetDateTime?, OffsetDateTime?) -> U): SelectField<U> = convertFrom(Records.mapping(from))
 
     /**
      * Convenience mapping calling {@link SelectField#convertFrom(Class,
      * Function)}.
      */
-    fun <U> mapping(toType: Class<U>, from: (UUID?, UUID?, LocalDate?, Boolean?, OffsetDateTime?, OffsetDateTime?) -> U): SelectField<U> = convertFrom(toType, Records.mapping(from))
+    fun <U> mapping(toType: Class<U>, from: (UUID?, UUID?, LocalDate?, OffsetDateTime?, OffsetDateTime?) -> U): SelectField<U> = convertFrom(toType, Records.mapping(from))
 }

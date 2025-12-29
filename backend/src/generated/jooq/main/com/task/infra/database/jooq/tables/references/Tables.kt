@@ -15,7 +15,7 @@ import com.task.infra.database.jooq.tables.TimeSlots
 
 
 /**
- * MemberAvailability集約ルート
+ * メンバーの空き時間（物理削除方式）
  */
 val MEMBER_AVAILABILITIES: MemberAvailabilities = MemberAvailabilities.MEMBER_AVAILABILITIES
 

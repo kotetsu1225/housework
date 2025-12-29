@@ -11,14 +11,13 @@ import java.util.UUID
 
 
 /**
- * MemberAvailability集約ルート
+ * メンバーの空き時間（物理削除方式）
  */
 @Suppress("UNCHECKED_CAST")
 data class MemberAvailabilities(
     val id: UUID? = null,
     val memberId: UUID,
     val targetDate: LocalDate,
-    val isDeleted: Boolean? = null,
     val createdAt: OffsetDateTime? = null,
     val updatedAt: OffsetDateTime? = null
 ): Serializable {
@@ -41,12 +40,6 @@ data class MemberAvailabilities(
             return false
         if (this.targetDate != o.targetDate)
             return false
-        if (this.isDeleted == null) {
-            if (o.isDeleted != null)
-                return false
-        }
-        else if (this.isDeleted != o.isDeleted)
-            return false
         if (this.createdAt == null) {
             if (o.createdAt != null)
                 return false
@@ -68,7 +61,6 @@ data class MemberAvailabilities(
         result = prime * result + (if (this.id == null) 0 else this.id.hashCode())
         result = prime * result + this.memberId.hashCode()
         result = prime * result + this.targetDate.hashCode()
-        result = prime * result + (if (this.isDeleted == null) 0 else this.isDeleted.hashCode())
         result = prime * result + (if (this.createdAt == null) 0 else this.createdAt.hashCode())
         result = prime * result + (if (this.updatedAt == null) 0 else this.updatedAt.hashCode())
         return result
@@ -80,7 +72,6 @@ data class MemberAvailabilities(
         sb.append(id)
         sb.append(", ").append(memberId)
         sb.append(", ").append(targetDate)
-        sb.append(", ").append(isDeleted)
         sb.append(", ").append(createdAt)
         sb.append(", ").append(updatedAt)
 

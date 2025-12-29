@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { UserPlus, CheckCircle2, Clock, TrendingUp, RefreshCw } from 'lucide-react'
+import { UserPlus, CheckCircle2, Clock, TrendingUp, RefreshCw, Mail } from 'lucide-react'
 import { Header } from '../components/layout/Header'
 import { PageContainer } from '../components/layout/PageContainer'
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card'
@@ -63,6 +63,10 @@ function MemberCard({ member }: { member: MemberWithStats }) {
           <div className="flex items-center gap-2 mb-1">
             <span className="font-bold text-white text-lg">{member.name}</span>
             <RoleBadge role={member.role} />
+          </div>
+          <div className="flex items-center gap-1 text-sm text-white/50 mb-1">
+            <Mail className="w-3 h-3" />
+            <span className="truncate">{member.email}</span>
           </div>
           <div className="flex items-center gap-4 text-sm text-white/50">
             <div className="flex items-center gap-1">
@@ -139,6 +143,8 @@ export function Members() {
   // モーダル状態
   const [showAddModal, setShowAddModal] = useState(false)
   const [newMemberName, setNewMemberName] = useState('')
+  const [newMemberEmail, setNewMemberEmail] = useState('')
+  const [newMemberPassword, setNewMemberPassword] = useState('')
   const [newMemberRole, setNewMemberRole] = useState<FamilyRole>('FATHER')
 
   // 初回マウント時にAPIからメンバー一覧を取得
@@ -160,6 +166,8 @@ export function Members() {
   const handleCloseModal = () => {
     setShowAddModal(false)
     setNewMemberName('')
+    setNewMemberEmail('')
+    setNewMemberPassword('')
     setNewMemberRole('FATHER')
     clearError()
   }
@@ -168,9 +176,9 @@ export function Members() {
    * メンバー追加ハンドラー
    */
   const handleAddMember = async () => {
-    if (!newMemberName.trim()) return
+    if (!newMemberName.trim() || !newMemberEmail.trim() || !newMemberPassword.trim()) return
 
-    const success = await addMember(newMemberName, newMemberRole)
+    const success = await addMember(newMemberName, newMemberEmail, newMemberRole, newMemberPassword)
 
     if (success) {
       // useMemberフックが内部でmembersを更新するので、
@@ -178,6 +186,11 @@ export function Members() {
       handleCloseModal()
     }
   }
+
+  // メールアドレスのバリデーション
+  const isEmailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newMemberEmail.trim())
+  // パスワードのバリデーション（8文字以上）
+  const isPasswordValid = newMemberPassword.trim().length >= 8
 
   return (
     <>
@@ -246,7 +259,7 @@ export function Members() {
                 className="flex-1"
                 onClick={handleAddMember}
                 loading={loading}
-                disabled={!newMemberName.trim()}
+                disabled={!newMemberName.trim() || !isEmailValid || !isPasswordValid}
               >
                 追加
               </Button>
@@ -265,6 +278,22 @@ export function Members() {
             placeholder="名前を入力"
             value={newMemberName}
             onChange={(e) => setNewMemberName(e.target.value)}
+          />
+
+          <Input
+            label="メールアドレス"
+            type="email"
+            placeholder="example@mail.com"
+            value={newMemberEmail}
+            onChange={(e) => setNewMemberEmail(e.target.value)}
+          />
+
+          <Input
+            label="パスワード"
+            type="password"
+            placeholder="8文字以上で入力"
+            value={newMemberPassword}
+            onChange={(e) => setNewMemberPassword(e.target.value)}
           />
 
           <RoleSelector

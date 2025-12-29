@@ -3,6 +3,7 @@ package com.task.infra.member
 import com.google.inject.Singleton
 import com.task.domain.member.FamilyRole
 import com.task.domain.member.Member
+import com.task.domain.member.MemberEmail
 import com.task.domain.member.MemberId
 import com.task.domain.member.MemberName
 import com.task.domain.member.MemberRepository
@@ -20,6 +21,7 @@ class MemberRepositoryImpl : MemberRepository {
 
         record.id = member.id.value
         record.name = member.name.value
+        record.email = member.email.value
         record.role = member.familyRole.value
         record.passwordHash = member.password.value
         record.createdAt = OffsetDateTime.now()
@@ -34,6 +36,7 @@ class MemberRepositoryImpl : MemberRepository {
         session
             .update(MEMBERS)
             .set(MEMBERS.NAME, member.name.value)
+            .set(MEMBERS.EMAIL, member.email.value)
             .set(MEMBERS.ROLE, member.familyRole.value)
             .set(MEMBERS.PASSWORD_HASH, member.password.value)
             .set(MEMBERS.UPDATED_AT, OffsetDateTime.now())
@@ -84,6 +87,7 @@ class MemberRepositoryImpl : MemberRepository {
         return Member.reconstruct(
             id = MemberId(this.id!!),
             name = MemberName(this.name),
+            email = MemberEmail(this.email),
             familyRole = FamilyRole.get(this.role),
             password = PasswordHash(this.passwordHash),
         )

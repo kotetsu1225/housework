@@ -24,6 +24,7 @@ const mockMembers: Member[] = [
   {
     id: 'member-1',
     name: '太郎',
+    email: 'taro@example.com',
     role: 'BROTHER',
     createdAt: '2024-01-01T00:00:00Z',
     updatedAt: '2024-01-01T00:00:00Z',
@@ -31,6 +32,7 @@ const mockMembers: Member[] = [
   {
     id: 'member-2',
     name: '花子',
+    email: 'hanako@example.com',
     role: 'SISTER',
     createdAt: '2024-01-01T00:00:00Z',
     updatedAt: '2024-01-01T00:00:00Z',
@@ -60,8 +62,8 @@ describe('useMember', () => {
     it('メンバー一覧を取得できる', async () => {
       vi.mocked(api.getMembers).mockResolvedValueOnce({
         members: [
-          { id: 'member-1', name: '太郎', familyRole: 'BROTHER' },
-          { id: 'member-2', name: '花子', familyRole: 'SISTER' },
+          { id: 'member-1', name: '太郎', email: 'taro@example.com', familyRole: 'BROTHER' },
+          { id: 'member-2', name: '花子', email: 'hanako@example.com', familyRole: 'SISTER' },
         ],
       })
 
@@ -107,6 +109,7 @@ describe('useMember', () => {
       vi.mocked(api.createMember).mockResolvedValueOnce({
         id: 'new-member',
         name: '次郎',
+        email: 'jiro@example.com',
         familyRole: 'BROTHER',
       })
 
@@ -114,7 +117,7 @@ describe('useMember', () => {
 
       let success: boolean
       await act(async () => {
-        success = await result.current.addMember('次郎', 'BROTHER')
+        success = await result.current.addMember('次郎', 'jiro@example.com', 'BROTHER', 'password123')
       })
 
       expect(success!).toBe(true)
@@ -129,7 +132,7 @@ describe('useMember', () => {
 
       let success: boolean
       await act(async () => {
-        success = await result.current.addMember('次郎', 'BROTHER')
+        success = await result.current.addMember('次郎', 'jiro@example.com', 'BROTHER', 'password123')
       })
 
       expect(success!).toBe(false)

@@ -18,10 +18,9 @@ class UpdateMemberUseCaseImpl @Inject constructor(
 
             if (input.name != null) {
                 val existingMembersName = memberRepository.findAllNames(session)
-                    .filter { it != targetMember.name }  // 自分自身は除外
+                    .filter { it != targetMember.name }
                 targetMember = targetMember.updateName(input.name, existingMembersName)
             }
-
 
             if (input.familyRole != null) {
                 targetMember = targetMember.updateFamilyRole(input.familyRole)
@@ -32,7 +31,8 @@ class UpdateMemberUseCaseImpl @Inject constructor(
         return UpdateMemberUseCase.Output(
             id = member.id,
             name = member.name,
-            familyRole = member.familyRole
+            familyRole = member.familyRole,
+            email = member.email,
         )
     }
 }

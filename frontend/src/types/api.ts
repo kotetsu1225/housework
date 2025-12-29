@@ -18,16 +18,18 @@ import type { FamilyRole } from './index'
  */
 export interface CreateMemberRequest {
   name: string
+  email: string
   familyRole: FamilyRole
+  password: string
 }
 
 /**
  * メンバー作成レスポンス
- * @note バックエンド修正後に対応予定
  */
 export interface CreateMemberResponse {
   id: string
   name: string
+  email: string
   familyRole: FamilyRole
 }
 
@@ -63,6 +65,7 @@ export interface GetMembersResponse {
 export interface MemberResponse {
   id: string
   name: string
+  email: string
   familyRole: FamilyRole
 }
 
@@ -95,6 +98,7 @@ export interface LoginResponse {
  */
 export interface RegisterRequest {
   name: string
+  email: string
   familyRole: FamilyRole
   password: string
 }

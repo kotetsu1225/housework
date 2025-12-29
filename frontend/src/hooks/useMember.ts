@@ -32,7 +32,7 @@ interface UseMemberActions {
   /**
    * メンバーを追加（ローカル状態 + API）
    */
-  addMember: (name: string, familyRole: FamilyRole) => Promise<boolean>
+  addMember: (name: string, email: string, familyRole: FamilyRole, password: string) => Promise<boolean>
   /**
    * メンバーを更新（ローカル状態 + API）
    */
@@ -88,6 +88,7 @@ export function useMember(initialMembers: Member[] = []): UseMemberReturn {
       const fetchedMembers: Member[] = response.members.map((m) => ({
         id: m.id,
         name: m.name,
+        email: m.email,
         role: m.familyRole,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
@@ -111,18 +112,19 @@ export function useMember(initialMembers: Member[] = []): UseMemberReturn {
    * メンバーを追加
    */
   const addMember = useCallback(
-    async (name: string, familyRole: FamilyRole): Promise<boolean> => {
+    async (name: string, email: string, familyRole: FamilyRole, password: string): Promise<boolean> => {
       setLoading(true)
       setError(null)
 
       try {
-        const request: CreateMemberRequest = { name, familyRole }
+        const request: CreateMemberRequest = { name, email, familyRole, password }
         const response = await createMember(request)
 
         // APIレスポンスから新しいメンバーを作成
         const newMember: Member = {
           id: response.id,
           name: response.name,
+          email: response.email,
           role: response.familyRole,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),

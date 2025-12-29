@@ -25,9 +25,9 @@ export type MemberWithStats = Member & { stats: MemberStats }
  * モックメンバーデータ（基本）
  */
 export const MOCK_MEMBERS: Member[] = [
-  { id: '1', name: '母', role: 'MOTHER', createdAt: '2024-01-01', updatedAt: '2024-01-01' },
-  { id: '2', name: '太郎', role: 'BROTHER', createdAt: '2024-01-01', updatedAt: '2024-01-01' },
-  { id: '3', name: '花子', role: 'SISTER', createdAt: '2024-01-01', updatedAt: '2024-01-01' },
+  { id: '1', name: '母', role: 'MOTHER', email: 'mother@example.com', createdAt: '2024-01-01', updatedAt: '2024-01-01' },
+  { id: '2', name: '太郎', role: 'BROTHER', email: 'taro@example.com', createdAt: '2024-01-01', updatedAt: '2024-01-01' },
+  { id: '3', name: '花子', role: 'SISTER', email: 'hanako@example.com', createdAt: '2024-01-01', updatedAt: '2024-01-01' },
 ]
 
 /**
@@ -38,6 +38,7 @@ export const MOCK_MEMBERS_WITH_STATS: MemberWithStats[] = [
     id: '1',
     name: '母',
     role: 'MOTHER',
+    email: 'mother@example.com',
     createdAt: '2024-01-01',
     updatedAt: '2024-01-01',
     stats: { completed: 145, total: 150, streak: 7 },
@@ -46,6 +47,7 @@ export const MOCK_MEMBERS_WITH_STATS: MemberWithStats[] = [
     id: '2',
     name: '太郎',
     role: 'BROTHER',
+    email: 'taro@example.com',
     createdAt: '2024-01-01',
     updatedAt: '2024-01-01',
     stats: { completed: 89, total: 100, streak: 5 },
@@ -54,6 +56,7 @@ export const MOCK_MEMBERS_WITH_STATS: MemberWithStats[] = [
     id: '3',
     name: '花子',
     role: 'SISTER',
+    email: 'hanako@example.com',
     createdAt: '2024-01-01',
     updatedAt: '2024-01-01',
     stats: { completed: 72, total: 85, streak: 3 },

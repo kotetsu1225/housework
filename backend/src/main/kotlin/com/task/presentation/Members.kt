@@ -1,6 +1,7 @@
 package com.task.presentation
 
 import com.task.domain.member.FamilyRole
+import com.task.domain.member.MemberEmail
 import com.task.domain.member.MemberId
 import com.task.domain.member.MemberName
 import com.task.domain.member.PlainPassword
@@ -36,6 +37,7 @@ class Members{
         data class MemberDto(
             val id: String,
             val name: String,
+            val email: String,
             val familyRole: String,
         )
     }
@@ -49,6 +51,7 @@ class Members{
         data class Response(
             val id: String,
             val name: String,
+            val email: String,
             val familyRole: String,
         )
     }
@@ -60,6 +63,7 @@ class Members{
         @Serializable
         data class Request(
             val name: String,
+            val email: String,
             val familyRole: String,
             val password: String,
         )
@@ -67,6 +71,7 @@ class Members{
         data class Response(
             val id: String,
             val name: String,
+            val email: String,
             val familyRole: String,
         )
     }
@@ -101,6 +106,7 @@ fun Route.members() {
                     Members.List.MemberDto(
                         id = member.id.value.toString(),
                         name = member.name.value,
+                        email = member.email.value,
                         familyRole = member.familyRole.value
                     )
                 }
@@ -125,6 +131,7 @@ fun Route.members() {
             Members.Member.Response(
                 id = output.id.value.toString(),
                 name = output.name.value,
+                email = output.email.value,
                 familyRole = output.familyRole.value
             )
         )
@@ -136,6 +143,7 @@ fun Route.members() {
         val output = instance<CreateMemberUseCase>().execute(
             CreateMemberUseCase.Input(
                 name = MemberName(request.name),
+                email = MemberEmail(request.email),
                 familyRole = FamilyRole.get(request.familyRole),
                 password = PlainPassword(request.password)
             )
@@ -146,6 +154,7 @@ fun Route.members() {
             Members.CreateMember.Response(
                 id = output.id.value.toString(),
                 name = output.name.value,
+                email = output.email.value,
                 familyRole = output.familyRole.value
             )
         )

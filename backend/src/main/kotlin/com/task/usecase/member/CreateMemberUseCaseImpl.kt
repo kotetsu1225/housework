@@ -25,7 +25,8 @@ class CreateMemberUseCaseImpl @Inject constructor(
                 name = input.name,
                 familyRole = input.familyRole,
                 password = hashedPassword,
-                existingMembersName = existingMembersName
+                existingMembersName = existingMembersName,
+                email = input.email,
             )
 
             memberRepository.create(newMember, session)
@@ -34,7 +35,8 @@ class CreateMemberUseCaseImpl @Inject constructor(
         return CreateMemberUseCase.Output(
             id = member.id,
             name = member.name,
-            familyRole = member.familyRole
+            familyRole = member.familyRole,
+            email = member.email,
         )
     }
 }

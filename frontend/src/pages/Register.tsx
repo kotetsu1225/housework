@@ -35,6 +35,7 @@ export function Register() {
   const navigate = useNavigate()
   const { register, loading, error, clearError } = useAuth()
   const [name, setName] = useState('')
+  const [email, setEmail] = useState('')
   const [selectedRole, setSelectedRole] = useState<FamilyRole>('FATHER')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
@@ -48,6 +49,21 @@ export function Register() {
   useEffect(() => {
     clearError()
   }, [clearError])
+
+  /**
+   * メールアドレスバリデーション
+   */
+  const validateEmail = (value: string): string | null => {
+    if (!value) {
+      return 'メールアドレスを入力してください'
+    }
+    // 簡易的なメールアドレス形式チェック
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(value)) {
+      return '有効なメールアドレスを入力してください'
+    }
+    return null
+  }
 
   /**
    * パスワードバリデーション
@@ -77,6 +93,12 @@ export function Register() {
       return
     }
 
+    const emailError = validateEmail(email.trim())
+    if (emailError) {
+      setLocalError(emailError)
+      return
+    }
+
     const passwordError = validatePassword(password)
     if (passwordError) {
       setLocalError(passwordError)
@@ -88,7 +110,7 @@ export function Register() {
       return
     }
 
-    const success = await register(name.trim(), selectedRole, password)
+    const success = await register(name.trim(), email.trim(), selectedRole, password)
 
     if (success) {
       navigate('/')
@@ -113,8 +135,10 @@ export function Register() {
   const passwordStrength = getPasswordStrength()
 
   // フォームが有効かどうか
+  const isEmailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())
   const isFormValid =
     name.trim() &&
+    isEmailValid &&
     password.length >= PASSWORD_MIN_LENGTH &&
     password === confirmPassword
 
@@ -148,6 +172,16 @@ export function Register() {
                   onChange={(e) => setName(e.target.value)}
                   disabled={loading}
                   autoComplete="username"
+                />
+
+                <Input
+                  label="メールアドレス"
+                  type="email"
+                  placeholder="example@mail.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  disabled={loading}
+                  autoComplete="email"
                 />
 
                 <div>

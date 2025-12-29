@@ -7,6 +7,7 @@ export type FamilyRole = 'FATHER' | 'MOTHER' | 'BROTHER' | 'SISTER'
 export interface Member {
   id: string
   name: string
+  email: string
   role: FamilyRole
   createdAt: string
   updatedAt: string
@@ -19,6 +20,7 @@ export interface Member {
 export interface User {
   id: string
   name: string
+  email: string
   role: FamilyRole
   createdAt: string
 }

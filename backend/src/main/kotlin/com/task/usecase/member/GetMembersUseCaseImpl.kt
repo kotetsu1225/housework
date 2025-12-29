@@ -21,6 +21,7 @@ class GetMembersUseCaseImpl @Inject constructor(
                 GetMembersUseCase.MemberOutput(
                     id = member.id,
                     name = member.name,
+                    email = member.email,
                     familyRole = member.familyRole
                 )
             }

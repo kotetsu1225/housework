@@ -32,6 +32,7 @@ import org.jooq.impl.Internal
 
 val MEMBER_AVAILABILITIES_PKEY: UniqueKey<MemberAvailabilitiesRecord> = Internal.createUniqueKey(MemberAvailabilities.MEMBER_AVAILABILITIES, DSL.name("member_availabilities_pkey"), arrayOf(MemberAvailabilities.MEMBER_AVAILABILITIES.ID), true)
 val UQ_MEMBER_TARGET_DATE: UniqueKey<MemberAvailabilitiesRecord> = Internal.createUniqueKey(MemberAvailabilities.MEMBER_AVAILABILITIES, DSL.name("uq_member_target_date"), arrayOf(MemberAvailabilities.MEMBER_AVAILABILITIES.MEMBER_ID, MemberAvailabilities.MEMBER_AVAILABILITIES.TARGET_DATE), true)
+val MEMBERS_EMAIL_KEY: UniqueKey<MembersRecord> = Internal.createUniqueKey(Members.MEMBERS, DSL.name("members_email_key"), arrayOf(Members.MEMBERS.EMAIL), true)
 val MEMBERS_PKEY: UniqueKey<MembersRecord> = Internal.createUniqueKey(Members.MEMBERS, DSL.name("members_pkey"), arrayOf(Members.MEMBERS.ID), true)
 val TASK_DEFINITIONS_PKEY: UniqueKey<TaskDefinitionsRecord> = Internal.createUniqueKey(TaskDefinitions.TASK_DEFINITIONS, DSL.name("task_definitions_pkey"), arrayOf(TaskDefinitions.TASK_DEFINITIONS.ID), true)
 val TASK_EXECUTIONS_PKEY: UniqueKey<TaskExecutionsRecord> = Internal.createUniqueKey(TaskExecutions.TASK_EXECUTIONS, DSL.name("task_executions_pkey"), arrayOf(TaskExecutions.TASK_EXECUTIONS.ID), true)

@@ -5,6 +5,7 @@ import java.util.UUID
 class Member private constructor(
     val id: MemberId,
     val name: MemberName,
+    val email: MemberEmail,
     val familyRole: FamilyRole,
     val password: PasswordHash,
 ) {
@@ -14,6 +15,17 @@ class Member private constructor(
         return Member(
             id = this.id,
             name = newName,
+            email = this.email,
+            familyRole = this.familyRole,
+            password = this.password,
+        )
+    }
+
+    fun updateEmail(newEmail: MemberEmail): Member {
+        return Member(
+            id = this.id,
+            name = this.name,
+            email = newEmail,
             familyRole = this.familyRole,
             password = this.password,
         )
@@ -23,6 +35,7 @@ class Member private constructor(
         return Member(
             id = this.id,
             name = this.name,
+            email = this.email,
             familyRole = newRole,
             password = this.password,
         )
@@ -31,6 +44,7 @@ class Member private constructor(
     companion object {
         fun create(
             name: MemberName,
+            email: MemberEmail,
             familyRole: FamilyRole,
             password: PasswordHash,
             existingMembersName: List<MemberName>
@@ -40,6 +54,7 @@ class Member private constructor(
             return Member(
                 id = MemberId.generate(),
                 name = name,
+                email = email,
                 familyRole = familyRole,
                 password = password,
             )
@@ -48,12 +63,14 @@ class Member private constructor(
         fun reconstruct(
             id: MemberId,
             name: MemberName,
+            email: MemberEmail,
             familyRole: FamilyRole,
             password: PasswordHash,
         ): Member {
             return Member(
                 id = id,
                 name = name,
+                email = email,
                 familyRole = familyRole,
                 password = password,
             )

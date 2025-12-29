@@ -1,6 +1,7 @@
 package com.task.presentation
 
 import com.task.domain.member.FamilyRole
+import com.task.domain.member.MemberEmail
 import com.task.domain.member.MemberName
 import com.task.domain.member.PlainPassword
 import com.task.domain.member.MemberRepository
@@ -33,6 +34,7 @@ class Auth {
         @Serializable
         data class Request(
             val name: String,
+            val email: String,
             val familyRole: String,
             val password: String,
         )
@@ -75,6 +77,7 @@ fun Route.auth() {
             val createOutput = instance<CreateMemberUseCase>().execute(
                 CreateMemberUseCase.Input(
                     name = MemberName(request.name),
+                    email = MemberEmail(request.email),
                     familyRole = FamilyRole.get(request.familyRole),
                     password = PlainPassword(request.password)
                 )

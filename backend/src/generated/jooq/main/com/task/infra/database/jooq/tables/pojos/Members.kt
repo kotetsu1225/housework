@@ -19,7 +19,8 @@ data class Members(
     val role: String,
     val createdAt: OffsetDateTime? = null,
     val updatedAt: OffsetDateTime? = null,
-    val passwordHash: String
+    val passwordHash: String,
+    val email: String
 ): Serializable {
 
     override fun equals(other: Any?): Boolean {
@@ -54,6 +55,8 @@ data class Members(
             return false
         if (this.passwordHash != o.passwordHash)
             return false
+        if (this.email != o.email)
+            return false
         return true
     }
 
@@ -66,6 +69,7 @@ data class Members(
         result = prime * result + (if (this.createdAt == null) 0 else this.createdAt.hashCode())
         result = prime * result + (if (this.updatedAt == null) 0 else this.updatedAt.hashCode())
         result = prime * result + this.passwordHash.hashCode()
+        result = prime * result + this.email.hashCode()
         return result
     }
 
@@ -78,6 +82,7 @@ data class Members(
         sb.append(", ").append(createdAt)
         sb.append(", ").append(updatedAt)
         sb.append(", ").append(passwordHash)
+        sb.append(", ").append(email)
 
         sb.append(")")
         return sb.toString()

@@ -93,11 +93,12 @@ interface AuthContextType {
   /**
    * 新規登録（バックエンドの/api/auth/registerを使用）
    * @param name - メンバー名
+   * @param email - メールアドレス
    * @param role - 家族の役割
    * @param password - パスワード
    * @returns 登録成功したかどうか
    */
-  register: (name: string, role: FamilyRole, password: string) => Promise<boolean>
+  register: (name: string, email: string, role: FamilyRole, password: string) => Promise<boolean>
   /** エラーをクリア */
   clearError: () => void
 }
@@ -166,6 +167,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return {
         id: member.id,
         name: member.name,
+        email: member.email,
         role: member.familyRole,
         createdAt: new Date().toISOString(),
       }
@@ -225,9 +227,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           return false
         }
 
+        // ログイン時はAPIからメンバー情報を取得してemailを取得
+        const member = await getMember(payload.sub)
         const userData: User = {
           id: payload.sub,
           name: response.memberName,
+          email: member.email,
           role: payload.role as FamilyRole,
           createdAt: new Date().toISOString(),
         }
@@ -262,7 +267,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
    * メンバーを作成してJWTトークンを取得します。
    */
   const register = useCallback(
-    async (name: string, role: FamilyRole, password: string): Promise<boolean> => {
+    async (name: string, email: string, role: FamilyRole, password: string): Promise<boolean> => {
       setLoading(true)
       setError(null)
 
@@ -270,6 +275,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // バックエンドに登録リクエスト
         const response = await registerApi({
           name,
+          email,
           familyRole: role,
           password,
         })
@@ -287,6 +293,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const userData: User = {
           id: payload.sub,
           name: response.memberName,
+          email: email,
           role: payload.role as FamilyRole,
           createdAt: new Date().toISOString(),
         }

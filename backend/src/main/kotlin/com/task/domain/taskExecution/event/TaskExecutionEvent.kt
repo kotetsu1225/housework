@@ -8,22 +8,32 @@ import java.time.Instant
 
 sealed interface TaskExecutionEvent: DomainEvent {
     val taskExecutionId: TaskExecutionId
+    val taskName: TaskDefinitionName
 }
 
 data class TaskExecutionStarted(
     override val taskExecutionId: TaskExecutionId,
-    val assigneeMemberId: MemberId? = null,
-    val taskName: TaskDefinitionName,
+    val assigneeMemberId: MemberId,
+    override val taskName: TaskDefinitionName,
     override val occurredAt: Instant
 ) : TaskExecutionEvent
 
 data class TaskExecutionCompleted(
     override val taskExecutionId: TaskExecutionId,
     val completedByMemberId: MemberId,
+    override val taskName: TaskDefinitionName,
     override val occurredAt: Instant
 ) : TaskExecutionEvent
 
 data class TaskExecutionCancelled(
     override val taskExecutionId: TaskExecutionId,
+    override val taskName: TaskDefinitionName,
+    override val occurredAt: Instant
+) : TaskExecutionEvent
+
+data class TaskExecutionCreated(
+    override val taskExecutionId: TaskExecutionId,
+    override val taskName: TaskDefinitionName,
+    val assigneeMemberId: MemberId?,
     override val occurredAt: Instant
 ) : TaskExecutionEvent

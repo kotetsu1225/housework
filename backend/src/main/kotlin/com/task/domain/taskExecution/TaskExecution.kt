@@ -53,29 +53,11 @@ sealed class TaskExecution {
             return StateChange(newInProgressState, startEvent)
         }
 
-        fun cancel(definitionIsDeleted: Boolean): StateChange<Cancelled> {
-            require(!definitionIsDeleted) {
+        fun cancel(taskDefinition: TaskDefinition): StateChange<Cancelled> {
+            require(!taskDefinition.isDeleted) {
                 "削除されたタスクはキャンセルできません。"
             }
-
-            val now = Instant.now()
-
-            val newCancelledState = Cancelled(
-                id = this.id,
-                taskDefinitionId = this.taskDefinitionId,
-                scheduledDate = this.scheduledDate,
-                assigneeMemberId = this.assigneeMemberId,
-                taskSnapshot = null,
-                startedAt = null,
-                cancelledAt = now
-            )
-
-            val cancelEvent = TaskExecutionCancelled(
-                taskExecutionId = this.id,
-                occurredAt = now,
-            )
-
-            return StateChange(newCancelledState, cancelEvent)
+            return toCancelledState(taskDefinition.name)
         }
 
         fun assign(
@@ -84,7 +66,11 @@ sealed class TaskExecution {
             return copy(assigneeMemberId = newAssigneeMemberId)
         }
 
-        fun cancelByDefinitionDeletion(): StateChange<Cancelled> {
+        fun cancelByDefinitionDeletion(taskName: TaskDefinitionName): StateChange<Cancelled> {
+            return toCancelledState(taskName)
+        }
+
+        private fun toCancelledState(taskName: TaskDefinitionName): StateChange<Cancelled> {
             val now = Instant.now()
 
             val newCancelledState = Cancelled(
@@ -99,7 +85,8 @@ sealed class TaskExecution {
 
             val cancelEvent = TaskExecutionCancelled(
                 taskExecutionId = this.id,
-                occurredAt = now
+                taskName = taskName,
+                occurredAt = now,
             )
 
             return StateChange(newCancelledState, cancelEvent)
@@ -138,9 +125,10 @@ sealed class TaskExecution {
             val completedEvent = TaskExecutionCompleted(
                 taskExecutionId = this.id,
                 completedByMemberId = completedByMemberId,
+                taskName = this.taskSnapshot.frozenName,
                 occurredAt = now
             )
-            
+
             return StateChange(newCompletedState, completedEvent)
         }
 
@@ -148,7 +136,18 @@ sealed class TaskExecution {
             require(!definitionIsDeleted) {
                 "削除されたタスクはキャンセルできません。"
             }
+            return toCancelledState()
+        }
 
+        fun assign(newAssigneeMemberId: MemberId): InProgress {
+            return copy(assigneeMemberId = newAssigneeMemberId)
+        }
+
+        fun cancelByDefinitionDeletion(): StateChange<Cancelled> {
+            return toCancelledState()
+        }
+
+        private fun toCancelledState(): StateChange<Cancelled> {
             val now = Instant.now()
             val newCancelledState =  Cancelled(
                 id = this.id,
@@ -162,34 +161,11 @@ sealed class TaskExecution {
             
             val cancelEvent = TaskExecutionCancelled(
                 taskExecutionId = this.id,
+                taskName = this.taskSnapshot.frozenName,
                 occurredAt = now
             )
 
             return StateChange(newCancelledState, cancelEvent)
-        }
-
-        fun assign(newAssigneeMemberId: MemberId): InProgress {
-            return copy(assigneeMemberId = newAssigneeMemberId)
-        }
-
-        fun cancelByDefinitionDeletion(): StateChange<Cancelled> {
-            val now = Instant.now()
-            val cancelledState = Cancelled(
-                id = this.id,
-                taskDefinitionId = this.taskDefinitionId,
-                scheduledDate = this.scheduledDate,
-                assigneeMemberId = this.assigneeMemberId,
-                taskSnapshot = this.taskSnapshot,
-                startedAt = this.startedAt,
-                cancelledAt = now
-            )
-
-            val cancelEvent = TaskExecutionCancelled(
-                taskExecutionId = this.id,
-                occurredAt = now
-            )
-
-            return StateChange(cancelledState, cancelEvent)
         }
     }
 
@@ -244,14 +220,14 @@ sealed class TaskExecution {
                 assigneeMemberId = assignee,
             )
 
-            val startedEvent = TaskExecutionStarted(
+            val createdEvent = com.task.domain.taskExecution.event.TaskExecutionCreated(
                 taskExecutionId = newNotStartedState.id,
-                assigneeMemberId = assignee,
                 taskName = taskDefinition.name,
+                assigneeMemberId = assignee,
                 occurredAt = now
             )
 
-            return StateChange(newNotStartedState, startedEvent)
+            return StateChange(newNotStartedState, createdEvent)
         }
 
         fun reconstructNotStarted(

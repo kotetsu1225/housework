@@ -9,21 +9,21 @@ import org.jooq.DSLContext
 
 @Singleton
 class InMemoryDomainEventDispatcher @Inject constructor(
-    handlers: Set<@JvmSuppressWildcards DomainEventHandler<*>>,
+    private val handlers: Set<@JvmSuppressWildcards DomainEventHandler<*>>,
 ) : DomainEventDispatcher {
-    private val handlerMap: Map<Class<*>, List<DomainEventHandler<*>>>
-        = handlers.groupBy { it.eventType }
 
     override fun dispatchAll(events: List<DomainEvent>, session: DSLContext) {
         for (event in events) {
             dispatch(event, session)
         }
     }
+
     @Suppress("UNCHECKED_CAST")
     private fun dispatch(event: DomainEvent, session: DSLContext) {
-        val eventHandlers = handlerMap[event::class.java] ?: return
-        for (eventHandler in eventHandlers) {
-            (eventHandler as DomainEventHandler<DomainEvent>).handle(event, session)
+        handlers.forEach { handler ->
+            if (handler.eventType.isAssignableFrom(event::class.java)) {
+                (handler as DomainEventHandler<DomainEvent>).handle(event, session)
+            }
         }
     }
 }

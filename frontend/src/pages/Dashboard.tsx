@@ -100,7 +100,7 @@ export function Dashboard() {
    */
   useEffect(() => {
     fetchMembers()
-    fetchTaskExecutions({ date: todayStr })
+    fetchTaskExecutions({ scheduledDate: todayStr })
   }, [todayStr, fetchMembers, fetchTaskExecutions])
 
   /**
@@ -140,7 +140,7 @@ export function Dashboard() {
    */
   const handleRefresh = useCallback(async () => {
     await fetchMembers()
-    await fetchTaskExecutions({ date: todayStr })
+    await fetchTaskExecutions({ scheduledDate: todayStr })
   }, [todayStr, fetchMembers, fetchTaskExecutions])
 
   /**
@@ -151,7 +151,7 @@ export function Dashboard() {
     const success = await generateTasks(todayStr)
     if (success) {
       // 生成後にタスク一覧を再取得
-      await fetchTaskExecutions({ date: todayStr })
+      await fetchTaskExecutions({ scheduledDate: todayStr })
     }
     setIsGenerating(false)
   }, [todayStr, generateTasks, fetchTaskExecutions])

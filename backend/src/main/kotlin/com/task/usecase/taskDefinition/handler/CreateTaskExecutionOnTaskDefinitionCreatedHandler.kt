@@ -1,18 +1,20 @@
 package com.task.usecase.taskDefinition.handler
 
 import com.google.inject.Inject
-import com.task.domain.event.DomainEventHandler
-import com.task.domain.taskDefinition.TaskSchedule
-import com.task.domain.taskDefinition.TaskScope
-import com.task.domain.taskDefinition.event.TaskDefinitionCreated
-import com.task.domain.taskExecution.TaskExecution.*
-import com.task.domain.taskExecution.TaskExecutionId
-import com.task.domain.taskExecution.TaskExecutionRepository
 import com.task.domain.AppTimeZone
+import com.task.domain.event.DomainEventDispatcher
+import com.task.domain.event.DomainEventHandler
+import com.task.domain.taskDefinition.TaskDefinitionRepository
+import com.task.domain.taskDefinition.TaskSchedule
+import com.task.domain.taskDefinition.event.TaskDefinitionCreated
+import com.task.domain.taskExecution.TaskExecution
+import com.task.domain.taskExecution.TaskExecutionRepository
 import org.jooq.DSLContext
 
 class CreateTaskExecutionOnTaskDefinitionCreatedHandler @Inject constructor(
     private val taskExecutionRepository: TaskExecutionRepository,
+    private val taskDefinitionRepository: TaskDefinitionRepository,
+    private val domainEventDispatcher: DomainEventDispatcher,
 ) : DomainEventHandler<TaskDefinitionCreated> {
     override val eventType: Class<TaskDefinitionCreated> = TaskDefinitionCreated::class.java
 
@@ -22,23 +24,26 @@ class CreateTaskExecutionOnTaskDefinitionCreatedHandler @Inject constructor(
             return
         }
 
-        val assigneeMemberId = if (event.scope == TaskScope.PERSONAL) {
-            event.ownerMemberId
-        }else{
-            null
-        }
+        // TaskDefinitionを取得（ファクトリメソッドに必要）
+        val taskDefinition = taskDefinitionRepository.findById(event.taskDefinitionId, session)
+            ?: throw IllegalArgumentException("TaskDefinition not found: ${event.taskDefinitionId}")
 
         val scheduledDate = schedule.deadline
             .atStartOfDay(AppTimeZone.ZONE)
             .toInstant()
 
-        val taskExecution = NotStarted(
-            id = TaskExecutionId.generate(),
-            taskDefinitionId = event.taskDefinitionId,
+        // ファクトリメソッドを使用してTaskExecutionを生成
+        // これにより TaskExecutionCreated イベントも一緒に生成される
+        val stateChange = TaskExecution.create(
+            taskDefinition = taskDefinition,
             scheduledDate = scheduledDate,
-            assigneeMemberId = assigneeMemberId,
         )
 
-        taskExecutionRepository.create(taskExecution, session)
+        // 新しい状態を永続化
+        taskExecutionRepository.create(stateChange.newState, session)
+
+        // TaskExecutionCreated イベントをディスパッチ
+        // これにより EmailNotificationHandler が呼び出され、メール通知が送信される
+        domainEventDispatcher.dispatchAll(listOf(stateChange.event), session)
     }
 }

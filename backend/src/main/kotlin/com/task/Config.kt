@@ -51,6 +51,9 @@ import com.task.infra.security.JwtService
 import com.task.usecase.auth.LoginUseCase
 import com.task.usecase.auth.LoginUseCaseImpl
 import com.typesafe.config.ConfigFactory
+import com.task.domain.mail.MailSender
+import com.task.infra.mail.LoggingMailSender
+import com.task.infra.event.handler.EmailNotificationHandler
 
 class AppModule : AbstractModule() {
     override fun configure() {
@@ -86,6 +89,9 @@ class AppModule : AbstractModule() {
 
         bind(DomainEventDispatcher::class.java).to(InMemoryDomainEventDispatcher::class.java)
 
+        // Mail bindings
+        bind(MailSender::class.java).to(LoggingMailSender::class.java)
+
         // Auth UseCase bindings
         bind(LoginUseCase::class.java).to(LoginUseCaseImpl::class.java)
 
@@ -95,6 +101,7 @@ class AppModule : AbstractModule() {
         )
         handlerBinder.addBinding().to(CreateTaskExecutionOnTaskDefinitionCreatedHandler::class.java)
         handlerBinder.addBinding().to(TaskDefinitionDeletedHandler::class.java)
+        handlerBinder.addBinding().to(EmailNotificationHandler::class.java)
 
         val appConfig = ConfigFactory.load()
         val jwtConfig = JwtConfig(

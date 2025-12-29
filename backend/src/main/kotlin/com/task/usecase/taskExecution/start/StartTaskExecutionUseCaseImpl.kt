@@ -2,6 +2,7 @@ package com.task.usecase.taskExecution.start
 
 import com.google.inject.Inject
 import com.google.inject.Singleton
+import com.task.domain.event.DomainEventDispatcher
 import com.task.domain.taskDefinition.TaskDefinitionRepository
 import com.task.domain.taskExecution.TaskExecution
 import com.task.domain.taskExecution.TaskExecutionRepository
@@ -11,7 +12,8 @@ import com.task.infra.database.Database
 class StartTaskExecutionUseCaseImpl @Inject constructor(
     private val database: Database,
     private val taskExecutionRepository: TaskExecutionRepository,
-    private val taskDefinitionRepository: TaskDefinitionRepository
+    private val taskDefinitionRepository: TaskDefinitionRepository,
+    private val domainEventDispatcher: DomainEventDispatcher
 ) : StartTaskExecutionUseCase {
 
     override fun execute(input: StartTaskExecutionUseCase.Input): StartTaskExecutionUseCase.Output {
@@ -20,7 +22,8 @@ class StartTaskExecutionUseCaseImpl @Inject constructor(
                 ?: throw IllegalArgumentException("タスク実行が見つかりません: ${input.id}")
             val taskDefinition = taskDefinitionRepository.findById(taskExecution.taskDefinitionId, session)
                 ?: throw IllegalArgumentException("タスク定義が見つかりません: ${taskExecution.taskDefinitionId}")
-            val startedExecution = when (taskExecution) {
+            
+            val stateChange = when (taskExecution) {
                 is TaskExecution.NotStarted -> {
                     taskExecution.start(
                         assigneeMemberId = input.assigneeMemberId,
@@ -38,7 +41,10 @@ class StartTaskExecutionUseCaseImpl @Inject constructor(
                 }
             }
 
+            val startedExecution = stateChange.newState
+
             taskExecutionRepository.update(startedExecution, session)
+            domainEventDispatcher.dispatchAll(listOf(stateChange.event), session)
 
             StartTaskExecutionUseCase.Output(
                 id = startedExecution.id,

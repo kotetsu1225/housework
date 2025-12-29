@@ -18,7 +18,9 @@ interface CompleteTaskExecutionUseCase {
         val id: TaskExecutionId,
         val taskDefinitionId: TaskDefinitionId,
         val scheduledDate: Instant,
-        val taskSnapshot: TaskSnapshot?,
+        val taskSnapshot: TaskSnapshot,
+        val assigneeMemberId: MemberId,
+        val startedAt: Instant,
         val completedAt: Instant,
         val completedMemberId: MemberId,
     )

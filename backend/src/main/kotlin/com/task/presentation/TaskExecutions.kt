@@ -243,13 +243,22 @@ fun Route.taskExecutions() {
 
         call.respond(
             HttpStatusCode.OK,
-            mapOf(
-                "id" to output.id.value.toString(),
-                "taskDefinitionId" to output.taskDefinitionId.value.toString(),
-                "scheduledDate" to dateFormatter.format(output.scheduledDate),
-                "status" to "COMPLETED",
-                "completedAt" to instantFormatter.format(output.completedAt),
-                "completedByMemberId" to output.completedMemberId.value.toString()
+            TaskExecutionDto(
+                id = output.id.value.toString(),
+                taskDefinitionId = output.taskDefinitionId.value.toString(),
+                assigneeMemberId = output.assigneeMemberId.value.toString(),
+                scheduledDate = dateFormatter.format(output.scheduledDate),
+                status = "COMPLETED",
+                taskSnapshot = TaskSnapshotDto(
+                    name = output.taskSnapshot.frozenName.value,
+                    description = output.taskSnapshot.frozenDescription.value,
+                    estimatedMinutes = output.taskSnapshot.frozenEstimatedMinutes,
+                    definitionVersion = output.taskSnapshot.definitionVersion,
+                    capturedAt = instantFormatter.format(output.taskSnapshot.capturedAt)
+                ),
+                startedAt = instantFormatter.format(output.startedAt),
+                completedAt = instantFormatter.format(output.completedAt),
+                completedByMemberId = output.completedMemberId.value.toString()
             )
         )
     }

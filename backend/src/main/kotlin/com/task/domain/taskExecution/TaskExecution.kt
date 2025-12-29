@@ -6,9 +6,11 @@ import com.task.domain.taskDefinition.TaskDefinitionDescription
 import com.task.domain.taskDefinition.TaskDefinitionId
 import com.task.domain.taskDefinition.TaskDefinitionName
 import com.task.domain.taskDefinition.TaskScope
+import com.task.domain.taskExecution.event.TaskExecutionCancelled
+import com.task.domain.taskExecution.event.TaskExecutionCompleted
+import com.task.domain.taskExecution.event.TaskExecutionStarted
 import java.time.Instant
 import java.util.UUID
-
 
 sealed class TaskExecution {
     abstract val id: TaskExecutionId
@@ -25,34 +27,55 @@ sealed class TaskExecution {
         fun start(
             assigneeMemberId: MemberId,
             taskDefinition: TaskDefinition
-        ): InProgress {
+        ): StateChange<InProgress> {
             require(!taskDefinition.isDeleted) {
                 "削除されたタスクは開始できません。"
             }
 
-            return InProgress(
+            val now = Instant.now()
+
+            val newInProgressState = InProgress(
                 id = this.id,
                 taskDefinitionId = this.taskDefinitionId,
                 scheduledDate = this.scheduledDate,
                 assigneeMemberId = assigneeMemberId,
                 taskSnapshot = TaskSnapshot.create(taskDefinition),
-                startedAt = Instant.now()
+                startedAt = now
             )
+
+            val startEvent = TaskExecutionStarted(
+                taskExecutionId = this.id,
+                assigneeMemberId = assigneeMemberId,
+                taskName = taskDefinition.name,
+                occurredAt = now,
+            )
+
+            return StateChange(newInProgressState, startEvent)
         }
 
-        fun cancel(definitionIsDeleted: Boolean): Cancelled {
+        fun cancel(definitionIsDeleted: Boolean): StateChange<Cancelled> {
             require(!definitionIsDeleted) {
                 "削除されたタスクはキャンセルできません。"
             }
-            return Cancelled(
+
+            val now = Instant.now()
+
+            val newCancelledState = Cancelled(
                 id = this.id,
                 taskDefinitionId = this.taskDefinitionId,
                 scheduledDate = this.scheduledDate,
                 assigneeMemberId = this.assigneeMemberId,
                 taskSnapshot = null,
                 startedAt = null,
-                cancelledAt = Instant.now()
+                cancelledAt = now
             )
+
+            val cancelEvent = TaskExecutionCancelled(
+                taskExecutionId = this.id,
+                occurredAt = now,
+            )
+
+            return StateChange(newCancelledState, cancelEvent)
         }
 
         fun assign(
@@ -61,16 +84,25 @@ sealed class TaskExecution {
             return copy(assigneeMemberId = newAssigneeMemberId)
         }
 
-        fun cancelByDefinitionDeletion(): Cancelled {
-            return Cancelled(
+        fun cancelByDefinitionDeletion(): StateChange<Cancelled> {
+            val now = Instant.now()
+
+            val newCancelledState = Cancelled(
                 id = this.id,
                 taskDefinitionId = this.taskDefinitionId,
                 scheduledDate = this.scheduledDate,
                 assigneeMemberId = this.assigneeMemberId,
                 taskSnapshot = null,
                 startedAt = null,
-                cancelledAt = Instant.now()
+                cancelledAt = now
             )
+
+            val cancelEvent = TaskExecutionCancelled(
+                taskExecutionId = this.id,
+                occurredAt = now
+            )
+
+            return StateChange(newCancelledState, cancelEvent)
         }
     }
 
@@ -86,11 +118,13 @@ sealed class TaskExecution {
         fun complete(
             completedByMemberId: MemberId,
             definitionIsDeleted: Boolean
-        ): Completed {
+        ): StateChange<Completed> {
             require(!definitionIsDeleted) {
                 "削除されたタスクは完了できません。"
             }
-            return Completed(
+
+            val now = Instant.now()
+            val newCompletedState = Completed(
                 id = this.id,
                 taskDefinitionId = this.taskDefinitionId,
                 scheduledDate = this.scheduledDate,
@@ -100,37 +134,62 @@ sealed class TaskExecution {
                 completedAt = Instant.now(),
                 completedByMemberId = completedByMemberId,
             )
+
+            val completedEvent = TaskExecutionCompleted(
+                taskExecutionId = this.id,
+                completedByMemberId = completedByMemberId,
+                occurredAt = now
+            )
+            
+            return StateChange(newCompletedState, completedEvent)
         }
 
-        fun cancel(definitionIsDeleted: Boolean): Cancelled {
+        fun cancel(definitionIsDeleted: Boolean): StateChange<Cancelled> {
             require(!definitionIsDeleted) {
                 "削除されたタスクはキャンセルできません。"
             }
-            return Cancelled(
+
+            val now = Instant.now()
+            val newCancelledState =  Cancelled(
                 id = this.id,
                 taskDefinitionId = this.taskDefinitionId,
                 scheduledDate = this.scheduledDate,
                 assigneeMemberId = this.assigneeMemberId,
                 taskSnapshot = this.taskSnapshot,
                 startedAt = this.startedAt,
-                cancelledAt = Instant.now()
+                cancelledAt = now
             )
+            
+            val cancelEvent = TaskExecutionCancelled(
+                taskExecutionId = this.id,
+                occurredAt = now
+            )
+
+            return StateChange(newCancelledState, cancelEvent)
         }
 
         fun assign(newAssigneeMemberId: MemberId): InProgress {
             return copy(assigneeMemberId = newAssigneeMemberId)
         }
 
-        fun cancelByDefinitionDeletion(): Cancelled {
-            return Cancelled(
+        fun cancelByDefinitionDeletion(): StateChange<Cancelled> {
+            val now = Instant.now()
+            val cancelledState = Cancelled(
                 id = this.id,
                 taskDefinitionId = this.taskDefinitionId,
                 scheduledDate = this.scheduledDate,
                 assigneeMemberId = this.assigneeMemberId,
                 taskSnapshot = this.taskSnapshot,
                 startedAt = this.startedAt,
-                cancelledAt = Instant.now()
+                cancelledAt = now
             )
+
+            val cancelEvent = TaskExecutionCancelled(
+                taskExecutionId = this.id,
+                occurredAt = now
+            )
+
+            return StateChange(cancelledState, cancelEvent)
         }
     }
 
@@ -166,7 +225,7 @@ sealed class TaskExecution {
         fun create(
             taskDefinition: TaskDefinition,
             scheduledDate: Instant,
-        ): NotStarted {
+        ): StateChange<NotStarted> {
             require(!taskDefinition.isDeleted) {
                 "削除されたタスクには実行オブジェクトを割当てられません。"
             }
@@ -176,12 +235,23 @@ sealed class TaskExecution {
                 null
             }
 
-            return NotStarted(
+            val now = Instant.now()
+
+            val newNotStartedState = NotStarted(
                 id = TaskExecutionId.generate(),
                 taskDefinitionId = taskDefinition.id,
                 scheduledDate = scheduledDate,
                 assigneeMemberId = assignee,
             )
+
+            val startedEvent = TaskExecutionStarted(
+                taskExecutionId = newNotStartedState.id,
+                assigneeMemberId = assignee,
+                taskName = taskDefinition.name,
+                occurredAt = now
+            )
+
+            return StateChange(newNotStartedState, startedEvent)
         }
 
         fun reconstructNotStarted(

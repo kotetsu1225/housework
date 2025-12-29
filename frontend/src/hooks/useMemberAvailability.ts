@@ -10,6 +10,7 @@ import {
   createMemberAvailability,
   updateMemberAvailability,
   deleteMemberAvailabilitySlots,
+  deleteMemberAvailability,
   ApiError,
 } from '../api'
 import type {
@@ -80,6 +81,10 @@ interface UseMemberAvailabilityActions {
     availabilityId: string,
     slots: TimeSlotRequest[]
   ) => Promise<boolean>
+  /**
+   * 空き時間を物理削除（最後のスロット削除時に使用）
+   */
+  removeAvailability: (availabilityId: string) => Promise<boolean>
   /**
    * 空き時間一覧をセット（手動データ設定用）
    */
@@ -295,6 +300,38 @@ export function useMemberAvailability(
   )
 
   /**
+   * 空き時間を物理削除
+   */
+  const removeAvailability = useCallback(
+    async (availabilityId: string): Promise<boolean> => {
+      setLoading(true)
+      setError(null)
+
+      try {
+        await deleteMemberAvailability(availabilityId)
+
+        // ローカル状態から削除
+        setAvailabilities((prev) =>
+          prev.filter((availability) => availability.id !== availabilityId)
+        )
+        return true
+      } catch (err) {
+        if (err instanceof ApiError) {
+          setError(err.message)
+        } else if (err instanceof Error) {
+          setError(err.message)
+        } else {
+          setError('空き時間の削除に失敗しました')
+        }
+        return false
+      } finally {
+        setLoading(false)
+      }
+    },
+    []
+  )
+
+  /**
    * エラーをクリア
    */
   const clearError = useCallback(() => {
@@ -309,6 +346,7 @@ export function useMemberAvailability(
     addAvailability,
     editAvailability,
     removeSlots,
+    removeAvailability,
     setAvailabilities,
     clearError,
   }

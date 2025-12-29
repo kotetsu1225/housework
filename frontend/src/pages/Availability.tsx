@@ -250,6 +250,7 @@ export function Availability() {
     fetchAvailabilities,
     addAvailability,
     removeSlots,
+    removeAvailability,
     setAvailabilities,
     clearError,
   } = useMemberAvailability()
@@ -378,13 +379,18 @@ export function Availability() {
 
   /**
    * スロット削除ハンドラー
+   *
+   * 最後のスロットを削除する場合は、MemberAvailability自体を削除する
+   * (バックエンドの制約: スロットは1つ以上必要)
    */
   const handleDeleteSlot = async (availability: MemberAvailability, slotToDelete: TimeSlot) => {
     if (availability.slots.length <= 1) {
-      setAvailabilities((prev) => prev.filter((av) => av.id !== availability.id))
+      // 最後のスロットを削除する場合は、MemberAvailability自体を削除
+      await removeAvailability(availability.id)
       return
     }
 
+    // 複数スロットがある場合は、該当スロットのみ削除
     await removeSlots(availability.id, [
       {
         startTime: slotToDelete.startTime,

@@ -5,7 +5,7 @@
  * @see backend/src/main/kotlin/com/task/presentation/MemberAvailabilities.kt
  */
 
-import { apiGet, apiPost } from './client'
+import { apiDelete, apiGet, apiPost } from './client'
 import type {
   CreateMemberAvailabilityRequest,
   CreateMemberAvailabilityResponse,
@@ -110,5 +110,25 @@ export async function getMemberAvailabilities(
   memberId: string
 ): Promise<GetMemberAvailabilitiesResponse> {
   return apiGet<GetMemberAvailabilitiesResponse>(`/member-availabilities/member/${memberId}`)
+}
+
+/**
+ * 空き時間を物理削除する
+ * DELETE /api/member-availabilities/{availabilityId}
+ *
+ * @param availabilityId - 削除対象の空き時間ID
+ *
+ * @note 最後のスロットを削除する場合に使用
+ *       空き時間全体を削除し、関連するスロットも自動削除される
+ *
+ * @example
+ * ```typescript
+ * await deleteMemberAvailability('uuid')
+ * ```
+ */
+export async function deleteMemberAvailability(
+  availabilityId: string
+): Promise<void> {
+  await apiDelete<void>(`/member-availabilities/${availabilityId}`)
 }
 

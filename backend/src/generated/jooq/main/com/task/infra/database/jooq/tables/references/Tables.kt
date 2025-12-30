@@ -6,6 +6,7 @@ package com.task.infra.database.jooq.tables.references
 
 import com.task.infra.database.jooq.tables.MemberAvailabilities
 import com.task.infra.database.jooq.tables.Members
+import com.task.infra.database.jooq.tables.ScheduledNotifications
 import com.task.infra.database.jooq.tables.TaskDefinitions
 import com.task.infra.database.jooq.tables.TaskExecutions
 import com.task.infra.database.jooq.tables.TaskRecurrences
@@ -23,6 +24,11 @@ val MEMBER_AVAILABILITIES: MemberAvailabilities = MemberAvailabilities.MEMBER_AV
  * 家族メンバー
  */
 val MEMBERS: Members = Members.MEMBERS
+
+/**
+ * 予定された通知
+ */
+val SCHEDULED_NOTIFICATIONS: ScheduledNotifications = ScheduledNotifications.SCHEDULED_NOTIFICATIONS
 
 /**
  * タスク定義（カタログ）

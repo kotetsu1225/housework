@@ -6,6 +6,7 @@ package com.task.infra.database.jooq
 
 import com.task.infra.database.jooq.tables.MemberAvailabilities
 import com.task.infra.database.jooq.tables.Members
+import com.task.infra.database.jooq.tables.ScheduledNotifications
 import com.task.infra.database.jooq.tables.TaskDefinitions
 import com.task.infra.database.jooq.tables.TaskExecutions
 import com.task.infra.database.jooq.tables.TaskRecurrences
@@ -43,6 +44,11 @@ open class Public : SchemaImpl("public", DefaultCatalog.DEFAULT_CATALOG) {
     val MEMBERS: Members get() = Members.MEMBERS
 
     /**
+     * 予定された通知
+     */
+    val SCHEDULED_NOTIFICATIONS: ScheduledNotifications get() = ScheduledNotifications.SCHEDULED_NOTIFICATIONS
+
+    /**
      * タスク定義（カタログ）
      */
     val TASK_DEFINITIONS: TaskDefinitions get() = TaskDefinitions.TASK_DEFINITIONS
@@ -72,6 +78,7 @@ open class Public : SchemaImpl("public", DefaultCatalog.DEFAULT_CATALOG) {
     override fun getTables(): List<Table<*>> = listOf(
         MemberAvailabilities.MEMBER_AVAILABILITIES,
         Members.MEMBERS,
+        ScheduledNotifications.SCHEDULED_NOTIFICATIONS,
         TaskDefinitions.TASK_DEFINITIONS,
         TaskExecutions.TASK_EXECUTIONS,
         TaskRecurrences.TASK_RECURRENCES,

@@ -53,6 +53,8 @@ import com.task.usecase.auth.LoginUseCaseImpl
 import com.typesafe.config.ConfigFactory
 import com.task.domain.mail.MailSender
 import com.task.infra.mail.LoggingMailSender
+import com.task.infra.mail.SmtpMailSender
+import com.task.infra.mail.SmtpConfig
 import com.task.infra.event.handler.EmailNotificationHandler
 // Query Services (CQRS)
 import com.task.usecase.query.dashboard.DashboardQueryService
@@ -92,8 +94,28 @@ class AppModule : AbstractModule() {
 
         bind(DomainEventDispatcher::class.java).to(InMemoryDomainEventDispatcher::class.java)
 
-        // Mail bindings
-        bind(MailSender::class.java).to(LoggingMailSender::class.java)
+        // Mail bindings (環境変数で切り替え)
+        val appConfig = ConfigFactory.load()
+        val mailProvider = appConfig.getString("mail.provider")
+        
+        when (mailProvider) {
+            "smtp" -> {
+                val smtpConfig = SmtpConfig(
+                    host = appConfig.getString("mail.smtp.host"),
+                    port = appConfig.getInt("mail.smtp.port"),
+                    username = appConfig.getString("mail.smtp.username"),
+                    password = appConfig.getString("mail.smtp.password"),
+                    fromAddress = appConfig.getString("mail.smtp.fromAddress"),
+                    fromName = appConfig.getString("mail.smtp.fromName")
+                )
+                bind(SmtpConfig::class.java).toInstance(smtpConfig)
+                bind(MailSender::class.java).to(SmtpMailSender::class.java)
+            }
+            else -> {
+                // デフォルト: ログ出力のみ
+                bind(MailSender::class.java).to(LoggingMailSender::class.java)
+            }
+        }
 
         // Auth UseCase bindings
         bind(LoginUseCase::class.java).to(LoginUseCaseImpl::class.java)
@@ -109,7 +131,6 @@ class AppModule : AbstractModule() {
         handlerBinder.addBinding().to(TaskDefinitionDeletedHandler::class.java)
         handlerBinder.addBinding().to(EmailNotificationHandler::class.java)
 
-        val appConfig = ConfigFactory.load()
         val jwtConfig = JwtConfig(
             secret = appConfig.getString("jwt.secret"),
             issuer =  appConfig.getString("jwt.issuer"),

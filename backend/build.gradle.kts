@@ -70,6 +70,9 @@ dependencies {
     // パスワードハッシュ化
     implementation("org.mindrot:jbcrypt:0.4")
 
+    // Email (JavaMail / Jakarta Mail)
+    implementation("com.sun.mail:jakarta.mail:2.0.1")
+
     // Testing
     testImplementation("io.ktor:ktor-server-tests-jvm:$ktorVersion")
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit:$kotlinVersion")

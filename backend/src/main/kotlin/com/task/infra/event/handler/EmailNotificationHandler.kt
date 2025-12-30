@@ -96,7 +96,6 @@ class EmailNotificationHandler @Inject constructor(
                     )
                 }
             }
-            else -> emptyList()
         }
 
         if (mails.isNotEmpty()) {

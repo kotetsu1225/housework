@@ -88,6 +88,7 @@ function MemberAvailabilityCard({ availability }: MemberAvailabilityCardProps) {
         <Avatar
           name={availability.memberName}
           size="md"
+          role={familyRole}
           variant={isParentRole(familyRole) ? 'parent' : 'child'}
         />
       </div>
@@ -143,7 +144,7 @@ function TimeSlotBadge({ startTime, endTime, memo }: TimeSlotBadgeProps) {
         {startTime} - {endTime}
       </span>
       {memo && (
-        <span className="text-shazam-400/70 text-xs ml-1">({memo})</span>
+        <span className="text-shazam-400/70 text-xs ml-1">{memo}</span>
       )}
     </div>
   )

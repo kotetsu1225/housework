@@ -35,9 +35,10 @@ services:
       dockerfile: Dockerfile
     container_name: housework-backend
     environment:
-      DATABASE_URL: jdbc:postgresql://postgres:5432/housework
-      DATABASE_USER: housework
-      DATABASE_PASSWORD: housework_password
+      # backend/src/main/resources/application.conf が参照する環境変数に合わせる
+      JDBC_DATABASE_URL: jdbc:postgresql://postgres:5432/housework
+      PGUSER: housework
+      PGPASSWORD: housework_password
       TZ: Asia/Tokyo
     ports:
       - "8080:8080"
@@ -68,7 +69,8 @@ services:
       backend:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:80/"]
+      # localhost が IPv6 (::1) に解決される環境だと接続拒否になることがあるため IPv4 を明示
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:80/"]
       interval: 30s
       timeout: 3s
       retries: 3

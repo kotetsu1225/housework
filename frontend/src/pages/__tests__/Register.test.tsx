@@ -39,8 +39,8 @@ describe('Register', () => {
       renderRegisterPage()
       expect(screen.getByText('父')).toBeInTheDocument()
       expect(screen.getByText('母')).toBeInTheDocument()
-      expect(screen.getByText('兄弟')).toBeInTheDocument()
-      expect(screen.getByText('姉妹')).toBeInTheDocument()
+      expect(screen.getByText('兄')).toBeInTheDocument()
+      expect(screen.getByText('妹')).toBeInTheDocument()
     })
 
     it('ログインリンクが表示される', () => {

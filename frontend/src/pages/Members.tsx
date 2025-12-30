@@ -57,6 +57,7 @@ function MemberCard({ member }: { member: MemberWithStats }) {
         <Avatar
           name={member.name}
           size="xl"
+          role={member.role}
           variant={isParentRole(member.role) ? 'parent' : 'child'}
         />
         <div className="flex-1 min-w-0">

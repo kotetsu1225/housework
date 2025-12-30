@@ -1,10 +1,16 @@
 import { HTMLAttributes, forwardRef } from 'react'
 import { clsx } from 'clsx'
+import { ROLE_OPTIONS } from '../../constants'
+import type { FamilyRole } from '../../types'
 
 export interface AvatarProps extends HTMLAttributes<HTMLDivElement> {
   name: string
+  /** 家族の役割（指定された場合は役割アイコンを優先表示） */
+  role?: FamilyRole
   size?: 'sm' | 'md' | 'lg' | 'xl'
   variant?: 'parent' | 'child'
+  /** role指定時に画像表示するか（デフォルト: true） */
+  showImage?: boolean
 }
 
 const getInitials = (name: string): string => {
@@ -26,27 +32,47 @@ const getColorFromName = (name: string, isParent: boolean): string => {
 }
 
 export const Avatar = forwardRef<HTMLDivElement, AvatarProps>(
-  ({ className, name, size = 'md', variant = 'child', ...props }, ref) => {
+  ({ className, name, role, size = 'md', variant = 'child', showImage = true, ...props }, ref) => {
     const sizes = {
-      sm: 'w-8 h-8 text-xs',
-      md: 'w-10 h-10 text-sm',
-      lg: 'w-12 h-12 text-base',
-      xl: 'w-16 h-16 text-xl',
+      sm: 'w-8 h-8',
+      md: 'w-10 h-10',
+      lg: 'w-12 h-12',
+      xl: 'w-16 h-16',
     }
+
+    const textSizes = {
+      sm: 'text-xs',
+      md: 'text-sm',
+      lg: 'text-base',
+      xl: 'text-xl',
+    }
+
+    const icon = role ? ROLE_OPTIONS.find((r) => r.value === role)?.icon : undefined
+    const shouldShowImage = showImage && !!icon
 
     return (
       <div
         ref={ref}
         className={clsx(
-          'rounded-full flex items-center justify-center font-bold text-white',
+          'rounded-full flex items-center justify-center font-bold text-white overflow-hidden',
           `bg-gradient-to-br ${getColorFromName(name, variant === 'parent')}`,
           'shadow-md',
           sizes[size],
+          !shouldShowImage && textSizes[size],
           className
         )}
         {...props}
       >
-        {getInitials(name)}
+        {shouldShowImage ? (
+          <img
+            src={icon}
+            alt={name}
+            className="w-full h-full object-cover"
+            loading="lazy"
+          />
+        ) : (
+          getInitials(name)
+        )}
       </div>
     )
   }

@@ -55,7 +55,10 @@ fun Application.module() {
         val allowedOrigins = allowedOriginsEnv
             ?.split(",")
             ?.map { it.trim() }
-            ?: listOf("http://localhost:3000") 
+            ?: listOf(
+                "http://localhost:3000",
+                "http://127.0.0.1:3000",
+            )
         
         allowedOrigins.forEach { origin ->
             allowHost(origin.removePrefix("http://").removePrefix("https://"), 

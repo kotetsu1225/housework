@@ -16,20 +16,13 @@ import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
 import { Alert } from '../components/ui/Alert'
 import { useAuth } from '../contexts/AuthContext'
+import { ROLE_OPTIONS } from '../constants'
 import type { FamilyRole } from '../types'
 
 /** パスワードの最小文字数（バックエンドと同期） */
 const PASSWORD_MIN_LENGTH = 5
 /** パスワードの最大文字数（バックエンドと同期） */
 const PASSWORD_MAX_LENGTH = 72
-
-/** 役割選択オプション */
-const roleOptions: { value: FamilyRole; label: string; icon: string }[] = [
-  { value: 'FATHER', label: '父', icon: '/familyIcons/father.svg.jpg' },
-  { value: 'MOTHER', label: '母', icon: '/familyIcons/mother.svg.jpg' },
-  { value: 'BROTHER', label: '兄弟', icon: '/familyIcons/brother.svg.jpg' },
-  { value: 'SISTER', label: '姉妹', icon: '/familyIcons/sister.svg.jpg' },
-]
 
 export function Register() {
   const navigate = useNavigate()
@@ -43,7 +36,7 @@ export function Register() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [localError, setLocalError] = useState('')
 
-  const selectedRoleOption = roleOptions.find((r) => r.value === selectedRole)
+  const selectedRoleOption = ROLE_OPTIONS.find((r) => r.value === selectedRole)
 
   // コンポーネントマウント時にエラーをクリア
   useEffect(() => {
@@ -189,7 +182,7 @@ export function Register() {
                     家族の役割
                   </label>
                   <div className="grid grid-cols-2 gap-3">
-                    {roleOptions.map((role) => (
+                    {ROLE_OPTIONS.map((role) => (
                       <button
                         key={role.value}
                         type="button"

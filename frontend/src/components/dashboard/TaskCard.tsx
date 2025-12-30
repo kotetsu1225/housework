@@ -126,6 +126,7 @@ export function TaskCard({ task, assignee, onClick, onStatusClick }: TaskCardPro
               <Avatar
                 name={assignee.name}
                 size="sm"
+                role={assignee.role}
                 variant={isParentRole(assignee.role) ? 'parent' : 'child'}
               />
               <span>{assignee.name}</span>

@@ -9,6 +9,7 @@ import { Input } from '../components/ui/Input'
 import { Modal } from '../components/ui/Modal'
 import { Alert } from '../components/ui/Alert'
 import { useTaskDefinition, useMember } from '../hooks'
+import { useAuth } from '../contexts/AuthContext'
 import type { TaskDefinition, TaskScope, PatternType } from '../types'
 import type { CreateTaskDefinitionRequest, ScheduleDto, PatternDto } from '../types/api'
 
@@ -17,9 +18,9 @@ import type { CreateTaskDefinitionRequest, ScheduleDto, PatternDto } from '../ty
  */
 function ScopeBadge({ scope }: { scope: TaskScope }) {
   return scope === 'FAMILY' ? (
-    <Badge variant="info" size="sm">家族</Badge>
+    <Badge variant="info" size="sm" className="whitespace-nowrap flex-shrink-0">家族</Badge>
   ) : (
-    <Badge variant="warning" size="sm">個人</Badge>
+    <Badge variant="warning" size="sm" className="whitespace-nowrap flex-shrink-0">個人</Badge>
   )
 }
 
@@ -28,16 +29,16 @@ function ScopeBadge({ scope }: { scope: TaskScope }) {
  */
 function ScheduleBadge({ task }: { task: TaskDefinition }) {
   if (task.scheduleType === 'ONE_TIME') {
-    return <Badge variant="default" size="sm">単発</Badge>
+    return <Badge variant="default" size="sm" className="whitespace-nowrap flex-shrink-0">単発</Badge>
   }
   const pattern = task.recurrence?.patternType
   switch (pattern) {
     case 'DAILY':
-      return <Badge variant="success" size="sm">毎日</Badge>
+      return <Badge variant="success" size="sm" className="whitespace-nowrap flex-shrink-0">毎日</Badge>
     case 'WEEKLY':
-      return <Badge variant="info" size="sm">毎週</Badge>
+      return <Badge variant="info" size="sm" className="whitespace-nowrap flex-shrink-0">毎週</Badge>
     case 'MONTHLY':
-      return <Badge variant="default" size="sm">毎月</Badge>
+      return <Badge variant="default" size="sm" className="whitespace-nowrap flex-shrink-0">毎月</Badge>
     default:
       return null
   }
@@ -132,6 +133,9 @@ export function Tasks() {
   const [searchQuery, setSearchQuery] = useState('')
   const [filterScope, setFilterScope] = useState<TaskScope | 'ALL'>('ALL')
 
+  // ログインユーザー情報取得
+  const { user } = useAuth()
+
   // メンバー管理フック（個人タスクのオーナー選択用）
   const { members, fetchMembers, loading: membersLoading } = useMember()
 
@@ -175,6 +179,7 @@ export function Tasks() {
     dayOfWeek: 'MONDAY',
     dayOfMonth: 1,
     startDate: new Date().toISOString().split('T')[0],
+    endDate: '',
     deadline: new Date().toISOString().split('T')[0],
   })
 
@@ -219,6 +224,21 @@ export function Tasks() {
   }
 
   /**
+   * スコープ変更ハンドラー
+   */
+  const handleScopeChange = (scope: TaskScope, isEdit: boolean) => {
+    const targetSet = isEdit ? setEditTask : setNewTask
+    const currentTask = isEdit ? editTask : newTask
+
+    if (scope === 'PERSONAL') {
+      // 個人スコープ選択時、自分のIDを自動設定
+      targetSet({ ...currentTask, scope, ownerMemberId: user?.id ?? '' })
+    } else {
+      targetSet({ ...currentTask, scope, ownerMemberId: '' })
+    }
+  }
+
+  /**
    * タスク定義追加ハンドラー
    */
   const handleAddTask = async () => {
@@ -248,7 +268,7 @@ export function Tasks() {
         type: 'Recurring',
         pattern,
         startDate: newTask.startDate,
-        endDate: null,
+        endDate: newTask.endDate ? newTask.endDate : null,
       }
     }
 
@@ -257,7 +277,7 @@ export function Tasks() {
       description: newTask.description,
       estimatedMinutes: newTask.estimatedMinutes,
       scope: newTask.scope,
-      ownerMemberId: newTask.scope === 'PERSONAL' ? newTask.ownerMemberId : null,
+      ownerMemberId: newTask.scope === 'PERSONAL' ? (user?.id ?? null) : null,
       schedule,
     }
 
@@ -323,6 +343,7 @@ export function Tasks() {
         : 'MONDAY',
       dayOfMonth: task.recurrence?.monthlyDayOfMonth ?? 1,
       startDate: task.recurrence?.startDate ?? new Date().toISOString().split('T')[0],
+      endDate: task.recurrence?.endDate ?? '',
       deadline: task.oneTimeDeadline ?? new Date().toISOString().split('T')[0],
     })
     setShowEditModal(true)
@@ -358,7 +379,7 @@ export function Tasks() {
         type: 'Recurring',
         pattern,
         startDate: editTask.startDate,
-        endDate: null,
+        endDate: editTask.endDate ? editTask.endDate : null,
       }
     }
 
@@ -367,7 +388,7 @@ export function Tasks() {
       description: editTask.description || null,
       estimatedMinutes: editTask.estimatedMinutes,
       scope: editTask.scope,
-      ownerMemberId: editTask.scope === 'PERSONAL' ? editTask.ownerMemberId : null,
+      ownerMemberId: editTask.scope === 'PERSONAL' ? (user?.id ?? null) : null,
       schedule,
     }
 
@@ -498,192 +519,181 @@ export function Tasks() {
             </>
           }
         >
-          {error && (
-            <Alert variant="error" className="mb-4">
-              {error}
-            </Alert>
-          )}
+          <div className="space-y-4 px-1">
+            {error && (
+              <Alert variant="error" className="mb-4">
+                {error}
+              </Alert>
+            )}
 
-          <Input
-            label="タスク名"
-            placeholder="例: お風呂掃除"
-            value={newTask.name}
-            onChange={(e) => setNewTask({ ...newTask, name: e.target.value })}
-          />
+            <Input
+              label="タスク名"
+              placeholder="例: お風呂掃除"
+              value={newTask.name}
+              onChange={(e) => setNewTask({ ...newTask, name: e.target.value })}
+            />
 
-          <Input
-            label="説明"
-            placeholder="例: 浴槽と床を洗う"
-            value={newTask.description}
-            onChange={(e) => setNewTask({ ...newTask, description: e.target.value })}
-          />
+            <Input
+              label="説明"
+              placeholder="例: 浴槽と床を洗う"
+              value={newTask.description}
+              onChange={(e) => setNewTask({ ...newTask, description: e.target.value })}
+            />
 
-          <Input
-            label="見積時間（分）"
-            type="number"
-            min={1}
-            max={1440}
-            value={newTask.estimatedMinutes}
-            onChange={(e) =>
-              setNewTask({ ...newTask, estimatedMinutes: Number(e.target.value) })
-            }
-          />
+            <Input
+              label="見積時間（分）"
+              type="number"
+              min={1}
+              max={1440}
+              value={newTask.estimatedMinutes}
+              onChange={(e) =>
+                setNewTask({ ...newTask, estimatedMinutes: Number(e.target.value) })
+              }
+            />
 
-          {/* スコープ選択 */}
-          <div>
-            <label className="block text-sm font-medium text-dark-300 mb-2">
-              スコープ
-            </label>
-            <div className="flex gap-2">
-              <Button
-                variant={newTask.scope === 'FAMILY' ? 'primary' : 'secondary'}
-                size="sm"
-                onClick={() => setNewTask({ ...newTask, scope: 'FAMILY', ownerMemberId: '' })}
-              >
-                家族
-              </Button>
-              <Button
-                variant={newTask.scope === 'PERSONAL' ? 'primary' : 'secondary'}
-                size="sm"
-                onClick={() => setNewTask({ ...newTask, scope: 'PERSONAL' })}
-              >
-                個人
-              </Button>
-            </div>
-          </div>
-
-          {/* 個人タスクの場合のオーナー選択 */}
-          {newTask.scope === 'PERSONAL' && (
+            {/* スコープ選択 */}
             <div>
               <label className="block text-sm font-medium text-dark-300 mb-2">
-                担当者
+                スコープ
               </label>
-              <div className="flex gap-2 flex-wrap">
-                {members.map((member) => (
-                  <Button
-                    key={member.id}
-                    variant={newTask.ownerMemberId === member.id ? 'primary' : 'secondary'}
-                    size="sm"
-                    onClick={() => setNewTask({ ...newTask, ownerMemberId: member.id })}
-                  >
-                    {member.name}
-                  </Button>
-                ))}
+              <div className="flex gap-2">
+                <Button
+                  variant={newTask.scope === 'FAMILY' ? 'primary' : 'secondary'}
+                  size="sm"
+                  onClick={() => handleScopeChange('FAMILY', false)}
+                >
+                  家族
+                </Button>
+                <Button
+                  variant={newTask.scope === 'PERSONAL' ? 'primary' : 'secondary'}
+                  size="sm"
+                  onClick={() => handleScopeChange('PERSONAL', false)}
+                >
+                  個人
+                </Button>
               </div>
             </div>
-          )}
 
-          {/* スケジュールタイプ選択 */}
-          <div>
-            <label className="block text-sm font-medium text-dark-300 mb-2">
-              スケジュール
-            </label>
-            <div className="flex gap-2">
-              <Button
-                variant={newTask.scheduleType === 'RECURRING' ? 'primary' : 'secondary'}
-                size="sm"
-                onClick={() => setNewTask({ ...newTask, scheduleType: 'RECURRING' })}
-              >
-                定期
-              </Button>
-              <Button
-                variant={newTask.scheduleType === 'ONE_TIME' ? 'primary' : 'secondary'}
-                size="sm"
-                onClick={() => setNewTask({ ...newTask, scheduleType: 'ONE_TIME' })}
-              >
-                単発
-              </Button>
-            </div>
-          </div>
 
-          {/* 定期スケジュールの詳細 */}
-          {newTask.scheduleType === 'RECURRING' && (
-            <>
-              <div>
-                <label className="block text-sm font-medium text-dark-300 mb-2">
-                  繰り返しパターン
-                </label>
-                <div className="flex gap-2">
-                  {PATTERN_OPTIONS.map((opt) => (
-                    <Button
-                      key={opt.value}
-                      variant={newTask.patternType === opt.value ? 'primary' : 'secondary'}
-                      size="sm"
-                      onClick={() => setNewTask({ ...newTask, patternType: opt.value })}
-                    >
-                      {opt.label}
-                    </Button>
-                  ))}
-                </div>
+            {/* スケジュールタイプ選択 */}
+            <div>
+              <label className="block text-sm font-medium text-dark-300 mb-2">
+                スケジュール
+              </label>
+              <div className="flex gap-2">
+                <Button
+                  variant={newTask.scheduleType === 'RECURRING' ? 'primary' : 'secondary'}
+                  size="sm"
+                  onClick={() => setNewTask({ ...newTask, scheduleType: 'RECURRING' })}
+                >
+                  定期
+                </Button>
+                <Button
+                  variant={newTask.scheduleType === 'ONE_TIME' ? 'primary' : 'secondary'}
+                  size="sm"
+                  onClick={() => setNewTask({ ...newTask, scheduleType: 'ONE_TIME' })}
+                >
+                  単発
+                </Button>
               </div>
+            </div>
 
-              {newTask.patternType === 'DAILY' && (
-                <div className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    id="skipWeekends"
-                    checked={newTask.skipWeekends}
-                    onChange={(e) =>
-                      setNewTask({ ...newTask, skipWeekends: e.target.checked })
-                    }
-                    className="w-4 h-4 rounded border-dark-600 bg-dark-800"
-                  />
-                  <label htmlFor="skipWeekends" className="text-sm text-white/70">
-                    土日をスキップ
-                  </label>
-                </div>
-              )}
-
-              {newTask.patternType === 'WEEKLY' && (
+            {/* 定期スケジュールの詳細 */}
+            {newTask.scheduleType === 'RECURRING' && (
+              <>
                 <div>
                   <label className="block text-sm font-medium text-dark-300 mb-2">
-                    曜日
+                    繰り返しパターン
                   </label>
-                  <select
-                    value={newTask.dayOfWeek}
-                    onChange={(e) => setNewTask({ ...newTask, dayOfWeek: e.target.value })}
-                    className="w-full bg-dark-800 border border-dark-700 rounded-xl px-4 py-3 text-white"
-                  >
-                    {DAY_OF_WEEK_OPTIONS.map((opt) => (
-                      <option key={opt.value} value={opt.value}>
+                  <div className="flex gap-2">
+                    {PATTERN_OPTIONS.map((opt) => (
+                      <Button
+                        key={opt.value}
+                        variant={newTask.patternType === opt.value ? 'primary' : 'secondary'}
+                        size="sm"
+                        onClick={() => setNewTask({ ...newTask, patternType: opt.value })}
+                      >
                         {opt.label}
-                      </option>
+                      </Button>
                     ))}
-                  </select>
+                  </div>
                 </div>
-              )}
 
-              {newTask.patternType === 'MONTHLY' && (
+                {newTask.patternType === 'DAILY' && (
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id="skipWeekends"
+                      checked={newTask.skipWeekends}
+                      onChange={(e) =>
+                        setNewTask({ ...newTask, skipWeekends: e.target.checked })
+                      }
+                      className="w-4 h-4 rounded border-dark-600 bg-dark-800"
+                    />
+                    <label htmlFor="skipWeekends" className="text-sm text-white/70">
+                      土日をスキップ
+                    </label>
+                  </div>
+                )}
+
+                {newTask.patternType === 'WEEKLY' && (
+                  <div>
+                    <label className="block text-sm font-medium text-dark-300 mb-2">
+                      曜日
+                    </label>
+                    <select
+                      value={newTask.dayOfWeek}
+                      onChange={(e) => setNewTask({ ...newTask, dayOfWeek: e.target.value })}
+                      className="w-full bg-dark-800 border border-dark-700 rounded-xl px-4 py-3 text-white"
+                    >
+                      {DAY_OF_WEEK_OPTIONS.map((opt) => (
+                        <option key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                {newTask.patternType === 'MONTHLY' && (
+                  <Input
+                    label="日付（1-28）"
+                    type="number"
+                    min={1}
+                    max={28}
+                    value={newTask.dayOfMonth}
+                    onChange={(e) =>
+                      setNewTask({ ...newTask, dayOfMonth: Number(e.target.value) })
+                    }
+                  />
+                )}
+
                 <Input
-                  label="日付（1-28）"
-                  type="number"
-                  min={1}
-                  max={28}
-                  value={newTask.dayOfMonth}
-                  onChange={(e) =>
-                    setNewTask({ ...newTask, dayOfMonth: Number(e.target.value) })
-                  }
+                  label="開始日"
+                  type="date"
+                  value={newTask.startDate}
+                  onChange={(e) => setNewTask({ ...newTask, startDate: e.target.value })}
                 />
-              )}
 
+                <Input
+                  label="終了日（任意）"
+                  type="date"
+                  value={newTask.endDate}
+                  onChange={(e) => setNewTask({ ...newTask, endDate: e.target.value })}
+                />
+              </>
+            )}
+
+            {/* 単発スケジュールの詳細 */}
+            {newTask.scheduleType === 'ONE_TIME' && (
               <Input
-                label="開始日"
+                label="期限"
                 type="date"
-                value={newTask.startDate}
-                onChange={(e) => setNewTask({ ...newTask, startDate: e.target.value })}
+                value={newTask.deadline}
+                onChange={(e) => setNewTask({ ...newTask, deadline: e.target.value })}
               />
-            </>
-          )}
-
-          {/* 単発スケジュールの詳細 */}
-          {newTask.scheduleType === 'ONE_TIME' && (
-            <Input
-              label="期限"
-              type="date"
-              value={newTask.deadline}
-              onChange={(e) => setNewTask({ ...newTask, deadline: e.target.value })}
-            />
-          )}
+            )}
+          </div>
         </Modal>
 
         {/* 削除確認モーダル */}
@@ -750,192 +760,181 @@ export function Tasks() {
             </>
           }
         >
-          {error && (
-            <Alert variant="error" className="mb-4">
-              {error}
-            </Alert>
-          )}
+          <div className="space-y-4 px-1">
+            {error && (
+              <Alert variant="error" className="mb-4">
+                {error}
+              </Alert>
+            )}
 
-          <Input
-            label="タスク名"
-            placeholder="例: お風呂掃除"
-            value={editTask.name}
-            onChange={(e) => setEditTask({ ...editTask, name: e.target.value })}
-          />
+            <Input
+              label="タスク名"
+              placeholder="例: お風呂掃除"
+              value={editTask.name}
+              onChange={(e) => setEditTask({ ...editTask, name: e.target.value })}
+            />
 
-          <Input
-            label="説明"
-            placeholder="例: 浴槽と床を洗う"
-            value={editTask.description}
-            onChange={(e) => setEditTask({ ...editTask, description: e.target.value })}
-          />
+            <Input
+              label="説明"
+              placeholder="例: 浴槽と床を洗う"
+              value={editTask.description}
+              onChange={(e) => setEditTask({ ...editTask, description: e.target.value })}
+            />
 
-          <Input
-            label="見積時間（分）"
-            type="number"
-            min={1}
-            max={1440}
-            value={editTask.estimatedMinutes}
-            onChange={(e) =>
-              setEditTask({ ...editTask, estimatedMinutes: Number(e.target.value) })
-            }
-          />
+            <Input
+              label="見積時間（分）"
+              type="number"
+              min={1}
+              max={1440}
+              value={editTask.estimatedMinutes}
+              onChange={(e) =>
+                setEditTask({ ...editTask, estimatedMinutes: Number(e.target.value) })
+              }
+            />
 
-          {/* スコープ選択 */}
-          <div>
-            <label className="block text-sm font-medium text-dark-300 mb-2">
-              スコープ
-            </label>
-            <div className="flex gap-2">
-              <Button
-                variant={editTask.scope === 'FAMILY' ? 'primary' : 'secondary'}
-                size="sm"
-                onClick={() => setEditTask({ ...editTask, scope: 'FAMILY', ownerMemberId: '' })}
-              >
-                家族
-              </Button>
-              <Button
-                variant={editTask.scope === 'PERSONAL' ? 'primary' : 'secondary'}
-                size="sm"
-                onClick={() => setEditTask({ ...editTask, scope: 'PERSONAL' })}
-              >
-                個人
-              </Button>
-            </div>
-          </div>
-
-          {/* 個人タスクの場合のオーナー選択 */}
-          {editTask.scope === 'PERSONAL' && (
+            {/* スコープ選択 */}
             <div>
               <label className="block text-sm font-medium text-dark-300 mb-2">
-                担当者
+                スコープ
               </label>
-              <div className="flex gap-2 flex-wrap">
-                {members.map((member) => (
-                  <Button
-                    key={member.id}
-                    variant={editTask.ownerMemberId === member.id ? 'primary' : 'secondary'}
-                    size="sm"
-                    onClick={() => setEditTask({ ...editTask, ownerMemberId: member.id })}
-                  >
-                    {member.name}
-                  </Button>
-                ))}
+              <div className="flex gap-2">
+                <Button
+                  variant={editTask.scope === 'FAMILY' ? 'primary' : 'secondary'}
+                  size="sm"
+                  onClick={() => handleScopeChange('FAMILY', true)}
+                >
+                  家族
+                </Button>
+                <Button
+                  variant={editTask.scope === 'PERSONAL' ? 'primary' : 'secondary'}
+                  size="sm"
+                  onClick={() => handleScopeChange('PERSONAL', true)}
+                >
+                  個人
+                </Button>
               </div>
             </div>
-          )}
 
-          {/* スケジュールタイプ選択 */}
-          <div>
-            <label className="block text-sm font-medium text-dark-300 mb-2">
-              スケジュール
-            </label>
-            <div className="flex gap-2">
-              <Button
-                variant={editTask.scheduleType === 'RECURRING' ? 'primary' : 'secondary'}
-                size="sm"
-                onClick={() => setEditTask({ ...editTask, scheduleType: 'RECURRING' })}
-              >
-                定期
-              </Button>
-              <Button
-                variant={editTask.scheduleType === 'ONE_TIME' ? 'primary' : 'secondary'}
-                size="sm"
-                onClick={() => setEditTask({ ...editTask, scheduleType: 'ONE_TIME' })}
-              >
-                単発
-              </Button>
-            </div>
-          </div>
 
-          {/* 定期スケジュールの詳細 */}
-          {editTask.scheduleType === 'RECURRING' && (
-            <>
-              <div>
-                <label className="block text-sm font-medium text-dark-300 mb-2">
-                  繰り返しパターン
-                </label>
-                <div className="flex gap-2">
-                  {PATTERN_OPTIONS.map((opt) => (
-                    <Button
-                      key={opt.value}
-                      variant={editTask.patternType === opt.value ? 'primary' : 'secondary'}
-                      size="sm"
-                      onClick={() => setEditTask({ ...editTask, patternType: opt.value })}
-                    >
-                      {opt.label}
-                    </Button>
-                  ))}
-                </div>
+            {/* スケジュールタイプ選択 */}
+            <div>
+              <label className="block text-sm font-medium text-dark-300 mb-2">
+                スケジュール
+              </label>
+              <div className="flex gap-2">
+                <Button
+                  variant={editTask.scheduleType === 'RECURRING' ? 'primary' : 'secondary'}
+                  size="sm"
+                  onClick={() => setEditTask({ ...editTask, scheduleType: 'RECURRING' })}
+                >
+                  定期
+                </Button>
+                <Button
+                  variant={editTask.scheduleType === 'ONE_TIME' ? 'primary' : 'secondary'}
+                  size="sm"
+                  onClick={() => setEditTask({ ...editTask, scheduleType: 'ONE_TIME' })}
+                >
+                  単発
+                </Button>
               </div>
+            </div>
 
-              {editTask.patternType === 'DAILY' && (
-                <div className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    id="editSkipWeekends"
-                    checked={editTask.skipWeekends}
-                    onChange={(e) =>
-                      setEditTask({ ...editTask, skipWeekends: e.target.checked })
-                    }
-                    className="w-4 h-4 rounded border-dark-600 bg-dark-800"
-                  />
-                  <label htmlFor="editSkipWeekends" className="text-sm text-white/70">
-                    土日をスキップ
-                  </label>
-                </div>
-              )}
-
-              {editTask.patternType === 'WEEKLY' && (
+            {/* 定期スケジュールの詳細 */}
+            {editTask.scheduleType === 'RECURRING' && (
+              <>
                 <div>
                   <label className="block text-sm font-medium text-dark-300 mb-2">
-                    曜日
+                    繰り返しパターン
                   </label>
-                  <select
-                    value={editTask.dayOfWeek}
-                    onChange={(e) => setEditTask({ ...editTask, dayOfWeek: e.target.value })}
-                    className="w-full bg-dark-800 border border-dark-700 rounded-xl px-4 py-3 text-white"
-                  >
-                    {DAY_OF_WEEK_OPTIONS.map((opt) => (
-                      <option key={opt.value} value={opt.value}>
+                  <div className="flex gap-2">
+                    {PATTERN_OPTIONS.map((opt) => (
+                      <Button
+                        key={opt.value}
+                        variant={editTask.patternType === opt.value ? 'primary' : 'secondary'}
+                        size="sm"
+                        onClick={() => setEditTask({ ...editTask, patternType: opt.value })}
+                      >
                         {opt.label}
-                      </option>
+                      </Button>
                     ))}
-                  </select>
+                  </div>
                 </div>
-              )}
 
-              {editTask.patternType === 'MONTHLY' && (
+                {editTask.patternType === 'DAILY' && (
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id="editSkipWeekends"
+                      checked={editTask.skipWeekends}
+                      onChange={(e) =>
+                        setEditTask({ ...editTask, skipWeekends: e.target.checked })
+                      }
+                      className="w-4 h-4 rounded border-dark-600 bg-dark-800"
+                    />
+                    <label htmlFor="editSkipWeekends" className="text-sm text-white/70">
+                      土日をスキップ
+                    </label>
+                  </div>
+                )}
+
+                {editTask.patternType === 'WEEKLY' && (
+                  <div>
+                    <label className="block text-sm font-medium text-dark-300 mb-2">
+                      曜日
+                    </label>
+                    <select
+                      value={editTask.dayOfWeek}
+                      onChange={(e) => setEditTask({ ...editTask, dayOfWeek: e.target.value })}
+                      className="w-full bg-dark-800 border border-dark-700 rounded-xl px-4 py-3 text-white"
+                    >
+                      {DAY_OF_WEEK_OPTIONS.map((opt) => (
+                        <option key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                {editTask.patternType === 'MONTHLY' && (
+                  <Input
+                    label="日付（1-28）"
+                    type="number"
+                    min={1}
+                    max={28}
+                    value={editTask.dayOfMonth}
+                    onChange={(e) =>
+                      setEditTask({ ...editTask, dayOfMonth: Number(e.target.value) })
+                    }
+                  />
+                )}
+
                 <Input
-                  label="日付（1-28）"
-                  type="number"
-                  min={1}
-                  max={28}
-                  value={editTask.dayOfMonth}
-                  onChange={(e) =>
-                    setEditTask({ ...editTask, dayOfMonth: Number(e.target.value) })
-                  }
+                  label="開始日"
+                  type="date"
+                  value={editTask.startDate}
+                  onChange={(e) => setEditTask({ ...editTask, startDate: e.target.value })}
                 />
-              )}
 
+                <Input
+                  label="終了日（任意）"
+                  type="date"
+                  value={editTask.endDate}
+                  onChange={(e) => setEditTask({ ...editTask, endDate: e.target.value })}
+                />
+              </>
+            )}
+
+            {/* 単発スケジュールの詳細 */}
+            {editTask.scheduleType === 'ONE_TIME' && (
               <Input
-                label="開始日"
+                label="期限"
                 type="date"
-                value={editTask.startDate}
-                onChange={(e) => setEditTask({ ...editTask, startDate: e.target.value })}
+                value={editTask.deadline}
+                onChange={(e) => setEditTask({ ...editTask, deadline: e.target.value })}
               />
-            </>
-          )}
-
-          {/* 単発スケジュールの詳細 */}
-          {editTask.scheduleType === 'ONE_TIME' && (
-            <Input
-              label="期限"
-              type="date"
-              value={editTask.deadline}
-              onChange={(e) => setEditTask({ ...editTask, deadline: e.target.value })}
-            />
-          )}
+            )}
+          </div>
         </Modal>
       </PageContainer>
     </>

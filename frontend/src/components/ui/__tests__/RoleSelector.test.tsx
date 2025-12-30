@@ -17,8 +17,8 @@ describe('RoleSelector', () => {
       render(<RoleSelector {...defaultProps} />)
       expect(screen.getByText('父')).toBeInTheDocument()
       expect(screen.getByText('母')).toBeInTheDocument()
-      expect(screen.getByText('兄弟')).toBeInTheDocument()
-      expect(screen.getByText('姉妹')).toBeInTheDocument()
+      expect(screen.getByText('兄')).toBeInTheDocument()
+      expect(screen.getByText('妹')).toBeInTheDocument()
     })
 
     it('デフォルトラベル"役割"が表示される', () => {
@@ -54,17 +54,17 @@ describe('RoleSelector', () => {
       expect(onChange).toHaveBeenCalledWith('MOTHER')
     })
 
-    it('兄弟をクリックするとBROTHERが渡される', () => {
+    it('兄をクリックするとBROTHERが渡される', () => {
       const onChange = vi.fn()
       render(<RoleSelector {...defaultProps} onChange={onChange} />)
-      fireEvent.click(screen.getByRole('button', { name: /兄弟/ }))
+      fireEvent.click(screen.getByRole('button', { name: /兄/ }))
       expect(onChange).toHaveBeenCalledWith('BROTHER')
     })
 
-    it('姉妹をクリックするとSISTERが渡される', () => {
+    it('妹をクリックするとSISTERが渡される', () => {
       const onChange = vi.fn()
       render(<RoleSelector {...defaultProps} onChange={onChange} />)
-      fireEvent.click(screen.getByRole('button', { name: /姉妹/ }))
+      fireEvent.click(screen.getByRole('button', { name: /妹/ }))
       expect(onChange).toHaveBeenCalledWith('SISTER')
     })
   })
@@ -105,8 +105,8 @@ describe('RoleSelector', () => {
       render(<RoleSelector {...defaultProps} />)
       expect(screen.getByAltText('父')).toBeInTheDocument()
       expect(screen.getByAltText('母')).toBeInTheDocument()
-      expect(screen.getByAltText('兄弟')).toBeInTheDocument()
-      expect(screen.getByAltText('姉妹')).toBeInTheDocument()
+      expect(screen.getByAltText('兄')).toBeInTheDocument()
+      expect(screen.getByAltText('妹')).toBeInTheDocument()
     })
   })
 })

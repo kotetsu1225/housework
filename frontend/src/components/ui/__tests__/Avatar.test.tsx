@@ -46,6 +46,13 @@ describe('Avatar', () => {
     })
   })
 
+  describe('roleアイコン表示', () => {
+    it('roleが指定された場合は役割アイコン画像を表示する', () => {
+      render(<Avatar name="父" role="FATHER" />)
+      expect(screen.getByRole('img', { name: '父' })).toBeInTheDocument()
+    })
+  })
+
   describe('variant', () => {
     it('parentバリアントでcoral系のグラデーションが適用される', () => {
       render(<Avatar name="父" variant="parent" />)

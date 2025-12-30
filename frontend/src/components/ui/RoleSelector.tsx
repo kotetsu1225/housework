@@ -16,7 +16,7 @@ export interface RoleSelectorProps {
 /**
  * 役割選択コンポーネント
  *
- * 4つの役割（父、母、兄弟、姉妹）から選択するUIを提供
+ * 4つの役割（父、母、兄、妹）から選択するUIを提供
  *
  * @example
  * ```tsx

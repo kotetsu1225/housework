@@ -41,16 +41,16 @@ export function getRoleVariant(role: FamilyRole): 'parent' | 'child' {
  * ```typescript
  * getFamilyRoleLabel('FATHER') // '父'
  * getFamilyRoleLabel('MOTHER') // '母'
- * getFamilyRoleLabel('BROTHER') // '兄弟'
- * getFamilyRoleLabel('SISTER') // '姉妹'
+ * getFamilyRoleLabel('BROTHER') // '兄'
+ * getFamilyRoleLabel('SISTER') // '妹'
  * ```
  */
 export function getFamilyRoleLabel(role: FamilyRole): string {
   const labels: Record<FamilyRole, string> = {
     FATHER: '父',
     MOTHER: '母',
-    BROTHER: '兄弟',
-    SISTER: '姉妹',
+    BROTHER: '兄',
+    SISTER: '妹',
   }
   return labels[role] || role
 }

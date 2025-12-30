@@ -10,6 +10,7 @@ import { Input } from '../components/ui/Input'
 import { Modal } from '../components/ui/Modal'
 import { Alert } from '../components/ui/Alert'
 import { useMember, useMemberAvailability } from '../hooks'
+import { useAuth } from '../contexts/AuthContext'
 import { isParentRole, formatJa, toISODateString } from '../utils'
 import type { Member, MemberAvailability, TimeSlot } from '../types'
 import type { TimeSlotRequest } from '../types/api'
@@ -111,7 +112,7 @@ function TimeSlotItem({ slot, onDelete, disabled }: TimeSlotItemProps) {
           {slot.startTime} - {slot.endTime}
         </span>
         {slot.memo && (
-          <span className="text-dark-400 text-sm">({slot.memo})</span>
+          <span className="text-dark-400 text-sm">{slot.memo}</span>
         )}
       </div>
       <button
@@ -147,6 +148,7 @@ function MemberAvailabilityCard({
         <Avatar
           name={member.name}
           size="md"
+          role={member.role}
           variant={isParentRole(member.role) ? 'parent' : 'child'}
         />
         <div className="flex-1">
@@ -189,47 +191,19 @@ function EmptyState({ onAdd }: EmptyStateProps) {
   )
 }
 
-/**
- * メンバー選択コンポーネント
- */
-interface MemberSelectorProps {
-  members: Member[]
-  selectedMemberId: string | null
-  onSelect: (memberId: string) => void
-}
-
-function MemberSelector({ members, selectedMemberId, onSelect }: MemberSelectorProps) {
-  return (
-    <div>
-      <label className="block text-sm font-medium text-dark-300 mb-2">
-        メンバー
-      </label>
-      <div className="flex gap-2 flex-wrap">
-        {members.map((member) => (
-          <Button
-            key={member.id}
-            variant={selectedMemberId === member.id ? 'primary' : 'secondary'}
-            size="sm"
-            onClick={() => onSelect(member.id)}
-          >
-            {member.name}
-          </Button>
-        ))}
-      </div>
-    </div>
-  )
-}
 
 /**
  * 空き時間管理ページ
  */
 export function Availability() {
+  // ログインユーザー情報取得
+  const { user } = useAuth()
+  
   // カレンダー状態
   const [currentWeekStart, setCurrentWeekStart] = useState(() =>
     startOfWeek(new Date(), { weekStartsOn: 1 })
   )
   const [selectedDate, setSelectedDate] = useState(new Date())
-  const [selectedMember, setSelectedMember] = useState<string | null>(null)
 
   // モーダル状態
   const [showAddModal, setShowAddModal] = useState(false)
@@ -327,7 +301,6 @@ export function Availability() {
   const handleCloseModal = () => {
     setShowAddModal(false)
     setNewSlot({ startTime: '', endTime: '', memo: '' })
-    setSelectedMember(null)
     clearError()
   }
 
@@ -335,11 +308,13 @@ export function Availability() {
    * 空き時間追加ハンドラー
    */
   const handleAddAvailability = async () => {
-    if (!selectedMember || !newSlot.startTime || !newSlot.endTime) return
+    // ログインユーザーのIDを使用
+    const memberId = user?.id
+    if (!memberId || !newSlot.startTime || !newSlot.endTime) return
 
     const targetDate = toISODateString(selectedDate)
     const existingAvailability = availabilities.find(
-      (av) => av.memberId === selectedMember && av.targetDate === targetDate
+      (av) => av.memberId === memberId && av.targetDate === targetDate
     )
 
     if (existingAvailability) {
@@ -363,7 +338,7 @@ export function Availability() {
       )
       handleCloseModal()
     } else {
-      const success = await addAvailability(selectedMember, targetDate, [
+      const success = await addAvailability(memberId, targetDate, [
         {
           startTime: newSlot.startTime,
           endTime: newSlot.endTime,
@@ -451,7 +426,7 @@ export function Availability() {
         {/* 選択日の詳細 */}
         <section className="mt-4">
           <h2 className="text-lg font-bold text-white mb-4">
-            {formatJa(selectedDate, 'M月d日（E）')}の空き時間
+            {formatJa(selectedDate, 'M月d日 E')}の空き時間
           </h2>
 
           {selectedDateAvailabilities.length > 0 ? (
@@ -487,9 +462,7 @@ export function Availability() {
                 <Card
                   key={member.id}
                   variant="glass"
-                  hoverable
                   className="text-center"
-                  onClick={() => setSelectedMember(member.id)}
                 >
                   <Avatar
                     name={member.name}
@@ -533,7 +506,7 @@ export function Availability() {
                 className="flex-1"
                 onClick={handleAddAvailability}
                 loading={loading}
-                disabled={!selectedMember || !newSlot.startTime || !newSlot.endTime}
+                disabled={!user?.id || !newSlot.startTime || !newSlot.endTime}
               >
                 登録
               </Button>
@@ -546,18 +519,12 @@ export function Availability() {
             </Alert>
           )}
 
-          <MemberSelector
-            members={members}
-            selectedMemberId={selectedMember}
-            onSelect={setSelectedMember}
-          />
-
           <div>
             <label className="block text-sm font-medium text-dark-300 mb-2">
               日付
             </label>
             <div className="bg-dark-800 border border-dark-700 rounded-xl px-4 py-3 text-white">
-              {formatJa(selectedDate, 'yyyy年M月d日（E）')}
+              {formatJa(selectedDate, 'yyyy年M月d日 E')}
             </div>
           </div>
 
@@ -577,7 +544,7 @@ export function Availability() {
           </div>
 
           <Input
-            label="メモ（任意）"
+            label="メモ"
             placeholder="例: 学校から帰宅後"
             value={newSlot.memo ?? ''}
             onChange={(e) => setNewSlot({ ...newSlot, memo: e.target.value })}

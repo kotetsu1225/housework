@@ -192,7 +192,7 @@ export function TaskActionModal({
           </div>
           <div className="flex items-center gap-1">
             {scopeIcon}
-            <span>{scopeLabel}</span>
+            <span className="whitespace-nowrap">{scopeLabel}</span>
           </div>
           <Badge
             variant={
@@ -245,6 +245,7 @@ export function TaskActionModal({
                     <Avatar
                       name={member.name}
                       size="sm"
+                      role={member.role}
                       variant={isParentRole(member.role) ? 'parent' : 'child'}
                     />
                     <span className="text-sm text-white">

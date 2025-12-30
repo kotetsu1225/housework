@@ -96,7 +96,7 @@ function TodayTaskCard({ task, onClick }: TodayTaskCardProps) {
               {task.estimatedMinutes}分
             </span>
           )}
-          <span className="flex items-center gap-1">
+          <span className="flex items-center gap-1 whitespace-nowrap">
             {task.scope === 'FAMILY' ? (
               <Users className="w-3.5 h-3.5" />
             ) : (
@@ -134,6 +134,7 @@ function MemberProgressCard({ summary }: MemberProgressCardProps) {
         <Avatar
           name={summary.memberName}
           size="lg"
+          role={familyRole}
           variant={isParentRole(familyRole) ? 'parent' : 'child'}
         />
         <div className="text-center">

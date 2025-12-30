@@ -1,4 +1,4 @@
-import { ReactNode, useEffect, useCallback } from 'react'
+import { ReactNode, useEffect, useCallback, useRef } from 'react'
 import { X } from 'lucide-react'
 import { clsx } from 'clsx'
 
@@ -51,6 +51,8 @@ export function Modal({
   closeOnOverlayClick = false,
   className,
 }: ModalProps) {
+  const containerRef = useRef<HTMLDivElement>(null)
+
   // ESCキーで閉じる
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
@@ -66,6 +68,11 @@ export function Modal({
       document.addEventListener('keydown', handleKeyDown)
       // スクロールを無効化
       document.body.style.overflow = 'hidden'
+
+      // オープン時に先頭へスクロール（SPで「上が見切れる」体感の原因になりやすい）
+      requestAnimationFrame(() => {
+        containerRef.current?.scrollTo({ top: 0 })
+      })
     }
 
     return () => {
@@ -91,8 +98,9 @@ export function Modal({
       aria-labelledby="modal-title"
     >
       <div
+        ref={containerRef}
         className={clsx(
-          'bg-dark-900 w-full max-w-lg rounded-t-3xl p-6 safe-bottom animate-slide-up',
+          'bg-dark-900 w-full max-w-lg rounded-t-3xl p-6 safe-top safe-bottom animate-slide-up max-h-[85dvh] overflow-y-auto overscroll-contain',
           className
         )}
         onClick={(e) => e.stopPropagation()}

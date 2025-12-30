@@ -58,6 +58,7 @@ export function MemberSummaryCard({
         <Avatar
           name={member.name}
           size="lg"
+          role={member.role}
           variant={isParentRole(member.role) ? 'parent' : 'child'}
         />
         <span className="font-medium text-white truncate w-full">{member.name}</span>

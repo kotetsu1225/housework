@@ -15,14 +15,17 @@ export interface RoleOption {
   icon: string
 }
 
+// public配下の画像はハッシュ化されないため、差し替えが反映されない場合に備えてバージョンを付与
+const ICON_VERSION = '2025-12-30'
+
 /**
  * 役割選択オプション一覧
  */
 export const ROLE_OPTIONS: RoleOption[] = [
-  { value: 'FATHER', label: '父', icon: '/familyIcons/father.svg.jpg' },
-  { value: 'MOTHER', label: '母', icon: '/familyIcons/mother.svg.jpg' },
-  { value: 'BROTHER', label: '兄弟', icon: '/familyIcons/brother.svg.jpg' },
-  { value: 'SISTER', label: '姉妹', icon: '/familyIcons/sister.svg.jpg' },
+  { value: 'FATHER', label: '父', icon: `/familyIcons/father.jpg?v=${ICON_VERSION}` },
+  { value: 'MOTHER', label: '母', icon: `/familyIcons/mother.jpg?v=${ICON_VERSION}` },
+  { value: 'BROTHER', label: '兄', icon: `/familyIcons/brother.jpg?v=${ICON_VERSION}` },
+  { value: 'SISTER', label: '妹', icon: `/familyIcons/sister.jpg?v=${ICON_VERSION}` },
 ] as const
 
 /**
@@ -31,8 +34,8 @@ export const ROLE_OPTIONS: RoleOption[] = [
 export const ROLE_LABELS: Record<FamilyRole, string> = {
   FATHER: '父',
   MOTHER: '母',
-  BROTHER: '兄弟',
-  SISTER: '姉妹',
+  BROTHER: '兄',
+  SISTER: '妹',
 } as const
 
 /**

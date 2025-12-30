@@ -90,6 +90,8 @@ export function useMember(initialMembers: Member[] = []): UseMemberReturn {
         name: m.name,
         email: m.email,
         role: m.familyRole,
+        completedCount: m.completedCount,
+        totalCount: m.totalCount,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       }))

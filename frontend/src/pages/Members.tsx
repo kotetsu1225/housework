@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react'
-import { UserPlus, CheckCircle2, TrendingUp, RefreshCw, Mail } from 'lucide-react'
+import { UserPlus, CheckCircle2, RefreshCw, Mail } from 'lucide-react'
 import { Header } from '../components/layout/Header'
 import { PageContainer } from '../components/layout/PageContainer'
-import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card'
+import { Card } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
 import { Badge } from '../components/ui/Badge'
 import { Avatar } from '../components/ui/Avatar'
@@ -21,7 +21,6 @@ import type { FamilyRole, Member } from '../types'
 interface MemberStats {
   completed: number
   total: number
-  streak: number
 }
 
 /**
@@ -83,48 +82,6 @@ function MemberCard({ member }: { member: MemberWithStats }) {
 }
 
 /**
- * 家族統計カードコンポーネント
- */
-function FamilyStatsCard({ members }: { members: MemberWithStats[] }) {
-  const totalCompleted = members.reduce((sum, m) => sum + m.stats.completed, 0)
-  const totalTasks = members.reduce((sum, m) => sum + m.stats.total, 0)
-  const maxStreak = members.length > 0
-    ? Math.max(...members.map((m) => m.stats.streak))
-    : 0
-  const completionRate = totalTasks > 0
-    ? Math.round((totalCompleted / totalTasks) * 100)
-    : 0
-
-  return (
-    <Card variant="gradient" className="relative overflow-hidden">
-      <div className="absolute top-0 right-0 w-40 h-40 bg-shazam-500/10 rounded-full blur-3xl" />
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <TrendingUp className="w-5 h-5 text-shazam-400" />
-          家族の実績
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="grid grid-cols-3 gap-4 text-center">
-          <div>
-            <p className="text-2xl font-bold text-white">{totalCompleted}</p>
-            <p className="text-xs text-white/50">完了タスク</p>
-          </div>
-          <div>
-            <p className="text-2xl font-bold text-emerald-400">{completionRate}%</p>
-            <p className="text-xs text-white/50">完了率</p>
-          </div>
-          <div>
-            <p className="text-2xl font-bold text-amber-400">{maxStreak}日</p>
-            <p className="text-xs text-white/50">最長連続</p>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  )
-}
-
-/**
  * メンバー一覧ページ
  */
 export function Members() {
@@ -134,7 +91,10 @@ export function Members() {
   // 統計情報付きメンバー（将来的には統計APIから取得）
   const membersWithStats: MemberWithStats[] = members.map((member) => ({
     ...member,
-    stats: { completed: 0, total: 0, streak: 0 },
+    stats: {
+      completed: member.completedCount ?? 0,
+      total: member.totalCount ?? 0,
+    },
   }))
 
   // モーダル状態

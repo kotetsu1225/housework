@@ -9,6 +9,7 @@ import com.task.usecase.member.CreateMemberUseCase
 import com.task.usecase.member.GetMemberUseCase
 import com.task.usecase.member.GetMembersUseCase
 import com.task.usecase.member.UpdateMemberUseCase
+import com.task.usecase.query.member.MemberStatsQueryService
 import io.ktor.http.HttpStatusCode
 import io.ktor.resources.Resource
 import io.ktor.server.application.call
@@ -39,6 +40,8 @@ class Members{
             val name: String,
             val email: String,
             val familyRole: String,
+            val completedCount: Int,
+            val totalCount: Int,
         )
     }
 
@@ -98,16 +101,22 @@ fun Route.members() {
 
     get<Members.List> {
         val output = instance<GetMembersUseCase>().execute()
+        val statsByMemberId = instance<MemberStatsQueryService>()
+            .fetchMemberStats()
+            .associateBy { it.memberId }
 
         call.respond(
             HttpStatusCode.OK,
             Members.List.Response(
                 members = output.members.map { member ->
+                    val stats = statsByMemberId[member.id.value.toString()]
                     Members.List.MemberDto(
                         id = member.id.value.toString(),
                         name = member.name.value,
                         email = member.email.value,
-                        familyRole = member.familyRole.value
+                        familyRole = member.familyRole.value,
+                        completedCount = stats?.completedCount ?: 0,
+                        totalCount = stats?.totalCount ?: 0,
                     )
                 }
             )

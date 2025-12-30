@@ -219,10 +219,10 @@ export function Members() {
           </Alert>
         )}
 
-        {/* 家族全体の統計 */}
+        {/* 家族全体の統計
         <section className="py-4">
           <FamilyStatsCard members={membersWithStats} />
-        </section>
+        </section> */}
 
         {/* メンバー一覧 */}
         <section>

@@ -6,7 +6,7 @@
  */
 
 import { useState, useCallback, useMemo } from 'react'
-import { RefreshCw, ListTodo, Users, Clock, CheckCircle2, Circle, PlayCircle, Calendar, ChevronDown } from 'lucide-react'
+import { RefreshCw, ListTodo, Users, Clock, CheckCircle2, Circle, PlayCircle, Calendar, ChevronDown, User } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { Header } from '../components/layout/Header'
 import { PageContainer } from '../components/layout/PageContainer'
@@ -52,6 +52,15 @@ function getStatusBadge(status: string) {
   }
 }
 
+function getScheduleBadge(scheduleType: TodayTaskDto['scheduleType']) {
+  switch (scheduleType) {
+    case 'ONE_TIME':
+      return <Badge variant="warning">単発</Badge>
+    default:
+      return <Badge variant="default">定期</Badge>
+  }
+}
+
 /**
  * 今日のタスクカードコンポーネント
  */
@@ -84,7 +93,7 @@ function TodayTaskCard({ task, onClick, showDate = false, members }: TodayTaskCa
 
       {/* タスク情報 */}
       <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 mb-1">
+        <div className="flex flex-wrap items-center gap-2 mb-1">
           <span
             className={`font-medium truncate ${
               task.status === 'COMPLETED'
@@ -95,17 +104,18 @@ function TodayTaskCard({ task, onClick, showDate = false, members }: TodayTaskCa
             {task.taskName}
           </span>
           {getStatusBadge(task.status)}
+          {getScheduleBadge(task.scheduleType)}
         </div>
-        <div className="flex items-center gap-3 text-sm text-white/50">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-white/50">
           {/* 期限が今日じゃない場合は日付を表示 */}
           {showDate && task.scheduledDate && (
-            <span className="flex items-center gap-1 text-shazam-400">
+            <span className="flex items-center gap-1 text-shazam-400 whitespace-nowrap">
               <Calendar className="w-3.5 h-3.5" />
               {formatJa(new Date(task.scheduledDate), 'M月d日')}
             </span>
           )}
           {task.scheduledStartTime && task.scheduledEndTime && (
-            <span className="flex items-center gap-1">
+            <span className="flex items-center gap-1 whitespace-nowrap">
               <Clock className="w-3.5 h-3.5" />
               {formatTimeFromISO(task.scheduledStartTime)} - {formatTimeFromISO(task.scheduledEndTime)}
             </span>
@@ -119,7 +129,7 @@ function TodayTaskCard({ task, onClick, showDate = false, members }: TodayTaskCa
             {task.scope === 'FAMILY' ? '家族' : '個人'}
           </span>
           {task.assigneeMemberName && (
-            <span className="flex items-center gap-1.5 text-coral-400 font-medium">
+            <span className="flex items-center gap-1.5 text-coral-400 font-medium whitespace-nowrap">
               {assignee ? (
                 <Avatar
                   name={assignee.name}
@@ -152,6 +162,8 @@ export function Dashboard() {
   const [selectedTask, setSelectedTask] = useState<TodayTaskDto | null>(null)
   const [showTaskModal, setShowTaskModal] = useState(false)
   const [showCompleted, setShowCompleted] = useState(false)
+  const [showOtherMembersToday, setShowOtherMembersToday] = useState(false)
+  const [showOtherMembersCompleted, setShowOtherMembersCompleted] = useState(false)
 
   // ダッシュボードデータ取得（CQRS Query）
   const {
@@ -197,6 +209,74 @@ export function Dashboard() {
     
     return { todayActiveTasks: todayActive, completedTasks: completed, futureTasks: future }
   }, [todayTasks, todayStr])
+
+  type GroupedTasks = {
+    familyTasks: TodayTaskDto[]
+    myPersonalTasks: TodayTaskDto[]
+    otherPersonalTasksByOwner: Map<string, TodayTaskDto[]>
+    otherPersonalTasksUnknownOwner: TodayTaskDto[]
+  }
+
+  const groupTasks = useCallback(
+    (tasks: TodayTaskDto[]): GroupedTasks => {
+      const familyTasks: TodayTaskDto[] = []
+      const myPersonalTasks: TodayTaskDto[] = []
+      const otherPersonalTasksByOwner = new Map<string, TodayTaskDto[]>()
+      const otherPersonalTasksUnknownOwner: TodayTaskDto[] = []
+      const currentUserId = user?.id ?? null
+
+      for (const task of tasks) {
+        if (task.scope === 'FAMILY') {
+          familyTasks.push(task)
+          continue
+        }
+
+        // PERSONAL
+        if (task.ownerMemberId && currentUserId && task.ownerMemberId === currentUserId) {
+          myPersonalTasks.push(task)
+          continue
+        }
+
+        if (task.ownerMemberId) {
+          const bucket = otherPersonalTasksByOwner.get(task.ownerMemberId) ?? []
+          bucket.push(task)
+          otherPersonalTasksByOwner.set(task.ownerMemberId, bucket)
+          continue
+        }
+
+        // オーナー情報がない場合（互換/フォールバック）
+        otherPersonalTasksUnknownOwner.push(task)
+      }
+
+      return {
+        familyTasks,
+        myPersonalTasks,
+        otherPersonalTasksByOwner,
+        otherPersonalTasksUnknownOwner,
+      }
+    },
+    [user?.id]
+  )
+
+  const groupedTodayActive = useMemo(() => groupTasks(todayActiveTasks), [groupTasks, todayActiveTasks])
+  const groupedCompleted = useMemo(() => groupTasks(completedTasks), [groupTasks, completedTasks])
+
+  const sortedOtherOwners = useCallback(
+    (map: Map<string, TodayTaskDto[]>) => {
+      const entries = Array.from(map.entries())
+      entries.sort(([aId], [bId]) => {
+        const a = members.find((m) => m.id === aId)?.name ?? aId
+        const b = members.find((m) => m.id === bId)?.name ?? bId
+        return a.localeCompare(b, 'ja')
+      })
+      return entries
+    },
+    [members]
+  )
+
+  const otherCount = (g: GroupedTasks) =>
+    Array.from(g.otherPersonalTasksByOwner.values()).reduce((sum, arr) => sum + arr.length, 0) +
+    g.otherPersonalTasksUnknownOwner.length
 
   // 進捗サマリーの計算（今日のタスクのみ）
   const { completedCount, totalCount } = useMemo(() => {
@@ -302,14 +382,114 @@ export function Dashboard() {
                 <p className="text-white/50">読み込み中...</p>
               </div>
             ) : todayActiveTasks.length > 0 ? (
-              todayActiveTasks.map((task) => (
-                <TodayTaskCard
-                  key={task.taskExecutionId}
-                  task={task}
-                  onClick={handleTaskClick}
-                  members={members}
-                />
-              ))
+              <div className="space-y-6">
+                {groupedTodayActive.familyTasks.length > 0 && (
+                  <div className="space-y-3">
+                    <h3 className="text-white/70 font-bold flex items-center gap-2">
+                      <Users className="w-4 h-4 text-white/50" />
+                      家族のタスク
+                    </h3>
+                    <div className="space-y-3">
+                      {groupedTodayActive.familyTasks.map((task) => (
+                        <TodayTaskCard
+                          key={task.taskExecutionId}
+                          task={task}
+                          onClick={handleTaskClick}
+                          members={members}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {groupedTodayActive.myPersonalTasks.length > 0 && (
+                  <div className="space-y-3">
+                    <h3 className="text-white/70 font-bold flex items-center gap-2">
+                      <User className="w-4 h-4 text-white/50" />
+                      自分のタスク
+                    </h3>
+                    <div className="space-y-3">
+                      {groupedTodayActive.myPersonalTasks.map((task) => (
+                        <TodayTaskCard
+                          key={task.taskExecutionId}
+                          task={task}
+                          onClick={handleTaskClick}
+                          members={members}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {otherCount(groupedTodayActive) > 0 && (
+                  <div className="space-y-3">
+                    <button
+                      onClick={() => setShowOtherMembersToday((v) => !v)}
+                      className="flex items-center gap-2 text-white/60 hover:text-white/80 transition-colors font-bold"
+                    >
+                      <Users className="w-4 h-4 text-white/40" />
+                      他のメンバーのタスク ({otherCount(groupedTodayActive)})
+                      <ChevronDown
+                        className={`w-4 h-4 transition-transform ${showOtherMembersToday ? 'rotate-180' : ''}`}
+                      />
+                    </button>
+
+                    {showOtherMembersToday && (
+                      <div className="space-y-6">
+                        {sortedOtherOwners(groupedTodayActive.otherPersonalTasksByOwner).map(([ownerId, tasks]) => {
+                          const owner = members.find((m) => m.id === ownerId)
+                          return (
+                            <div key={ownerId} className="space-y-3">
+                              <div className="flex items-center gap-2 text-white/70 font-bold">
+                                {owner ? (
+                                  <Avatar
+                                    name={owner.name}
+                                    size="sm"
+                                    role={owner.role}
+                                    variant={isParentRole(owner.role) ? 'parent' : 'child'}
+                                  />
+                                ) : (
+                                  <span className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-xs">?</span>
+                                )}
+                                <span className="truncate">{owner?.name ?? '不明なメンバー'}</span>
+                              </div>
+                              <div className="space-y-3">
+                                {tasks.map((task) => (
+                                  <TodayTaskCard
+                                    key={task.taskExecutionId}
+                                    task={task}
+                                    onClick={handleTaskClick}
+                                    members={members}
+                                  />
+                                ))}
+                              </div>
+                            </div>
+                          )
+                        })}
+
+                        {groupedTodayActive.otherPersonalTasksUnknownOwner.length > 0 && (
+                          <div className="space-y-3">
+                            <div className="flex items-center gap-2 text-white/70 font-bold">
+                              <span className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-xs">?</span>
+                              <span className="truncate">不明なメンバー</span>
+                            </div>
+                            <div className="space-y-3">
+                              {groupedTodayActive.otherPersonalTasksUnknownOwner.map((task) => (
+                                <TodayTaskCard
+                                  key={task.taskExecutionId}
+                                  task={task}
+                                  onClick={handleTaskClick}
+                                  members={members}
+                                />
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
             ) : (
               <Card variant="glass" className="text-center py-8">
                 <p className="text-white/50 mb-2">今日のタスクはありません</p>
@@ -344,15 +524,113 @@ export function Dashboard() {
             </div>
             
             {showCompleted && (
-              <div className="space-y-3 opacity-60">
-                {completedTasks.map((task) => (
-                  <TodayTaskCard
-                    key={task.taskExecutionId}
-                    task={task}
-                    onClick={handleTaskClick}
-                    members={members}
-                  />
-                ))}
+              <div className="space-y-6 opacity-60">
+                {groupedCompleted.familyTasks.length > 0 && (
+                  <div className="space-y-3">
+                    <h3 className="text-white/70 font-bold flex items-center gap-2">
+                      <Users className="w-4 h-4 text-white/50" />
+                      家族のタスク
+                    </h3>
+                    <div className="space-y-3">
+                      {groupedCompleted.familyTasks.map((task) => (
+                        <TodayTaskCard
+                          key={task.taskExecutionId}
+                          task={task}
+                          onClick={handleTaskClick}
+                          members={members}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {groupedCompleted.myPersonalTasks.length > 0 && (
+                  <div className="space-y-3">
+                    <h3 className="text-white/70 font-bold flex items-center gap-2">
+                      <User className="w-4 h-4 text-white/50" />
+                      自分のタスク
+                    </h3>
+                    <div className="space-y-3">
+                      {groupedCompleted.myPersonalTasks.map((task) => (
+                        <TodayTaskCard
+                          key={task.taskExecutionId}
+                          task={task}
+                          onClick={handleTaskClick}
+                          members={members}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {otherCount(groupedCompleted) > 0 && (
+                  <div className="space-y-3">
+                    <button
+                      onClick={() => setShowOtherMembersCompleted((v) => !v)}
+                      className="flex items-center gap-2 text-white/60 hover:text-white/80 transition-colors font-bold"
+                    >
+                      <Users className="w-4 h-4 text-white/40" />
+                      他のメンバーのタスク ({otherCount(groupedCompleted)})
+                      <ChevronDown
+                        className={`w-4 h-4 transition-transform ${showOtherMembersCompleted ? 'rotate-180' : ''}`}
+                      />
+                    </button>
+
+                    {showOtherMembersCompleted && (
+                      <div className="space-y-6">
+                        {sortedOtherOwners(groupedCompleted.otherPersonalTasksByOwner).map(([ownerId, tasks]) => {
+                          const owner = members.find((m) => m.id === ownerId)
+                          return (
+                            <div key={ownerId} className="space-y-3">
+                              <div className="flex items-center gap-2 text-white/70 font-bold">
+                                {owner ? (
+                                  <Avatar
+                                    name={owner.name}
+                                    size="sm"
+                                    role={owner.role}
+                                    variant={isParentRole(owner.role) ? 'parent' : 'child'}
+                                  />
+                                ) : (
+                                  <span className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-xs">?</span>
+                                )}
+                                <span className="truncate">{owner?.name ?? '不明なメンバー'}</span>
+                              </div>
+                              <div className="space-y-3">
+                                {tasks.map((task) => (
+                                  <TodayTaskCard
+                                    key={task.taskExecutionId}
+                                    task={task}
+                                    onClick={handleTaskClick}
+                                    members={members}
+                                  />
+                                ))}
+                              </div>
+                            </div>
+                          )
+                        })}
+
+                        {groupedCompleted.otherPersonalTasksUnknownOwner.length > 0 && (
+                          <div className="space-y-3">
+                            <div className="flex items-center gap-2 text-white/70 font-bold">
+                              <span className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-xs">?</span>
+                              <span className="truncate">不明なメンバー</span>
+                            </div>
+                            <div className="space-y-3">
+                              {groupedCompleted.otherPersonalTasksUnknownOwner.map((task) => (
+                                <TodayTaskCard
+                                  key={task.taskExecutionId}
+                                  task={task}
+                                  onClick={handleTaskClick}
+                                  members={members}
+                                />
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             )}
           </section>

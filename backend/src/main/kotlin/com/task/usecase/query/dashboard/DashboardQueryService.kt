@@ -37,7 +37,9 @@ data class TodayTaskDto(
     val scheduledStartTime: String, // ISO-8601形式
     val scheduledEndTime: String,   // ISO-8601形式
     val scope: String,              // TaskDefinition.scope (FAMILY/PERSONAL)
+    val scheduleType: String,       // TaskDefinition.schedule_type (RECURRING/ONE_TIME)
     val status: String,             // TaskExecution.status
+    val ownerMemberId: String?,     // TaskDefinition.owner_member_id (PERSONAL only)
     val assigneeMemberId: String?,
     val assigneeMemberName: String?,
     val scheduledDate: String

@@ -44,7 +44,9 @@ data class TodayTaskResponse(
     val scheduledStartTime: String,
     val scheduledEndTime: String,
     val scope: String,
+    val scheduleType: String,
     val status: String,
+    val ownerMemberId: String?,
     val assigneeMemberId: String?,
     val assigneeMemberName: String?,
     val scheduledDate: String
@@ -93,7 +95,9 @@ private fun TodayTaskDto.toResponse() = TodayTaskResponse(
     scheduledStartTime = scheduledStartTime,
     scheduledEndTime = scheduledEndTime,
     scope = scope,
+    scheduleType = scheduleType,
     status = status,
+    ownerMemberId = ownerMemberId,
     assigneeMemberId = assigneeMemberId,
     assigneeMemberName = assigneeMemberName,
     scheduledDate = scheduledDate

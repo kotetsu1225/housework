@@ -70,7 +70,9 @@ class DashboardQueryServiceImpl @Inject constructor(
             DSL.coalesce(ts.SCHEDULED_START_TIME, td.SCHEDULED_START_TIME).`as`("scheduled_start_time"),
             DSL.coalesce(ts.SCHEDULED_END_TIME, td.SCHEDULED_END_TIME).`as`("scheduled_end_time"),
             td.SCOPE,
+            td.SCHEDULE_TYPE,
             te.STATUS,
+            td.OWNER_MEMBER_ID,
             te.ASSIGNEE_MEMBER_ID,
             m.NAME.`as`("assignee_name"),
             te.SCHEDULED_DATE
@@ -99,7 +101,9 @@ class DashboardQueryServiceImpl @Inject constructor(
                     scheduledStartTime = record.get("scheduled_start_time", java.time.OffsetDateTime::class.java)?.toInstant()?.toString() ?: "",
                     scheduledEndTime = record.get("scheduled_end_time", java.time.OffsetDateTime::class.java)?.toInstant()?.toString() ?: "",
                     scope = record.get(td.SCOPE) ?: "FAMILY",
+                    scheduleType = record.get(td.SCHEDULE_TYPE) ?: "RECURRING",
                     status = record.get(te.STATUS) ?: "NOT_STARTED",
+                    ownerMemberId = record.get(td.OWNER_MEMBER_ID)?.toString(),
                     assigneeMemberId = record.get(te.ASSIGNEE_MEMBER_ID)?.toString(),
                     assigneeMemberName = record.get("assignee_name", String::class.java),
                     scheduledDate = record.get(te.SCHEDULED_DATE)?.format(dateFormatter) ?: ""

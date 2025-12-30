@@ -18,7 +18,11 @@ export interface TodayTaskDto {
   scheduledStartTime: string // HH:mm format
   scheduledEndTime: string // HH:mm format
   scope: 'FAMILY' | 'PERSONAL'
+  /** タスク定義のスケジュール種別 */
+  scheduleType: 'RECURRING' | 'ONE_TIME'
   status: 'NOT_STARTED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED'
+  /** PERSONALの場合のオーナー（FAMILYはnull） */
+  ownerMemberId: string | null
   assigneeMemberId: string | null
   assigneeMemberName: string | null
   scheduledDate: string

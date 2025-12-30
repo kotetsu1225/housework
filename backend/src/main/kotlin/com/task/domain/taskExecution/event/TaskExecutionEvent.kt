@@ -35,5 +35,6 @@ data class TaskExecutionCreated(
     override val taskExecutionId: TaskExecutionId,
     override val taskName: TaskDefinitionName,
     val assigneeMemberId: MemberId?,
+    val scheduledStartTime: Instant,
     override val occurredAt: Instant
 ) : TaskExecutionEvent

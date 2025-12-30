@@ -17,9 +17,10 @@ data class TaskSnapshots(
     val taskExecutionId: UUID,
     val name: String,
     val description: String? = null,
-    val estimatedMinutes: Int,
     val definitionVersion: Int,
-    val createdAt: OffsetDateTime? = null
+    val createdAt: OffsetDateTime? = null,
+    val scheduledStartTime: OffsetDateTime,
+    val scheduledEndTime: OffsetDateTime
 ): Serializable {
 
     override fun equals(other: Any?): Boolean {
@@ -40,8 +41,6 @@ data class TaskSnapshots(
         }
         else if (this.description != o.description)
             return false
-        if (this.estimatedMinutes != o.estimatedMinutes)
-            return false
         if (this.definitionVersion != o.definitionVersion)
             return false
         if (this.createdAt == null) {
@@ -49,6 +48,10 @@ data class TaskSnapshots(
                 return false
         }
         else if (this.createdAt != o.createdAt)
+            return false
+        if (this.scheduledStartTime != o.scheduledStartTime)
+            return false
+        if (this.scheduledEndTime != o.scheduledEndTime)
             return false
         return true
     }
@@ -59,9 +62,10 @@ data class TaskSnapshots(
         result = prime * result + this.taskExecutionId.hashCode()
         result = prime * result + this.name.hashCode()
         result = prime * result + (if (this.description == null) 0 else this.description.hashCode())
-        result = prime * result + this.estimatedMinutes.hashCode()
         result = prime * result + this.definitionVersion.hashCode()
         result = prime * result + (if (this.createdAt == null) 0 else this.createdAt.hashCode())
+        result = prime * result + this.scheduledStartTime.hashCode()
+        result = prime * result + this.scheduledEndTime.hashCode()
         return result
     }
 
@@ -71,9 +75,10 @@ data class TaskSnapshots(
         sb.append(taskExecutionId)
         sb.append(", ").append(name)
         sb.append(", ").append(description)
-        sb.append(", ").append(estimatedMinutes)
         sb.append(", ").append(definitionVersion)
         sb.append(", ").append(createdAt)
+        sb.append(", ").append(scheduledStartTime)
+        sb.append(", ").append(scheduledEndTime)
 
         sb.append(")")
         return sb.toString()

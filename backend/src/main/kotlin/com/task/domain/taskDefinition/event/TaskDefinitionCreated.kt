@@ -2,6 +2,7 @@ package com.task.domain.taskDefinition.event
 
 import com.task.domain.event.DomainEvent
 import com.task.domain.member.MemberId
+import com.task.domain.taskDefinition.ScheduledTimeRange
 import com.task.domain.taskDefinition.TaskDefinitionDescription
 import com.task.domain.taskDefinition.TaskDefinitionId
 import com.task.domain.taskDefinition.TaskDefinitionName
@@ -13,7 +14,7 @@ data class TaskDefinitionCreated(
     val taskDefinitionId: TaskDefinitionId,
     val name: TaskDefinitionName,
     val description: TaskDefinitionDescription,
-    val estimatedMinutes: Int,
+    val scheduledTimeRange: ScheduledTimeRange,
     val scope: TaskScope,
     val ownerMemberId: MemberId? = null,
     val schedule: TaskSchedule,

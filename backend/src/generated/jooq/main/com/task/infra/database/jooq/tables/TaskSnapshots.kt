@@ -21,7 +21,7 @@ import org.jooq.ForeignKey
 import org.jooq.Name
 import org.jooq.Record
 import org.jooq.Records
-import org.jooq.Row6
+import org.jooq.Row7
 import org.jooq.Schema
 import org.jooq.SelectField
 import org.jooq.Table
@@ -84,12 +84,6 @@ open class TaskSnapshots(
     val DESCRIPTION: TableField<TaskSnapshotsRecord, String?> = createField(DSL.name("description"), SQLDataType.CLOB, this, "凍結された説明")
 
     /**
-     * The column <code>public.task_snapshots.estimated_minutes</code>.
-     * 凍結された見積時間（分）
-     */
-    val ESTIMATED_MINUTES: TableField<TaskSnapshotsRecord, Int?> = createField(DSL.name("estimated_minutes"), SQLDataType.INTEGER.nullable(false), this, "凍結された見積時間（分）")
-
-    /**
      * The column <code>public.task_snapshots.definition_version</code>.
      * 元タスク定義のバージョン
      */
@@ -99,6 +93,18 @@ open class TaskSnapshots(
      * The column <code>public.task_snapshots.created_at</code>. スナップショット作成日時
      */
     val CREATED_AT: TableField<TaskSnapshotsRecord, OffsetDateTime?> = createField(DSL.name("created_at"), SQLDataType.TIMESTAMPWITHTIMEZONE(6).nullable(false).defaultValue(DSL.field(DSL.raw("CURRENT_TIMESTAMP"), SQLDataType.TIMESTAMPWITHTIMEZONE)), this, "スナップショット作成日時")
+
+    /**
+     * The column <code>public.task_snapshots.scheduled_start_time</code>.
+     * 凍結された予定開始時刻
+     */
+    val SCHEDULED_START_TIME: TableField<TaskSnapshotsRecord, OffsetDateTime?> = createField(DSL.name("scheduled_start_time"), SQLDataType.TIMESTAMPWITHTIMEZONE(6).nullable(false), this, "凍結された予定開始時刻")
+
+    /**
+     * The column <code>public.task_snapshots.scheduled_end_time</code>.
+     * 凍結された予定終了時刻
+     */
+    val SCHEDULED_END_TIME: TableField<TaskSnapshotsRecord, OffsetDateTime?> = createField(DSL.name("scheduled_end_time"), SQLDataType.TIMESTAMPWITHTIMEZONE(6).nullable(false), this, "凍結された予定終了時刻")
 
     private constructor(alias: Name, aliased: Table<TaskSnapshotsRecord>?): this(alias, null, null, aliased, null)
     private constructor(alias: Name, aliased: Table<TaskSnapshotsRecord>?, parameters: Array<Field<*>?>?): this(alias, null, null, aliased, parameters)
@@ -139,7 +145,7 @@ open class TaskSnapshots(
     val taskExecutions: TaskExecutions
         get(): TaskExecutions = taskExecutions()
     override fun getChecks(): List<Check<TaskSnapshotsRecord>> = listOf(
-        Internal.createCheck(this, DSL.name("task_snapshots_estimated_minutes_check"), "((estimated_minutes > 0))", true)
+        Internal.createCheck(this, DSL.name("chk_snapshot_scheduled_time_range"), "((scheduled_start_time < scheduled_end_time))", true)
     )
     override fun `as`(alias: String): TaskSnapshots = TaskSnapshots(DSL.name(alias), this)
     override fun `as`(alias: Name): TaskSnapshots = TaskSnapshots(alias, this)
@@ -161,18 +167,18 @@ open class TaskSnapshots(
     override fun rename(name: Table<*>): TaskSnapshots = TaskSnapshots(name.getQualifiedName(), null)
 
     // -------------------------------------------------------------------------
-    // Row6 type methods
+    // Row7 type methods
     // -------------------------------------------------------------------------
-    override fun fieldsRow(): Row6<UUID?, String?, String?, Int?, Int?, OffsetDateTime?> = super.fieldsRow() as Row6<UUID?, String?, String?, Int?, Int?, OffsetDateTime?>
+    override fun fieldsRow(): Row7<UUID?, String?, String?, Int?, OffsetDateTime?, OffsetDateTime?, OffsetDateTime?> = super.fieldsRow() as Row7<UUID?, String?, String?, Int?, OffsetDateTime?, OffsetDateTime?, OffsetDateTime?>
 
     /**
      * Convenience mapping calling {@link SelectField#convertFrom(Function)}.
      */
-    fun <U> mapping(from: (UUID?, String?, String?, Int?, Int?, OffsetDateTime?) -> U): SelectField<U> = convertFrom(Records.mapping(from))
+    fun <U> mapping(from: (UUID?, String?, String?, Int?, OffsetDateTime?, OffsetDateTime?, OffsetDateTime?) -> U): SelectField<U> = convertFrom(Records.mapping(from))
 
     /**
      * Convenience mapping calling {@link SelectField#convertFrom(Class,
      * Function)}.
      */
-    fun <U> mapping(toType: Class<U>, from: (UUID?, String?, String?, Int?, Int?, OffsetDateTime?) -> U): SelectField<U> = convertFrom(toType, Records.mapping(from))
+    fun <U> mapping(toType: Class<U>, from: (UUID?, String?, String?, Int?, OffsetDateTime?, OffsetDateTime?, OffsetDateTime?) -> U): SelectField<U> = convertFrom(toType, Records.mapping(from))
 }

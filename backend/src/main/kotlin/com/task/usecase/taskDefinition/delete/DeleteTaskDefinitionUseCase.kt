@@ -2,6 +2,7 @@ package com.task.usecase.taskDefinition.delete
 
 import com.google.inject.ImplementedBy
 import com.task.domain.member.MemberId
+import com.task.domain.taskDefinition.ScheduledTimeRange
 import com.task.domain.taskDefinition.TaskDefinitionDescription
 import com.task.domain.taskDefinition.TaskDefinitionId
 import com.task.domain.taskDefinition.TaskDefinitionName
@@ -18,7 +19,7 @@ interface DeleteTaskDefinitionUseCase {
         val id: TaskDefinitionId,
         val name: TaskDefinitionName,
         val description: TaskDefinitionDescription,
-        val estimatedMinutes: Int,
+        val scheduledTimeRange: ScheduledTimeRange,
         val scope: TaskScope,
         val ownerMemberId: MemberId?,
         val schedule: TaskSchedule,

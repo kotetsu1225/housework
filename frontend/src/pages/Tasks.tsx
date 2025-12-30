@@ -51,9 +51,11 @@ interface TaskCardProps {
   task: TaskDefinition
   onEdit: (task: TaskDefinition) => void
   onDelete: (task: TaskDefinition) => void
+  /** 編集権限があるか */
+  canEdit: boolean
 }
 
-function TaskCard({ task, onEdit, onDelete }: TaskCardProps) {
+function TaskCard({ task, onEdit, onDelete, canEdit }: TaskCardProps) {
   return (
     <Card variant="glass" hoverable>
       <div className="flex items-center justify-between">
@@ -62,6 +64,12 @@ function TaskCard({ task, onEdit, onDelete }: TaskCardProps) {
             <span className="font-medium text-white truncate">{task.name}</span>
             <ScopeBadge scope={task.scope} />
             <ScheduleBadge task={task} />
+            {/* 編集権限がない場合の表示 */}
+            {!canEdit && (
+              <span className="text-xs text-white/30 whitespace-nowrap">
+                他メンバーのタスク
+              </span>
+            )}
           </div>
           {task.description && (
             <p className="text-sm text-white/50 line-clamp-1 mb-2">
@@ -86,18 +94,27 @@ function TaskCard({ task, onEdit, onDelete }: TaskCardProps) {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <button
-            className="p-2 hover:bg-dark-700 rounded-lg transition-colors"
-            onClick={() => onEdit(task)}
-          >
-            <Edit2 className="w-4 h-4 text-white/50 hover:text-white" />
-          </button>
-          <button
-            className="p-2 hover:bg-dark-700 rounded-lg transition-colors"
-            onClick={() => onDelete(task)}
-          >
-            <Trash2 className="w-4 h-4 text-white/50 hover:text-red-400" />
-          </button>
+          {canEdit ? (
+            <>
+              <button
+                className="p-2 hover:bg-dark-700 rounded-lg transition-colors"
+                onClick={() => onEdit(task)}
+              >
+                <Edit2 className="w-4 h-4 text-white/50 hover:text-white" />
+              </button>
+              <button
+                className="p-2 hover:bg-dark-700 rounded-lg transition-colors"
+                onClick={() => onDelete(task)}
+              >
+                <Trash2 className="w-4 h-4 text-white/50 hover:text-red-400" />
+              </button>
+            </>
+          ) : (
+            // 編集権限がない場合はアイコンを薄く表示
+            <div className="flex items-center gap-2 opacity-30">
+              <Edit2 className="w-4 h-4 text-white/50" />
+            </div>
+          )}
         </div>
       </div>
     </Card>
@@ -132,6 +149,7 @@ const DAY_OF_WEEK_OPTIONS: { value: string; label: string }[] = [
 export function Tasks() {
   const [searchQuery, setSearchQuery] = useState('')
   const [filterScope, setFilterScope] = useState<TaskScope | 'ALL'>('ALL')
+  const [filterMemberId, setFilterMemberId] = useState<string | null>(null)
 
   // ログインユーザー情報取得
   const { user } = useAuth()
@@ -201,8 +219,40 @@ export function Tasks() {
   const filteredTasks = taskDefinitions.filter((task) => {
     const matchesSearch = task.name.toLowerCase().includes(searchQuery.toLowerCase())
     const matchesScope = filterScope === 'ALL' || task.scope === filterScope
-    return matchesSearch && matchesScope && !task.isDeleted
+    
+    // 個人タスクでメンバーフィルターが設定されている場合
+    const matchesMember = filterScope !== 'PERSONAL' || 
+      filterMemberId === null || 
+      task.ownerMemberId === filterMemberId
+    
+    return matchesSearch && matchesScope && matchesMember && !task.isDeleted
   })
+
+  /**
+   * スコープ変更ハンドラー（メンバーフィルターも連動）
+   */
+  const handleFilterScopeChange = (scope: TaskScope | 'ALL') => {
+    setFilterScope(scope)
+    // PERSONALの場合はデフォルトで自分を選択、それ以外はnull
+    if (scope === 'PERSONAL') {
+      setFilterMemberId(user?.id ?? null)
+    } else {
+      setFilterMemberId(null)
+    }
+  }
+
+  /**
+   * タスクの編集権限があるか判定
+   * - FAMILYタスク: 全員編集可能
+   * - PERSONALタスク: オーナーのみ編集可能
+   */
+  const canEditTask = (task: TaskDefinition): boolean => {
+    if (task.scope === 'FAMILY') {
+      return true  // 家族タスクは全員編集可能
+    }
+    // 個人タスクはオーナーのみ
+    return task.ownerMemberId === user?.id
+  }
 
   /**
    * 追加モーダルを閉じる
@@ -446,25 +496,48 @@ export function Tasks() {
             <Button
               variant={filterScope === 'ALL' ? 'primary' : 'secondary'}
               size="sm"
-              onClick={() => setFilterScope('ALL')}
+              onClick={() => handleFilterScopeChange('ALL')}
             >
               すべて
             </Button>
             <Button
               variant={filterScope === 'FAMILY' ? 'primary' : 'secondary'}
               size="sm"
-              onClick={() => setFilterScope('FAMILY')}
+              onClick={() => handleFilterScopeChange('FAMILY')}
             >
               家族
             </Button>
             <Button
               variant={filterScope === 'PERSONAL' ? 'primary' : 'secondary'}
               size="sm"
-              onClick={() => setFilterScope('PERSONAL')}
+              onClick={() => handleFilterScopeChange('PERSONAL')}
             >
               個人
             </Button>
           </div>
+
+          {/* メンバー選択（個人タスクの場合のみ） */}
+          {filterScope === 'PERSONAL' && members.length > 0 && (
+            <div className="flex gap-2 flex-wrap">
+              <Button
+                variant={filterMemberId === null ? 'primary' : 'secondary'}
+                size="sm"
+                onClick={() => setFilterMemberId(null)}
+              >
+                全員
+              </Button>
+              {members.map((member) => (
+                <Button
+                  key={member.id}
+                  variant={filterMemberId === member.id ? 'primary' : 'secondary'}
+                  size="sm"
+                  onClick={() => setFilterMemberId(member.id)}
+                >
+                  {member.id === user?.id ? '自分' : member.name}
+                </Button>
+              ))}
+            </div>
+          )}
         </section>
 
         {/* タスク一覧 */}
@@ -477,6 +550,7 @@ export function Tasks() {
                 task={task}
                 onEdit={handleEdit}
                 onDelete={handleDeleteClick}
+                canEdit={canEditTask(task)}
               />
             ))}
           </div>

@@ -21,7 +21,7 @@ class GetTaskDefinitionUseCaseImpl @Inject constructor(
                 id = it.id,
                 name = it.name,
                 description = it.description,
-                estimatedMinutes = it.estimatedMinutes,
+                scheduledTimeRange = it.scheduledTimeRange,
                 scope = it.scope,
                 ownerMemberId = it.ownerMemberId,
                 schedule = it.schedule,

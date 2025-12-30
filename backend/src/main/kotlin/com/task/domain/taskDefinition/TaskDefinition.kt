@@ -4,13 +4,14 @@ import com.task.domain.AggregateRoot
 import com.task.domain.member.MemberId
 import com.task.domain.taskDefinition.event.TaskDefinitionCreated
 import com.task.domain.taskDefinition.event.TaskDefinitionDeleted
+import java.time.Instant
 import java.util.UUID
 
 class TaskDefinition private constructor(
     val id: TaskDefinitionId,
     val name: TaskDefinitionName,
     val description: TaskDefinitionDescription,
-    val estimatedMinutes: Int,
+    val scheduledTimeRange: ScheduledTimeRange,
     val scope: TaskScope,
     val ownerMemberId: MemberId?,
     val schedule: TaskSchedule,
@@ -18,9 +19,6 @@ class TaskDefinition private constructor(
     val isDeleted: Boolean,
 ) : AggregateRoot() {
     init {
-        require(estimatedMinutes in 1..1440) {
-            "推定時間は1分以上1440分以下である必要があります: $estimatedMinutes"
-        }
 
         if (scope == TaskScope.PERSONAL) {
             require(ownerMemberId != null) {
@@ -33,7 +31,7 @@ class TaskDefinition private constructor(
         id: TaskDefinitionId,
         name: TaskDefinitionName?,
         description: TaskDefinitionDescription?,
-        estimatedMinutes: Int?,
+        scheduledTimeRange: ScheduledTimeRange?,
         scope: TaskScope?,
         ownerMemberId: MemberId?,
         schedule: TaskSchedule?,
@@ -42,7 +40,7 @@ class TaskDefinition private constructor(
             id = id,
             name = name ?: this.name,
             description = description ?: this.description,
-            estimatedMinutes = estimatedMinutes ?: this.estimatedMinutes,
+            scheduledTimeRange = scheduledTimeRange ?: this.scheduledTimeRange,
             scope = scope ?: this.scope,
             ownerMemberId = ownerMemberId ?: this.ownerMemberId,
             schedule = schedule ?: this.schedule,
@@ -56,7 +54,7 @@ class TaskDefinition private constructor(
             id = this.id,
             name = this.name,
             description = this.description,
-            estimatedMinutes = this.estimatedMinutes,
+            scheduledTimeRange = this.scheduledTimeRange,
             scope = this.scope,
             ownerMemberId = this.ownerMemberId,
             schedule = this.schedule,
@@ -69,7 +67,7 @@ class TaskDefinition private constructor(
                 taskDefinitionId = taskDefinition.id,
                 name = taskDefinition.name,
                 description = taskDefinition.description,
-                estimatedMinutes = taskDefinition.estimatedMinutes,
+                scheduledTimeRange = taskDefinition.scheduledTimeRange,
                 scope = taskDefinition.scope,
                 ownerMemberId = taskDefinition.ownerMemberId,
                 schedule = taskDefinition.schedule,
@@ -84,7 +82,7 @@ class TaskDefinition private constructor(
         fun create(
             name: TaskDefinitionName,
             description: TaskDefinitionDescription,
-            estimatedMinutes: Int,
+            scheduledTimeRange: ScheduledTimeRange,
             scope: TaskScope,
             ownerMemberId: MemberId?,
             schedule: TaskSchedule,
@@ -93,7 +91,7 @@ class TaskDefinition private constructor(
                 id = TaskDefinitionId.generate(),
                 name = name,
                 description = description,
-                estimatedMinutes = estimatedMinutes,
+                scheduledTimeRange = scheduledTimeRange,
                 scope = scope,
                 ownerMemberId = ownerMemberId,
                 schedule = schedule,
@@ -107,7 +105,7 @@ class TaskDefinition private constructor(
                     taskDefinitionId = taskDefinition.id,
                     name = taskDefinition.name,
                     description = taskDefinition.description,
-                    estimatedMinutes = taskDefinition.estimatedMinutes,
+                    scheduledTimeRange = taskDefinition.scheduledTimeRange,
                     scope = taskDefinition.scope,
                     ownerMemberId = taskDefinition.ownerMemberId,
                     schedule = taskDefinition.schedule,
@@ -121,7 +119,7 @@ class TaskDefinition private constructor(
             id: TaskDefinitionId,
             name: TaskDefinitionName,
             description: TaskDefinitionDescription,
-            estimatedMinutes: Int,
+            scheduledTimeRange: ScheduledTimeRange,
             scope: TaskScope,
             ownerMemberId: MemberId?,
             schedule: TaskSchedule,
@@ -132,7 +130,7 @@ class TaskDefinition private constructor(
                 id = id,
                 name = name,
                 description = description,
-                estimatedMinutes = estimatedMinutes,
+                scheduledTimeRange = scheduledTimeRange,
                 scope = scope,
                 ownerMemberId = ownerMemberId,
                 schedule = schedule,
@@ -148,12 +146,28 @@ data class TaskDefinitionId(val value: UUID) {
         fun from(value: String) = TaskDefinitionId(value = UUID.fromString(value))
     }
 }
+
+
 data class TaskDefinitionName(val value: String) {
     init {
         require(value.isNotBlank()) {
             "名前は必須です。"
         }
     }
+}
+
+data class ScheduledTimeRange(
+    val startTime: Instant,
+    val endTime: Instant,
+){
+    init {
+        require(startTime < endTime) {
+            "開始時間は終了時間より前である必要があります: $startTime >= $endTime"
+        }
+    }
+
+    val durationMinutes: Int
+        get() = java.time.Duration.between(startTime, endTime).toMinutes().toInt()
 }
 
 data class TaskDefinitionDescription(val value: String) {

@@ -18,7 +18,6 @@ data class TaskDefinitions(
     val id: UUID? = null,
     val name: String,
     val description: String? = null,
-    val estimatedMinutes: Int,
     val scope: String,
     val ownerMemberId: UUID? = null,
     val scheduleType: String,
@@ -26,7 +25,9 @@ data class TaskDefinitions(
     val version: Int? = null,
     val isDeleted: Boolean? = null,
     val createdAt: OffsetDateTime? = null,
-    val updatedAt: OffsetDateTime? = null
+    val updatedAt: OffsetDateTime? = null,
+    val scheduledStartTime: OffsetDateTime,
+    val scheduledEndTime: OffsetDateTime
 ): Serializable {
 
     override fun equals(other: Any?): Boolean {
@@ -50,8 +51,6 @@ data class TaskDefinitions(
                 return false
         }
         else if (this.description != o.description)
-            return false
-        if (this.estimatedMinutes != o.estimatedMinutes)
             return false
         if (this.scope != o.scope)
             return false
@@ -93,6 +92,10 @@ data class TaskDefinitions(
         }
         else if (this.updatedAt != o.updatedAt)
             return false
+        if (this.scheduledStartTime != o.scheduledStartTime)
+            return false
+        if (this.scheduledEndTime != o.scheduledEndTime)
+            return false
         return true
     }
 
@@ -102,7 +105,6 @@ data class TaskDefinitions(
         result = prime * result + (if (this.id == null) 0 else this.id.hashCode())
         result = prime * result + this.name.hashCode()
         result = prime * result + (if (this.description == null) 0 else this.description.hashCode())
-        result = prime * result + this.estimatedMinutes.hashCode()
         result = prime * result + this.scope.hashCode()
         result = prime * result + (if (this.ownerMemberId == null) 0 else this.ownerMemberId.hashCode())
         result = prime * result + this.scheduleType.hashCode()
@@ -111,6 +113,8 @@ data class TaskDefinitions(
         result = prime * result + (if (this.isDeleted == null) 0 else this.isDeleted.hashCode())
         result = prime * result + (if (this.createdAt == null) 0 else this.createdAt.hashCode())
         result = prime * result + (if (this.updatedAt == null) 0 else this.updatedAt.hashCode())
+        result = prime * result + this.scheduledStartTime.hashCode()
+        result = prime * result + this.scheduledEndTime.hashCode()
         return result
     }
 
@@ -120,7 +124,6 @@ data class TaskDefinitions(
         sb.append(id)
         sb.append(", ").append(name)
         sb.append(", ").append(description)
-        sb.append(", ").append(estimatedMinutes)
         sb.append(", ").append(scope)
         sb.append(", ").append(ownerMemberId)
         sb.append(", ").append(scheduleType)
@@ -129,6 +132,8 @@ data class TaskDefinitions(
         sb.append(", ").append(isDeleted)
         sb.append(", ").append(createdAt)
         sb.append(", ").append(updatedAt)
+        sb.append(", ").append(scheduledStartTime)
+        sb.append(", ").append(scheduledEndTime)
 
         sb.append(")")
         return sb.toString()

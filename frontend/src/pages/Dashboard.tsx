@@ -6,7 +6,7 @@
  */
 
 import { useState, useCallback, useMemo } from 'react'
-import { RefreshCw, ListTodo, Users, Clock, CheckCircle2, Circle, PlayCircle } from 'lucide-react'
+import { RefreshCw, ListTodo, Users, Clock, CheckCircle2, Circle, PlayCircle, Calendar } from 'lucide-react'
 import { Header } from '../components/layout/Header'
 import { PageContainer } from '../components/layout/PageContainer'
 import { Button } from '../components/ui/Button'
@@ -58,9 +58,11 @@ function getStatusBadge(status: string) {
 interface TodayTaskCardProps {
   task: TodayTaskDto
   onClick: (task: TodayTaskDto) => void
+  /** 将来のタスク用に日付を表示するか */
+  showDate?: boolean
 }
 
-function TodayTaskCard({ task, onClick }: TodayTaskCardProps) {
+function TodayTaskCard({ task, onClick, showDate = false }: TodayTaskCardProps) {
   const handleClick = () => onClick(task)
 
   return (
@@ -90,6 +92,13 @@ function TodayTaskCard({ task, onClick }: TodayTaskCardProps) {
           {getStatusBadge(task.status)}
         </div>
         <div className="flex items-center gap-3 text-sm text-white/50">
+          {/* 期限が今日じゃない場合は日付を表示 */}
+          {showDate && task.scheduledDate && (
+            <span className="flex items-center gap-1 text-shazam-400">
+              <Calendar className="w-3.5 h-3.5" />
+              {formatJa(new Date(task.scheduledDate), 'M月d日')}
+            </span>
+          )}
           {task.estimatedMinutes > 0 && (
             <span className="flex items-center gap-1">
               <Clock className="w-3.5 h-3.5" />
@@ -195,12 +204,29 @@ export function Dashboard() {
     fetchMembers()
   })
 
-  // 進捗サマリーの計算
+  // タスクを今日のタスクと将来のタスクに分離
+  const { todayActiveTasks, futureTasks } = useMemo(() => {
+    const todayActive = todayTasks.filter((task) => {
+      // キャンセル済みは除外
+      if (task.status === 'CANCELLED') return false
+      // 予定日が今日のタスク
+      return task.scheduledDate === todayStr
+    })
+    
+    const future = todayTasks.filter((task) => {
+      if (task.status === 'CANCELLED') return false
+      // 予定日が今日より後のタスク
+      return task.scheduledDate > todayStr
+    })
+    
+    return { todayActiveTasks: todayActive, futureTasks: future }
+  }, [todayTasks, todayStr])
+
+  // 進捗サマリーの計算（今日のタスクのみ）
   const { completedCount, totalCount } = useMemo(() => {
-    const activeTasks = todayTasks.filter((t) => t.status !== 'CANCELLED')
-    const completed = activeTasks.filter((t) => t.status === 'COMPLETED').length
-    return { completedCount: completed, totalCount: activeTasks.length }
-  }, [todayTasks])
+    const completed = todayActiveTasks.filter((t) => t.status === 'COMPLETED').length
+    return { completedCount: completed, totalCount: todayActiveTasks.length }
+  }, [todayActiveTasks])
 
   /**
    * タスククリック時の処理（モーダル表示）
@@ -221,8 +247,8 @@ export function Dashboard() {
   /**
    * タスク開始処理
    */
-  const handleStartTask = useCallback(async (taskExecutionId: string) => {
-    return await startTask(taskExecutionId)
+  const handleStartTask = useCallback(async (taskExecutionId: string, memberId: string) => {
+    return await startTask(taskExecutionId, memberId)
   }, [startTask])
 
   /**
@@ -296,8 +322,8 @@ export function Dashboard() {
               <div className="text-center py-8">
                 <p className="text-white/50">読み込み中...</p>
               </div>
-            ) : todayTasks.length > 0 ? (
-              todayTasks.map((task) => (
+            ) : todayActiveTasks.length > 0 ? (
+              todayActiveTasks.map((task) => (
                 <TodayTaskCard
                   key={task.taskExecutionId}
                   task={task}
@@ -314,6 +340,27 @@ export function Dashboard() {
             )}
           </div>
         </section>
+
+        {/* 将来の単発タスク（存在する場合のみ表示） */}
+        {futureTasks.length > 0 && (
+          <section className="mt-8">
+            <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+              <Calendar className="w-5 h-5 text-shazam-400" />
+              今後の単発タスク
+            </h2>
+            
+            <div className="space-y-3">
+              {futureTasks.map((task) => (
+                <TodayTaskCard
+                  key={task.taskExecutionId}
+                  task={task}
+                  onClick={handleTaskClick}
+                  showDate
+                />
+              ))}
+            </div>
+          </section>
+        )}
 
         {/* メンバー進捗 */}
         <section className="mt-8">

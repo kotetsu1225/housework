@@ -11,8 +11,8 @@ import java.util.UUID
 
 import org.jooq.Field
 import org.jooq.Record1
-import org.jooq.Record6
-import org.jooq.Row6
+import org.jooq.Record7
+import org.jooq.Row7
 import org.jooq.impl.UpdatableRecordImpl
 
 
@@ -20,7 +20,7 @@ import org.jooq.impl.UpdatableRecordImpl
  * タスクスナップショット（実行時点の凍結情報）
  */
 @Suppress("UNCHECKED_CAST")
-open class TaskSnapshotsRecord private constructor() : UpdatableRecordImpl<TaskSnapshotsRecord>(TaskSnapshots.TASK_SNAPSHOTS), Record6<UUID?, String?, String?, Int?, Int?, OffsetDateTime?> {
+open class TaskSnapshotsRecord private constructor() : UpdatableRecordImpl<TaskSnapshotsRecord>(TaskSnapshots.TASK_SNAPSHOTS), Record7<UUID?, String?, String?, Int?, OffsetDateTime?, OffsetDateTime?, OffsetDateTime?> {
 
     open var taskExecutionId: UUID
         set(value): Unit = set(0, value)
@@ -34,17 +34,21 @@ open class TaskSnapshotsRecord private constructor() : UpdatableRecordImpl<TaskS
         set(value): Unit = set(2, value)
         get(): String? = get(2) as String?
 
-    open var estimatedMinutes: Int
+    open var definitionVersion: Int
         set(value): Unit = set(3, value)
         get(): Int = get(3) as Int
 
-    open var definitionVersion: Int
-        set(value): Unit = set(4, value)
-        get(): Int = get(4) as Int
-
     open var createdAt: OffsetDateTime?
+        set(value): Unit = set(4, value)
+        get(): OffsetDateTime? = get(4) as OffsetDateTime?
+
+    open var scheduledStartTime: OffsetDateTime
         set(value): Unit = set(5, value)
-        get(): OffsetDateTime? = get(5) as OffsetDateTime?
+        get(): OffsetDateTime = get(5) as OffsetDateTime
+
+    open var scheduledEndTime: OffsetDateTime
+        set(value): Unit = set(6, value)
+        get(): OffsetDateTime = get(6) as OffsetDateTime
 
     // -------------------------------------------------------------------------
     // Primary key information
@@ -53,29 +57,32 @@ open class TaskSnapshotsRecord private constructor() : UpdatableRecordImpl<TaskS
     override fun key(): Record1<UUID?> = super.key() as Record1<UUID?>
 
     // -------------------------------------------------------------------------
-    // Record6 type implementation
+    // Record7 type implementation
     // -------------------------------------------------------------------------
 
-    override fun fieldsRow(): Row6<UUID?, String?, String?, Int?, Int?, OffsetDateTime?> = super.fieldsRow() as Row6<UUID?, String?, String?, Int?, Int?, OffsetDateTime?>
-    override fun valuesRow(): Row6<UUID?, String?, String?, Int?, Int?, OffsetDateTime?> = super.valuesRow() as Row6<UUID?, String?, String?, Int?, Int?, OffsetDateTime?>
+    override fun fieldsRow(): Row7<UUID?, String?, String?, Int?, OffsetDateTime?, OffsetDateTime?, OffsetDateTime?> = super.fieldsRow() as Row7<UUID?, String?, String?, Int?, OffsetDateTime?, OffsetDateTime?, OffsetDateTime?>
+    override fun valuesRow(): Row7<UUID?, String?, String?, Int?, OffsetDateTime?, OffsetDateTime?, OffsetDateTime?> = super.valuesRow() as Row7<UUID?, String?, String?, Int?, OffsetDateTime?, OffsetDateTime?, OffsetDateTime?>
     override fun field1(): Field<UUID?> = TaskSnapshots.TASK_SNAPSHOTS.TASK_EXECUTION_ID
     override fun field2(): Field<String?> = TaskSnapshots.TASK_SNAPSHOTS.NAME
     override fun field3(): Field<String?> = TaskSnapshots.TASK_SNAPSHOTS.DESCRIPTION
-    override fun field4(): Field<Int?> = TaskSnapshots.TASK_SNAPSHOTS.ESTIMATED_MINUTES
-    override fun field5(): Field<Int?> = TaskSnapshots.TASK_SNAPSHOTS.DEFINITION_VERSION
-    override fun field6(): Field<OffsetDateTime?> = TaskSnapshots.TASK_SNAPSHOTS.CREATED_AT
+    override fun field4(): Field<Int?> = TaskSnapshots.TASK_SNAPSHOTS.DEFINITION_VERSION
+    override fun field5(): Field<OffsetDateTime?> = TaskSnapshots.TASK_SNAPSHOTS.CREATED_AT
+    override fun field6(): Field<OffsetDateTime?> = TaskSnapshots.TASK_SNAPSHOTS.SCHEDULED_START_TIME
+    override fun field7(): Field<OffsetDateTime?> = TaskSnapshots.TASK_SNAPSHOTS.SCHEDULED_END_TIME
     override fun component1(): UUID = taskExecutionId
     override fun component2(): String = name
     override fun component3(): String? = description
-    override fun component4(): Int = estimatedMinutes
-    override fun component5(): Int = definitionVersion
-    override fun component6(): OffsetDateTime? = createdAt
+    override fun component4(): Int = definitionVersion
+    override fun component5(): OffsetDateTime? = createdAt
+    override fun component6(): OffsetDateTime = scheduledStartTime
+    override fun component7(): OffsetDateTime = scheduledEndTime
     override fun value1(): UUID = taskExecutionId
     override fun value2(): String = name
     override fun value3(): String? = description
-    override fun value4(): Int = estimatedMinutes
-    override fun value5(): Int = definitionVersion
-    override fun value6(): OffsetDateTime? = createdAt
+    override fun value4(): Int = definitionVersion
+    override fun value5(): OffsetDateTime? = createdAt
+    override fun value6(): OffsetDateTime = scheduledStartTime
+    override fun value7(): OffsetDateTime = scheduledEndTime
 
     override fun value1(value: UUID?): TaskSnapshotsRecord {
         set(0, value)
@@ -97,7 +104,7 @@ open class TaskSnapshotsRecord private constructor() : UpdatableRecordImpl<TaskS
         return this
     }
 
-    override fun value5(value: Int?): TaskSnapshotsRecord {
+    override fun value5(value: OffsetDateTime?): TaskSnapshotsRecord {
         set(4, value)
         return this
     }
@@ -107,26 +114,33 @@ open class TaskSnapshotsRecord private constructor() : UpdatableRecordImpl<TaskS
         return this
     }
 
-    override fun values(value1: UUID?, value2: String?, value3: String?, value4: Int?, value5: Int?, value6: OffsetDateTime?): TaskSnapshotsRecord {
+    override fun value7(value: OffsetDateTime?): TaskSnapshotsRecord {
+        set(6, value)
+        return this
+    }
+
+    override fun values(value1: UUID?, value2: String?, value3: String?, value4: Int?, value5: OffsetDateTime?, value6: OffsetDateTime?, value7: OffsetDateTime?): TaskSnapshotsRecord {
         this.value1(value1)
         this.value2(value2)
         this.value3(value3)
         this.value4(value4)
         this.value5(value5)
         this.value6(value6)
+        this.value7(value7)
         return this
     }
 
     /**
      * Create a detached, initialised TaskSnapshotsRecord
      */
-    constructor(taskExecutionId: UUID, name: String, description: String? = null, estimatedMinutes: Int, definitionVersion: Int, createdAt: OffsetDateTime? = null): this() {
+    constructor(taskExecutionId: UUID, name: String, description: String? = null, definitionVersion: Int, createdAt: OffsetDateTime? = null, scheduledStartTime: OffsetDateTime, scheduledEndTime: OffsetDateTime): this() {
         this.taskExecutionId = taskExecutionId
         this.name = name
         this.description = description
-        this.estimatedMinutes = estimatedMinutes
         this.definitionVersion = definitionVersion
         this.createdAt = createdAt
+        this.scheduledStartTime = scheduledStartTime
+        this.scheduledEndTime = scheduledEndTime
         resetChangedOnNotNull()
     }
 
@@ -138,9 +152,10 @@ open class TaskSnapshotsRecord private constructor() : UpdatableRecordImpl<TaskS
             this.taskExecutionId = value.taskExecutionId
             this.name = value.name
             this.description = value.description
-            this.estimatedMinutes = value.estimatedMinutes
             this.definitionVersion = value.definitionVersion
             this.createdAt = value.createdAt
+            this.scheduledStartTime = value.scheduledStartTime
+            this.scheduledEndTime = value.scheduledEndTime
             resetChangedOnNotNull()
         }
     }

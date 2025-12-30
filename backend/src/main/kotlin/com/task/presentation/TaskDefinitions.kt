@@ -20,6 +20,7 @@ import io.ktor.server.resources.get
 import io.ktor.server.resources.post
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import java.time.Instant
 import java.time.LocalDate
 import java.util.UUID
 
@@ -43,7 +44,7 @@ class TaskDefinitions {
             val id: String,
             val name: String,
             val description: String,
-            val estimatedMinutes: Int,
+            val scheduledTimeRange: ScheduledTimeRangeDto,
             val scope: String,
             val ownerMemberId: String?,
             val schedule: ScheduleDto,
@@ -61,7 +62,7 @@ class TaskDefinitions {
             val id: String,
             val name: String,
             val description: String,
-            val estimatedMinutes: Int,
+            val scheduledTimeRange: ScheduledTimeRangeDto,
             val scope: String,
             val ownerMemberId: String?,
             val schedule: ScheduleDto,
@@ -77,7 +78,7 @@ class TaskDefinitions {
         data class Request(
             val name: String,
             val description: String,
-            val estimatedMinutes: Int,
+            val scheduledTimeRange: ScheduledTimeRangeDto,
             val scope: String,
             val ownerMemberId: String? = null,
             val schedule: ScheduleDto,
@@ -88,7 +89,7 @@ class TaskDefinitions {
             val id: String,
             val name: String,
             val description: String,
-            val estimatedMinutes: Int,
+            val scheduledTimeRange: ScheduledTimeRangeDto,
             val scope: String,
             val ownerMemberId: String?,
             val schedule: ScheduleDto,
@@ -105,7 +106,7 @@ class TaskDefinitions {
         data class Request(
             val name: String? = null,
             val description: String? = null,
-            val estimatedMinutes: Int? = null,
+            val scheduledTimeRange: ScheduledTimeRangeDto? = null,
             val scope: String? = null,
             val ownerMemberId: String? = null,
             val schedule: ScheduleDto? = null,
@@ -116,7 +117,7 @@ class TaskDefinitions {
             val id: String,
             val name: String,
             val description: String,
-            val estimatedMinutes: Int,
+            val scheduledTimeRange: ScheduledTimeRangeDto,
             val scope: String,
             val ownerMemberId: String?,
             val schedule: ScheduleDto,
@@ -134,13 +135,19 @@ class TaskDefinitions {
             val id: String,
             val name: String,
             val description: String,
-            val estimatedMinutes: Int,
+            val scheduledTimeRange: ScheduledTimeRangeDto,
             val scope: String,
             val ownerMemberId: String?,
             val schedule: ScheduleDto,
             val version: Int,
         )
     }
+
+    @Serializable
+    data class ScheduledTimeRangeDto(
+        val startTime: String,  // ISO-8601 形式
+        val endTime: String,    // ISO-8601 形式
+    )
 
     @Serializable
     sealed class ScheduleDto {
@@ -198,7 +205,7 @@ fun Route.taskDefinitions() {
                         id = taskDef.id.value.toString(),
                         name = taskDef.name.value,
                         description = taskDef.description.value,
-                        estimatedMinutes = taskDef.estimatedMinutes,
+                        scheduledTimeRange = taskDef.scheduledTimeRange.toDto(),
                         scope = taskDef.scope.value,
                         ownerMemberId = taskDef.ownerMemberId?.value?.toString(),
                         schedule = taskDef.schedule.toDto(),
@@ -229,7 +236,7 @@ fun Route.taskDefinitions() {
                 id = output.id.value.toString(),
                 name = output.name.value,
                 description = output.description.value,
-                estimatedMinutes = output.estimatedMinutes,
+                scheduledTimeRange = output.scheduledTimeRange.toDto(),
                 scope = output.scope.value,
                 ownerMemberId = output.ownerMemberId?.value?.toString(),
                 schedule = output.schedule.toDto(),
@@ -245,7 +252,7 @@ fun Route.taskDefinitions() {
             CreateTaskDefinitionUseCase.Input(
                 name = TaskDefinitionName(request.name),
                 description = TaskDefinitionDescription(request.description),
-                estimatedMinutes = request.estimatedMinutes,
+                scheduledTimeRange = request.scheduledTimeRange.toDomain(),
                 scope = TaskScope.get(request.scope),
                 ownerMemberId = request.ownerMemberId?.let { MemberId(UUID.fromString(it)) },
                 schedule = request.schedule.toDomain(),
@@ -258,7 +265,7 @@ fun Route.taskDefinitions() {
                 id = output.id.value.toString(),
                 name = output.name.value,
                 description = output.description.value,
-                estimatedMinutes = output.estimatedMinutes,
+                scheduledTimeRange = output.scheduledTimeRange.toDto(),
                 scope = output.scope.value,
                 ownerMemberId = output.ownerMemberId?.value?.toString(),
                 schedule = output.schedule.toDto(),
@@ -267,15 +274,15 @@ fun Route.taskDefinitions() {
         )
     }
 
-    post<TaskDefinitions.Update> {
+    post<TaskDefinitions.Update> { resource ->
         val request = call.receive<TaskDefinitions.Update.Request>()
 
         val output = instance<UpdateTaskDefinitionUseCase>().execute(
             UpdateTaskDefinitionUseCase.Input(
-                id = TaskDefinitionId(UUID.fromString(it.taskDefinitionId)),
+                id = TaskDefinitionId(UUID.fromString(resource.taskDefinitionId)),
                 name = request.name?.let { TaskDefinitionName(it) },
                 description = request.description?.let { TaskDefinitionDescription(it) },
-                estimatedMinutes = request.estimatedMinutes,
+                scheduledTimeRange = request.scheduledTimeRange?.toDomain(),
                 scope = request.scope?.let { TaskScope.get(it) },
                 ownerMemberId = request.ownerMemberId?.let { MemberId(UUID.fromString(it)) },
                 schedule = request.schedule?.toDomain(),
@@ -288,7 +295,7 @@ fun Route.taskDefinitions() {
                 id = output.id.value.toString(),
                 name = output.name.value,
                 description = output.description.value,
-                estimatedMinutes = output.estimatedMinutes,
+                scheduledTimeRange = output.scheduledTimeRange.toDto(),
                 scope = output.scope.value,
                 ownerMemberId = output.ownerMemberId?.value?.toString(),
                 schedule = output.schedule.toDto(),
@@ -297,10 +304,10 @@ fun Route.taskDefinitions() {
         )
     }
 
-    post<TaskDefinitions.Delete> {
+    post<TaskDefinitions.Delete> { resource ->
         val output = instance<DeleteTaskDefinitionUseCase>().execute(
             DeleteTaskDefinitionUseCase.Input(
-                id = TaskDefinitionId(UUID.fromString(it.taskDefinitionId)),
+                id = TaskDefinitionId(UUID.fromString(resource.taskDefinitionId)),
             )
         )
 
@@ -310,7 +317,7 @@ fun Route.taskDefinitions() {
                 id = output.id.value.toString(),
                 name = output.name.value,
                 description = output.description.value,
-                estimatedMinutes = output.estimatedMinutes,
+                scheduledTimeRange = output.scheduledTimeRange.toDto(),
                 scope = output.scope.value,
                 ownerMemberId = output.ownerMemberId?.value?.toString(),
                 schedule = output.schedule.toDto(),
@@ -380,4 +387,18 @@ private fun RecurrencePattern.toDto(): TaskDefinitions.PatternDto {
             TaskDefinitions.PatternDto.Monthly(dayOfMonth = this.dayOfMonth)
         }
     }
+}
+
+private fun TaskDefinitions.ScheduledTimeRangeDto.toDomain(): ScheduledTimeRange {
+    return ScheduledTimeRange(
+        startTime = Instant.parse(this.startTime),
+        endTime = Instant.parse(this.endTime),
+    )
+}
+
+private fun ScheduledTimeRange.toDto(): TaskDefinitions.ScheduledTimeRangeDto {
+    return TaskDefinitions.ScheduledTimeRangeDto(
+        startTime = this.startTime.toString(),
+        endTime = this.endTime.toString(),
+    )
 }

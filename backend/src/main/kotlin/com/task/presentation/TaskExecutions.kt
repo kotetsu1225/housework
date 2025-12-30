@@ -98,7 +98,8 @@ data class TaskExecutionDto(
 data class TaskSnapshotDto(
     val name: String,
     val description: String?,
-    val estimatedMinutes: Int,
+    val scheduledStartTime: String,
+    val scheduledEndTime: String,
     val definitionVersion: Int,
     val capturedAt: String
 )
@@ -142,7 +143,8 @@ fun Route.taskExecutions() {
                     TaskSnapshotDto(
                         name = snapshot.name,
                         description = snapshot.description,
-                        estimatedMinutes = snapshot.estimatedMinutes,
+                        scheduledStartTime = instantFormatter.format(snapshot.scheduledStartTime),
+                        scheduledEndTime = instantFormatter.format(snapshot.scheduledEndTime),
                         definitionVersion = snapshot.definitionVersion,
                         capturedAt = instantFormatter.format(snapshot.capturedAt)
                     )
@@ -187,7 +189,8 @@ fun Route.taskExecutions() {
                     TaskSnapshotDto(
                         name = snapshot.name,
                         description = snapshot.description,
-                        estimatedMinutes = snapshot.estimatedMinutes,
+                        scheduledStartTime = instantFormatter.format(snapshot.scheduledStartTime),
+                        scheduledEndTime = instantFormatter.format(snapshot.scheduledEndTime),
                         definitionVersion = snapshot.definitionVersion,
                         capturedAt = instantFormatter.format(snapshot.capturedAt)
                     )
@@ -220,7 +223,8 @@ fun Route.taskExecutions() {
                 taskSnapshot = TaskSnapshotDto(
                     name = output.taskSnapshot.frozenName.value,
                     description = output.taskSnapshot.frozenDescription.value,
-                    estimatedMinutes = output.taskSnapshot.frozenEstimatedMinutes,
+                    scheduledStartTime = instantFormatter.format(output.taskSnapshot.frozenScheduledTimeRange.startTime),
+                    scheduledEndTime = instantFormatter.format(output.taskSnapshot.frozenScheduledTimeRange.endTime),
                     definitionVersion = output.taskSnapshot.definitionVersion,
                     capturedAt = instantFormatter.format(output.taskSnapshot.capturedAt)
                 ),
@@ -252,7 +256,8 @@ fun Route.taskExecutions() {
                 taskSnapshot = TaskSnapshotDto(
                     name = output.taskSnapshot.frozenName.value,
                     description = output.taskSnapshot.frozenDescription.value,
-                    estimatedMinutes = output.taskSnapshot.frozenEstimatedMinutes,
+                    scheduledStartTime = instantFormatter.format(output.taskSnapshot.frozenScheduledTimeRange.startTime),
+                    scheduledEndTime = instantFormatter.format(output.taskSnapshot.frozenScheduledTimeRange.endTime),
                     definitionVersion = output.taskSnapshot.definitionVersion,
                     capturedAt = instantFormatter.format(output.taskSnapshot.capturedAt)
                 ),
@@ -303,7 +308,8 @@ fun Route.taskExecutions() {
                     TaskSnapshotDto(
                         name = snapshot.name,
                         description = snapshot.description,
-                        estimatedMinutes = snapshot.estimatedMinutes,
+                        scheduledStartTime = instantFormatter.format(snapshot.scheduledStartTime),
+                        scheduledEndTime = instantFormatter.format(snapshot.scheduledEndTime),
                         definitionVersion = snapshot.definitionVersion,
                         capturedAt = instantFormatter.format(snapshot.capturedAt)
                     )

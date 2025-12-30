@@ -24,7 +24,7 @@ class DeleteTaskDefinitionUseCaseImpl @Inject constructor(
                 id = deletedTaskDefinition.id,
                 name = deletedTaskDefinition.name,
                 description = deletedTaskDefinition.description,
-                estimatedMinutes = deletedTaskDefinition.estimatedMinutes,
+                scheduledTimeRange = deletedTaskDefinition.scheduledTimeRange,
                 scope = deletedTaskDefinition.scope,
                 ownerMemberId = deletedTaskDefinition.ownerMemberId,
                 schedule = deletedTaskDefinition.schedule,

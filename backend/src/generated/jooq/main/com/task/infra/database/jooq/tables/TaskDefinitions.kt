@@ -7,6 +7,8 @@ package com.task.infra.database.jooq.tables
 import com.task.infra.database.jooq.Public
 import com.task.infra.database.jooq.indexes.IDX_TASK_DEFINITIONS_IS_DELETED
 import com.task.infra.database.jooq.indexes.IDX_TASK_DEFINITIONS_OWNER
+import com.task.infra.database.jooq.indexes.IDX_TASK_DEFINITIONS_SCHEDULED_END_TIME
+import com.task.infra.database.jooq.indexes.IDX_TASK_DEFINITIONS_SCHEDULED_START_TIME
 import com.task.infra.database.jooq.indexes.IDX_TASK_DEFINITIONS_SCHEDULE_TYPE
 import com.task.infra.database.jooq.indexes.IDX_TASK_DEFINITIONS_SCOPE
 import com.task.infra.database.jooq.keys.TASK_DEFINITIONS_PKEY
@@ -27,7 +29,7 @@ import org.jooq.Index
 import org.jooq.Name
 import org.jooq.Record
 import org.jooq.Records
-import org.jooq.Row12
+import org.jooq.Row13
 import org.jooq.Schema
 import org.jooq.SelectField
 import org.jooq.Table
@@ -89,12 +91,6 @@ open class TaskDefinitions(
     val DESCRIPTION: TableField<TaskDefinitionsRecord, String?> = createField(DSL.name("description"), SQLDataType.CLOB, this, "タスクの説明・実行方法")
 
     /**
-     * The column <code>public.task_definitions.estimated_minutes</code>.
-     * 見積時間（分）
-     */
-    val ESTIMATED_MINUTES: TableField<TaskDefinitionsRecord, Int?> = createField(DSL.name("estimated_minutes"), SQLDataType.INTEGER.nullable(false), this, "見積時間（分）")
-
-    /**
      * The column <code>public.task_definitions.scope</code>. スコープ（FAMILY:
      * 家族全体、PERSONAL: 個人）
      */
@@ -138,6 +134,18 @@ open class TaskDefinitions(
      */
     val UPDATED_AT: TableField<TaskDefinitionsRecord, OffsetDateTime?> = createField(DSL.name("updated_at"), SQLDataType.TIMESTAMPWITHTIMEZONE(6).nullable(false).defaultValue(DSL.field(DSL.raw("CURRENT_TIMESTAMP"), SQLDataType.TIMESTAMPWITHTIMEZONE)), this, "更新日時")
 
+    /**
+     * The column <code>public.task_definitions.scheduled_start_time</code>.
+     * 予定開始時刻
+     */
+    val SCHEDULED_START_TIME: TableField<TaskDefinitionsRecord, OffsetDateTime?> = createField(DSL.name("scheduled_start_time"), SQLDataType.TIMESTAMPWITHTIMEZONE(6).nullable(false), this, "予定開始時刻")
+
+    /**
+     * The column <code>public.task_definitions.scheduled_end_time</code>.
+     * 予定終了時刻
+     */
+    val SCHEDULED_END_TIME: TableField<TaskDefinitionsRecord, OffsetDateTime?> = createField(DSL.name("scheduled_end_time"), SQLDataType.TIMESTAMPWITHTIMEZONE(6).nullable(false), this, "予定終了時刻")
+
     private constructor(alias: Name, aliased: Table<TaskDefinitionsRecord>?): this(alias, null, null, aliased, null)
     private constructor(alias: Name, aliased: Table<TaskDefinitionsRecord>?, parameters: Array<Field<*>?>?): this(alias, null, null, aliased, parameters)
 
@@ -158,7 +166,7 @@ open class TaskDefinitions(
 
     constructor(child: Table<out Record>, key: ForeignKey<out Record, TaskDefinitionsRecord>): this(Internal.createPathAlias(child, key), child, key, TASK_DEFINITIONS, null)
     override fun getSchema(): Schema? = if (aliased()) null else Public.PUBLIC
-    override fun getIndexes(): List<Index> = listOf(IDX_TASK_DEFINITIONS_IS_DELETED, IDX_TASK_DEFINITIONS_OWNER, IDX_TASK_DEFINITIONS_SCHEDULE_TYPE, IDX_TASK_DEFINITIONS_SCOPE)
+    override fun getIndexes(): List<Index> = listOf(IDX_TASK_DEFINITIONS_IS_DELETED, IDX_TASK_DEFINITIONS_OWNER, IDX_TASK_DEFINITIONS_SCHEDULE_TYPE, IDX_TASK_DEFINITIONS_SCHEDULED_END_TIME, IDX_TASK_DEFINITIONS_SCHEDULED_START_TIME, IDX_TASK_DEFINITIONS_SCOPE)
     override fun getPrimaryKey(): UniqueKey<TaskDefinitionsRecord> = TASK_DEFINITIONS_PKEY
     override fun getReferences(): List<ForeignKey<TaskDefinitionsRecord, *>> = listOf(TASK_DEFINITIONS__TASK_DEFINITIONS_OWNER_MEMBER_ID_FKEY)
 
@@ -179,7 +187,7 @@ open class TaskDefinitions(
     override fun getChecks(): List<Check<TaskDefinitionsRecord>> = listOf(
         Internal.createCheck(this, DSL.name("chk_onetime_deadline"), "(((((schedule_type)::text = 'RECURRING'::text) AND (one_time_deadline IS NULL)) OR (((schedule_type)::text = 'ONE_TIME'::text) AND (one_time_deadline IS NOT NULL))))", true),
         Internal.createCheck(this, DSL.name("chk_personal_owner"), "(((((scope)::text = 'FAMILY'::text) AND (owner_member_id IS NULL)) OR (((scope)::text = 'PERSONAL'::text) AND (owner_member_id IS NOT NULL))))", true),
-        Internal.createCheck(this, DSL.name("task_definitions_estimated_minutes_check"), "((estimated_minutes > 0))", true),
+        Internal.createCheck(this, DSL.name("chk_scheduled_time_range"), "((scheduled_start_time < scheduled_end_time))", true),
         Internal.createCheck(this, DSL.name("task_definitions_schedule_type_check"), "(((schedule_type)::text = ANY ((ARRAY['RECURRING'::character varying, 'ONE_TIME'::character varying])::text[])))", true),
         Internal.createCheck(this, DSL.name("task_definitions_scope_check"), "(((scope)::text = ANY ((ARRAY['FAMILY'::character varying, 'PERSONAL'::character varying])::text[])))", true)
     )
@@ -203,18 +211,18 @@ open class TaskDefinitions(
     override fun rename(name: Table<*>): TaskDefinitions = TaskDefinitions(name.getQualifiedName(), null)
 
     // -------------------------------------------------------------------------
-    // Row12 type methods
+    // Row13 type methods
     // -------------------------------------------------------------------------
-    override fun fieldsRow(): Row12<UUID?, String?, String?, Int?, String?, UUID?, String?, LocalDate?, Int?, Boolean?, OffsetDateTime?, OffsetDateTime?> = super.fieldsRow() as Row12<UUID?, String?, String?, Int?, String?, UUID?, String?, LocalDate?, Int?, Boolean?, OffsetDateTime?, OffsetDateTime?>
+    override fun fieldsRow(): Row13<UUID?, String?, String?, String?, UUID?, String?, LocalDate?, Int?, Boolean?, OffsetDateTime?, OffsetDateTime?, OffsetDateTime?, OffsetDateTime?> = super.fieldsRow() as Row13<UUID?, String?, String?, String?, UUID?, String?, LocalDate?, Int?, Boolean?, OffsetDateTime?, OffsetDateTime?, OffsetDateTime?, OffsetDateTime?>
 
     /**
      * Convenience mapping calling {@link SelectField#convertFrom(Function)}.
      */
-    fun <U> mapping(from: (UUID?, String?, String?, Int?, String?, UUID?, String?, LocalDate?, Int?, Boolean?, OffsetDateTime?, OffsetDateTime?) -> U): SelectField<U> = convertFrom(Records.mapping(from))
+    fun <U> mapping(from: (UUID?, String?, String?, String?, UUID?, String?, LocalDate?, Int?, Boolean?, OffsetDateTime?, OffsetDateTime?, OffsetDateTime?, OffsetDateTime?) -> U): SelectField<U> = convertFrom(Records.mapping(from))
 
     /**
      * Convenience mapping calling {@link SelectField#convertFrom(Class,
      * Function)}.
      */
-    fun <U> mapping(toType: Class<U>, from: (UUID?, String?, String?, Int?, String?, UUID?, String?, LocalDate?, Int?, Boolean?, OffsetDateTime?, OffsetDateTime?) -> U): SelectField<U> = convertFrom(toType, Records.mapping(from))
+    fun <U> mapping(toType: Class<U>, from: (UUID?, String?, String?, String?, UUID?, String?, LocalDate?, Int?, Boolean?, OffsetDateTime?, OffsetDateTime?, OffsetDateTime?, OffsetDateTime?) -> U): SelectField<U> = convertFrom(toType, Records.mapping(from))
 }

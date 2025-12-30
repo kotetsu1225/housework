@@ -44,8 +44,9 @@ interface UseDashboardActions {
   /**
    * タスクを開始する
    * @param taskExecutionId - タスク実行ID
+   * @param memberId - 開始するメンバーのID
    */
-  startTask: (taskExecutionId: string) => Promise<boolean>
+  startTask: (taskExecutionId: string, memberId: string) => Promise<boolean>
   /**
    * タスクを完了する
    * @param taskExecutionId - タスク実行ID
@@ -138,15 +139,13 @@ export function useDashboard(date?: string): UseDashboardReturn {
 
   /**
    * タスクを開始する
-   * @note バックエンドのstartTaskExecutionはmemberIdが必要ですが、
-   *       空文字で渡してバックエンド側で処理します
+   * @param taskExecutionId - タスク実行ID
+   * @param memberId - 開始するメンバーのID
    */
   const startTask = useCallback(
-    async (taskExecutionId: string): Promise<boolean> => {
+    async (taskExecutionId: string, memberId: string): Promise<boolean> => {
       try {
-        // NOTE: バックエンドは開始時にmemberIdを必要としますが、
-        // UIでは簡略化のため引数なしで呼び出し可能にしています
-        await startTaskExecution(taskExecutionId, { memberId: '' })
+        await startTaskExecution(taskExecutionId, { memberId })
         // 成功後にデータを再取得
         await fetchDashboardData()
         return true

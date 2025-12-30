@@ -1,6 +1,7 @@
 package com.task.domain.taskExecution
 
 import com.task.domain.member.MemberId
+import com.task.domain.taskDefinition.ScheduledTimeRange
 import com.task.domain.taskDefinition.TaskDefinition
 import com.task.domain.taskDefinition.TaskDefinitionDescription
 import com.task.domain.taskDefinition.TaskDefinitionId
@@ -224,6 +225,7 @@ sealed class TaskExecution {
                 taskExecutionId = newNotStartedState.id,
                 taskName = taskDefinition.name,
                 assigneeMemberId = assignee,
+                scheduledStartTime = taskDefinition.scheduledTimeRange.startTime,
                 occurredAt = now
             )
 
@@ -289,7 +291,7 @@ data class TaskExecutionId(val value: UUID) {
 data class TaskSnapshot(
     val frozenName: TaskDefinitionName,
     val frozenDescription: TaskDefinitionDescription,
-    val frozenEstimatedMinutes: Int,
+    val frozenScheduledTimeRange: ScheduledTimeRange,
     val definitionVersion: Int,
     val capturedAt: Instant,
 ) {
@@ -300,7 +302,7 @@ data class TaskSnapshot(
             return TaskSnapshot(
                 frozenName = taskDefinition.name,
                 frozenDescription = taskDefinition.description,
-                frozenEstimatedMinutes = taskDefinition.estimatedMinutes,
+                frozenScheduledTimeRange = taskDefinition.scheduledTimeRange,
                 definitionVersion = taskDefinition.version,
                 capturedAt = Instant.now(),
             )

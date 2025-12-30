@@ -9,7 +9,7 @@ interface CreateTaskDefinitionUseCase {
     data class Input(
         val name: TaskDefinitionName,
         val description: TaskDefinitionDescription,
-        val estimatedMinutes: Int,
+        val scheduledTimeRange: ScheduledTimeRange,
         val scope: TaskScope,
         val ownerMemberId: MemberId?,
         val schedule: TaskSchedule,
@@ -19,7 +19,7 @@ interface CreateTaskDefinitionUseCase {
         val id: TaskDefinitionId,
         val name: TaskDefinitionName,
         val description: TaskDefinitionDescription,
-        val estimatedMinutes: Int,
+        val scheduledTimeRange: ScheduledTimeRange,
         val scope: TaskScope,
         val ownerMemberId: MemberId?,
         val schedule: TaskSchedule,

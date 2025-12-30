@@ -19,7 +19,7 @@ class CreateTaskDefinitionUseCaseImpl @Inject constructor(
             val newTaskDefinition = TaskDefinition.create(
                 name = input.name,
                 description = input.description,
-                estimatedMinutes = input.estimatedMinutes,
+                scheduledTimeRange = input.scheduledTimeRange,
                 scope = input.scope,
                 ownerMemberId = input.ownerMemberId,
                 schedule = input.schedule,
@@ -35,7 +35,7 @@ class CreateTaskDefinitionUseCaseImpl @Inject constructor(
                 id = taskDefinition.id,
                 name = taskDefinition.name,
                 description = taskDefinition.description,
-                estimatedMinutes = taskDefinition.estimatedMinutes,
+                scheduledTimeRange = taskDefinition.scheduledTimeRange,
                 scope = taskDefinition.scope,
                 ownerMemberId = taskDefinition.ownerMemberId,
                 schedule = taskDefinition.schedule,

@@ -1,6 +1,7 @@
 package com.task.infra.taskDefinition
 
 import com.google.inject.Singleton
+import com.task.domain.AppTimeZone
 import com.task.domain.member.MemberId
 import com.task.domain.taskDefinition.*
 import com.task.infra.database.jooq.tables.TaskDefinitions.Companion.TASK_DEFINITIONS
@@ -11,10 +12,16 @@ import org.jooq.DSLContext
 import org.jooq.Field
 import org.jooq.impl.DSL.multiset
 import org.jooq.impl.DSL.select
+import java.time.Instant
 import java.time.OffsetDateTime
 
 @Singleton
 class TaskDefinitionRepositoryImpl : TaskDefinitionRepository {
+
+    private fun Instant.toOffsetDateTime(): OffsetDateTime =
+        this.atZone(AppTimeZone.ZONE).toOffsetDateTime()
+
+    private fun OffsetDateTime.toDomainInstant(): Instant = this.toInstant()
 
     private val recurrenceField: Field<TaskRecurrencesRecord?> = multiset(
         select(TASK_RECURRENCES.asterisk())
@@ -29,7 +36,8 @@ class TaskDefinitionRepositoryImpl : TaskDefinitionRepository {
             id = taskDefinition.id.value
             name = taskDefinition.name.value
             description = taskDefinition.description.value
-            estimatedMinutes = taskDefinition.estimatedMinutes
+            scheduledStartTime = taskDefinition.scheduledTimeRange.startTime.toOffsetDateTime()
+            scheduledEndTime = taskDefinition.scheduledTimeRange.endTime.toOffsetDateTime()
             scope = taskDefinition.scope.value
             ownerMemberId = taskDefinition.ownerMemberId?.value
             version = taskDefinition.version
@@ -64,7 +72,8 @@ class TaskDefinitionRepositoryImpl : TaskDefinitionRepository {
             .update(TASK_DEFINITIONS)
             .set(TASK_DEFINITIONS.NAME, taskDefinition.name.value)
             .set(TASK_DEFINITIONS.DESCRIPTION, taskDefinition.description.value)
-            .set(TASK_DEFINITIONS.ESTIMATED_MINUTES, taskDefinition.estimatedMinutes)
+            .set(TASK_DEFINITIONS.SCHEDULED_START_TIME, taskDefinition.scheduledTimeRange.startTime.toOffsetDateTime())
+            .set(TASK_DEFINITIONS.SCHEDULED_END_TIME, taskDefinition.scheduledTimeRange.endTime.toOffsetDateTime())
             .set(TASK_DEFINITIONS.SCOPE, taskDefinition.scope.value)
             .set(TASK_DEFINITIONS.OWNER_MEMBER_ID, taskDefinition.ownerMemberId?.value)
             .set(TASK_DEFINITIONS.VERSION, taskDefinition.version)
@@ -189,7 +198,7 @@ class TaskDefinitionRepositoryImpl : TaskDefinitionRepository {
 
                 TaskSchedule.Recurring(
                     pattern = pattern,
-                    startDate = recurrenceRecord.startDate!!,
+                    startDate = recurrenceRecord.startDate,
                     endDate = recurrenceRecord.endDate
                 )
             }
@@ -198,10 +207,13 @@ class TaskDefinitionRepositoryImpl : TaskDefinitionRepository {
 
         return TaskDefinition.reconstruct(
             id = TaskDefinitionId(definitionRecord.id!!),
-            name = TaskDefinitionName(definitionRecord.name!!),
+            name = TaskDefinitionName(definitionRecord.name),
             description = TaskDefinitionDescription(definitionRecord.description ?: ""),
-            estimatedMinutes = definitionRecord.estimatedMinutes!!,
-            scope = TaskScope.get(definitionRecord.scope!!),
+            scheduledTimeRange = ScheduledTimeRange(
+                startTime = definitionRecord.scheduledStartTime.toDomainInstant(),
+                endTime = definitionRecord.scheduledEndTime.toDomainInstant(),
+            ),
+            scope = TaskScope.get(definitionRecord.scope),
             ownerMemberId = definitionRecord.ownerMemberId?.let { MemberId(it) },
             schedule = schedule,
             version = definitionRecord.version!!,

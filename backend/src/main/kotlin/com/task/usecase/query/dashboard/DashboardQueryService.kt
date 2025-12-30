@@ -34,7 +34,8 @@ data class TodayTaskDto(
     val taskDefinitionId: String,
     val taskName: String,           // TaskDefinition.name
     val taskDescription: String?,   // TaskDefinition.description
-    val estimatedMinutes: Int,      // TaskDefinition.estimatedMinutes
+    val scheduledStartTime: String, // ISO-8601形式
+    val scheduledEndTime: String,   // ISO-8601形式
     val scope: String,              // TaskDefinition.scope (FAMILY/PERSONAL)
     val status: String,             // TaskExecution.status
     val assigneeMemberId: String?,

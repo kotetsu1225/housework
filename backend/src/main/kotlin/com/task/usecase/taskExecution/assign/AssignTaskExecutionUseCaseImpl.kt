@@ -65,7 +65,8 @@ class AssignTaskExecutionUseCaseImpl @Inject constructor(
                 snapshot = AssignTaskExecutionUseCase.SnapshotOutput(
                     name = taskExecution.taskSnapshot.frozenName.value,
                     description = taskExecution.taskSnapshot.frozenDescription.value,
-                    estimatedMinutes = taskExecution.taskSnapshot.frozenEstimatedMinutes,
+                    scheduledStartTime = taskExecution.taskSnapshot.frozenScheduledTimeRange.startTime,
+                    scheduledEndTime = taskExecution.taskSnapshot.frozenScheduledTimeRange.endTime,
                     definitionVersion = taskExecution.taskSnapshot.definitionVersion,
                     capturedAt = taskExecution.taskSnapshot.capturedAt
                 )

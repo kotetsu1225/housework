@@ -93,7 +93,8 @@ class GetTaskExecutionsUseCaseImpl @Inject constructor(
         return GetTaskExecutionsUseCase.SnapshotOutput(
             name = snapshot.frozenName.value,
             description = snapshot.frozenDescription.value,
-            estimatedMinutes = snapshot.frozenEstimatedMinutes,
+            scheduledStartTime = snapshot.frozenScheduledTimeRange.startTime,
+            scheduledEndTime = snapshot.frozenScheduledTimeRange.endTime,
             definitionVersion = snapshot.definitionVersion,
             capturedAt = snapshot.capturedAt
         )

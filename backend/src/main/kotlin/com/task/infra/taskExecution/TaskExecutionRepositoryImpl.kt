@@ -2,6 +2,7 @@ package com.task.infra.taskExecution
 
 import com.google.inject.Singleton
 import com.task.domain.member.MemberId
+import com.task.domain.taskDefinition.ScheduledTimeRange
 import com.task.domain.taskDefinition.TaskDefinitionDescription
 import com.task.domain.taskDefinition.TaskDefinitionId
 import com.task.domain.taskDefinition.TaskDefinitionName
@@ -88,7 +89,8 @@ class TaskExecutionRepositoryImpl : TaskExecutionRepository {
             .set(TASK_SNAPSHOTS.TASK_EXECUTION_ID, taskExecutionId)
             .set(TASK_SNAPSHOTS.NAME, snapshot.frozenName.value)
             .set(TASK_SNAPSHOTS.DESCRIPTION, snapshot.frozenDescription.value)
-            .set(TASK_SNAPSHOTS.ESTIMATED_MINUTES, snapshot.frozenEstimatedMinutes)
+            .set(TASK_SNAPSHOTS.SCHEDULED_START_TIME, snapshot.frozenScheduledTimeRange.startTime.toOffsetDateTime())
+            .set(TASK_SNAPSHOTS.SCHEDULED_END_TIME, snapshot.frozenScheduledTimeRange.endTime.toOffsetDateTime())
             .set(TASK_SNAPSHOTS.DEFINITION_VERSION, snapshot.definitionVersion)
             .set(TASK_SNAPSHOTS.CREATED_AT, snapshot.capturedAt.toOffsetDateTime())
             .execute()
@@ -280,7 +282,10 @@ class TaskExecutionRepositoryImpl : TaskExecutionRepository {
         return TaskSnapshot(
             frozenName = TaskDefinitionName(record.get(TASK_SNAPSHOTS.NAME)!!),
             frozenDescription = TaskDefinitionDescription(record.get(TASK_SNAPSHOTS.DESCRIPTION) ?: ""),
-            frozenEstimatedMinutes = record.get(TASK_SNAPSHOTS.ESTIMATED_MINUTES)!!,
+            frozenScheduledTimeRange = ScheduledTimeRange(
+                startTime = record.get(TASK_SNAPSHOTS.SCHEDULED_START_TIME)!!.toDomainInstant(),
+                endTime = record.get(TASK_SNAPSHOTS.SCHEDULED_END_TIME)!!.toDomainInstant(),
+            ),
             definitionVersion = record.get(TASK_SNAPSHOTS.DEFINITION_VERSION)!!,
             capturedAt = record.get(TASK_SNAPSHOTS.CREATED_AT)!!.toDomainInstant()
         )
@@ -291,7 +296,10 @@ class TaskExecutionRepositoryImpl : TaskExecutionRepository {
         return TaskSnapshot(
             frozenName = TaskDefinitionName(name),
             frozenDescription = TaskDefinitionDescription(record.get(TASK_SNAPSHOTS.DESCRIPTION) ?: ""),
-            frozenEstimatedMinutes = record.get(TASK_SNAPSHOTS.ESTIMATED_MINUTES)!!,
+            frozenScheduledTimeRange = ScheduledTimeRange(
+                startTime = record.get(TASK_SNAPSHOTS.SCHEDULED_START_TIME)!!.toDomainInstant(),
+                endTime = record.get(TASK_SNAPSHOTS.SCHEDULED_END_TIME)!!.toDomainInstant(),
+            ),
             definitionVersion = record.get(TASK_SNAPSHOTS.DEFINITION_VERSION)!!,
             capturedAt = record.get(TASK_SNAPSHOTS.CREATED_AT)!!.toDomainInstant()
         )

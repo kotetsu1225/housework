@@ -6,6 +6,7 @@ import com.task.infra.database.jooq.tables.references.MEMBERS
 import com.task.infra.database.jooq.tables.references.MEMBER_AVAILABILITIES
 import com.task.infra.database.jooq.tables.references.TASK_DEFINITIONS
 import com.task.infra.database.jooq.tables.references.TASK_EXECUTIONS
+import com.task.infra.database.jooq.tables.references.TASK_SNAPSHOTS
 import com.task.infra.database.jooq.tables.references.TIME_SLOTS
 import com.task.usecase.query.dashboard.*
 import org.jooq.DSLContext
@@ -50,20 +51,24 @@ class DashboardQueryServiceImpl @Inject constructor(
     /**
      * 今日のタスク一覧を取得
      *
-     * TaskExecution + TaskDefinition + Member をJOINして取得
+     * TaskExecution + TaskDefinition + TaskSnapshot + Member をJOINして取得
+     * IN_PROGRESS以上の状態ではスナップショットの情報を優先
      * パフォーマンス最適化: 必要なカラムのみSELECT
      */
     private fun fetchTodayTasks(dsl: DSLContext, targetDate: LocalDate): List<TodayTaskDto> {
         val te = TASK_EXECUTIONS
         val td = TASK_DEFINITIONS
+        val ts = TASK_SNAPSHOTS
         val m = MEMBERS.`as`("assignee")
 
         return dsl.select(
             te.ID,
             te.TASK_DEFINITION_ID,
-            td.NAME,
-            td.DESCRIPTION,
-            td.ESTIMATED_MINUTES,
+            // スナップショットがあればそちらを優先、なければ定義から取得
+            DSL.coalesce(ts.NAME, td.NAME).`as`("task_name"),
+            DSL.coalesce(ts.DESCRIPTION, td.DESCRIPTION).`as`("task_description"),
+            DSL.coalesce(ts.SCHEDULED_START_TIME, td.SCHEDULED_START_TIME).`as`("scheduled_start_time"),
+            DSL.coalesce(ts.SCHEDULED_END_TIME, td.SCHEDULED_END_TIME).`as`("scheduled_end_time"),
             td.SCOPE,
             te.STATUS,
             te.ASSIGNEE_MEMBER_ID,
@@ -72,6 +77,7 @@ class DashboardQueryServiceImpl @Inject constructor(
         )
             .from(te)
             .join(td).on(te.TASK_DEFINITION_ID.eq(td.ID))
+            .leftJoin(ts).on(ts.TASK_EXECUTION_ID.eq(te.ID))  // スナップショットを LEFT JOIN
             .leftJoin(m).on(te.ASSIGNEE_MEMBER_ID.eq(m.ID))
             .where(te.SCHEDULED_DATE.eq(targetDate))
             .and(td.IS_DELETED.eq(false))
@@ -88,9 +94,10 @@ class DashboardQueryServiceImpl @Inject constructor(
                 TodayTaskDto(
                     taskExecutionId = record.get(te.ID).toString(),
                     taskDefinitionId = record.get(te.TASK_DEFINITION_ID).toString(),
-                    taskName = record.get(td.NAME) ?: "",
-                    taskDescription = record.get(td.DESCRIPTION),
-                    estimatedMinutes = record.get(td.ESTIMATED_MINUTES) ?: 0,
+                    taskName = record.get("task_name", String::class.java) ?: "",
+                    taskDescription = record.get("task_description", String::class.java),
+                    scheduledStartTime = record.get("scheduled_start_time", java.time.OffsetDateTime::class.java)?.toInstant()?.toString() ?: "",
+                    scheduledEndTime = record.get("scheduled_end_time", java.time.OffsetDateTime::class.java)?.toInstant()?.toString() ?: "",
                     scope = record.get(td.SCOPE) ?: "FAMILY",
                     status = record.get(te.STATUS) ?: "NOT_STARTED",
                     assigneeMemberId = record.get(te.ASSIGNEE_MEMBER_ID)?.toString(),

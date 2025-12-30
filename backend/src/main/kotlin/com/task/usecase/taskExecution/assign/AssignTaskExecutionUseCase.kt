@@ -28,7 +28,8 @@ interface AssignTaskExecutionUseCase {
     data class SnapshotOutput(
         val name: String,
         val description: String,
-        val estimatedMinutes: Int,
+        val scheduledStartTime: Instant,
+        val scheduledEndTime: Instant,
         val definitionVersion: Int,
         val capturedAt: Instant
     )

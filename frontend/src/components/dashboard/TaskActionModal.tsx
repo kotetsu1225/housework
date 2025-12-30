@@ -26,7 +26,7 @@ export interface TaskActionModalProps {
   /** 現在のログインユーザーID */
   currentMemberId?: string
   /** タスク開始時のコールバック */
-  onStart: (taskExecutionId: string) => Promise<boolean>
+  onStart: (taskExecutionId: string, memberId: string) => Promise<boolean>
   /** タスク完了時のコールバック */
   onComplete: (taskExecutionId: string, completedByMemberId: string) => Promise<boolean>
   /** 担当者割り当て時のコールバック */
@@ -82,9 +82,14 @@ export function TaskActionModal({
    * タスク開始処理
    */
   const handleStart = async () => {
+    if (!currentMemberId) {
+      // currentMemberIdがない場合は開始できない
+      return
+    }
+
     setLoading(true)
     try {
-      const success = await onStart(task.taskExecutionId)
+      const success = await onStart(task.taskExecutionId, currentMemberId)
       if (success) {
         onClose()
       }

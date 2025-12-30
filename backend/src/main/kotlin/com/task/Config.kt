@@ -53,6 +53,8 @@ import com.task.usecase.auth.LoginUseCaseImpl
 import com.typesafe.config.ConfigFactory
 import com.task.domain.mail.MailSender
 import com.task.infra.mail.LoggingMailSender
+import com.task.infra.mail.SendGridConfig
+import com.task.infra.mail.SendGridMailSender
 import com.task.infra.mail.SmtpMailSender
 import com.task.infra.mail.SmtpConfig
 import com.task.infra.event.handler.EmailNotificationHandler
@@ -117,6 +119,15 @@ class AppModule : AbstractModule() {
                 )
                 bind(SmtpConfig::class.java).toInstance(smtpConfig)
                 bind(MailSender::class.java).to(SmtpMailSender::class.java)
+            }
+            "sendgrid" -> {
+                val sendGridConfig = SendGridConfig(
+                    apiKey = appConfig.getString("mail.sendgrid.apiKey"),
+                    fromAddress = appConfig.getString("mail.sendgrid.fromAddress"),
+                    fromName = appConfig.getString("mail.sendgrid.fromName"),
+                )
+                bind(SendGridConfig::class.java).toInstance(sendGridConfig)
+                bind(MailSender::class.java).to(SendGridMailSender::class.java)
             }
             else -> {
                 // デフォルト: ログ出力のみ

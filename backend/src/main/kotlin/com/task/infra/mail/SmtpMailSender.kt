@@ -34,6 +34,8 @@ class SmtpMailSender @Inject constructor(
 
         val props = Properties().apply {
             put("mail.smtp.auth", "true")
+            // ベストプラクティス: ホスト名検証（中間者攻撃対策）。STARTTLS/SSLどちらでも有効。
+            put("mail.smtp.ssl.checkserveridentity", "true")
             put("mail.smtp.host", config.host)
             put("mail.smtp.port", config.port.toString())
             // タイムアウト設定

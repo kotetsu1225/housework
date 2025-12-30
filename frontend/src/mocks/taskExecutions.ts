@@ -31,7 +31,7 @@ export const MOCK_TASK_EXECUTIONS: TaskExecution[] = [
       scheduledStartTime: '2025-01-01T20:00:00Z',
       scheduledEndTime: '2025-01-01T20:15:00Z',
       definitionVersion: 1,
-      createdAt: new Date().toISOString(),
+      capturedAt: new Date().toISOString(),
     },
     startedAt: new Date(Date.now() - 3600000).toISOString(), // 1時間前
     completedAt: new Date(Date.now() - 2700000).toISOString(), // 45分前

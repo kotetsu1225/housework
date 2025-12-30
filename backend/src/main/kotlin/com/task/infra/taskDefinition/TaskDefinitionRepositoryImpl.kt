@@ -6,13 +6,17 @@ import com.task.domain.member.MemberId
 import com.task.domain.taskDefinition.*
 import com.task.infra.database.jooq.tables.TaskDefinitions.Companion.TASK_DEFINITIONS
 import com.task.infra.database.jooq.tables.TaskRecurrences.Companion.TASK_RECURRENCES
+import com.task.infra.database.jooq.tables.TaskExecutions.Companion.TASK_EXECUTIONS
 import com.task.infra.database.jooq.tables.records.TaskDefinitionsRecord
 import com.task.infra.database.jooq.tables.records.TaskRecurrencesRecord
 import org.jooq.DSLContext
+import org.jooq.Condition
 import org.jooq.Field
 import org.jooq.impl.DSL.multiset
 import org.jooq.impl.DSL.select
+import org.jooq.impl.DSL.selectOne
 import java.time.Instant
+import java.time.LocalDate
 import java.time.OffsetDateTime
 
 @Singleton
@@ -152,6 +156,47 @@ class TaskDefinitionRepositoryImpl : TaskDefinitionRepository {
             .selectCount()
             .from(TASK_DEFINITIONS)
             .where(TASK_DEFINITIONS.IS_DELETED.eq(false))
+            .fetchOne(0, Int::class.java) ?: 0
+    }
+
+    private fun taskSettingsCondition(today: LocalDate): Condition {
+        val notOneTime = TASK_DEFINITIONS.SCHEDULE_TYPE.ne("ONE_TIME")
+
+        val oneTimeActive = TASK_DEFINITIONS.SCHEDULE_TYPE.eq("ONE_TIME")
+            .and(TASK_DEFINITIONS.ONE_TIME_DEADLINE.ge(today))
+            .and(
+                org.jooq.impl.DSL.notExists(
+                    selectOne()
+                        .from(TASK_EXECUTIONS)
+                        .where(TASK_EXECUTIONS.TASK_DEFINITION_ID.eq(TASK_DEFINITIONS.ID))
+                        .and(TASK_EXECUTIONS.STATUS.`in`("COMPLETED", "CANCELLED"))
+                )
+            )
+
+        return TASK_DEFINITIONS.IS_DELETED.eq(false)
+            .and(notOneTime.or(oneTimeActive))
+    }
+
+    override fun findAllForTaskSettings(session: DSLContext, today: LocalDate, limit: Int, offset: Int): List<TaskDefinition> {
+        return session
+            .select(TASK_DEFINITIONS.asterisk(), recurrenceField)
+            .from(TASK_DEFINITIONS)
+            .where(taskSettingsCondition(today))
+            .orderBy(TASK_DEFINITIONS.CREATED_AT.desc())
+            .limit(limit)
+            .offset(offset)
+            .fetch { record ->
+                val defRecord = record.into(TaskDefinitionsRecord::class.java)
+                val recurrenceRecord = record.get(recurrenceField)
+                reconstructFromRecords(defRecord, recurrenceRecord)
+            }
+    }
+
+    override fun countForTaskSettings(session: DSLContext, today: LocalDate): Int {
+        return session
+            .selectCount()
+            .from(TASK_DEFINITIONS)
+            .where(taskSettingsCondition(today))
             .fetchOne(0, Int::class.java) ?: 0
     }
 

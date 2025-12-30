@@ -2,8 +2,10 @@ package com.task.usecase.taskDefinition.get
 
 import com.google.inject.Inject
 import com.google.inject.Singleton
+import com.task.domain.AppTimeZone
 import com.task.domain.taskDefinition.TaskDefinitionRepository
 import com.task.infra.database.Database
+import java.time.LocalDate
 
 
 @Singleton
@@ -14,10 +16,12 @@ class GetTaskDefinitionsUseCaseImpl @Inject constructor(
 
     override fun execute(input: GetTaskDefinitionsUseCase.Input): GetTaskDefinitionsUseCase.Output {
         return database.withTransaction { session ->
-            val total = taskDefinitionRepository.count(session)
+            val today = LocalDate.now(AppTimeZone.ZONE)
+            val total = taskDefinitionRepository.countForTaskSettings(session, today)
 
-            val taskDefinitions = taskDefinitionRepository.findAll(
+            val taskDefinitions = taskDefinitionRepository.findAllForTaskSettings(
                 session = session,
+                today = today,
                 limit = input.limit,
                 offset = input.offset
             )

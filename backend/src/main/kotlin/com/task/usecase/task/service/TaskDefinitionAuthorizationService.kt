@@ -1,22 +1,13 @@
-package com.task.domain.taskDefinition.service
+package com.task.usecase.task.service
 
-import com.google.inject.ImplementedBy
 import com.google.inject.Singleton
 import com.task.domain.member.MemberId
+import com.task.domain.task.service.TaskDefinitionAuthService
 import com.task.domain.taskDefinition.TaskDefinition
 import com.task.domain.taskDefinition.TaskScope
 
-@ImplementedBy(TaskDefinitionAuthorizationServiceImpl::class)
-interface TaskDefinitionAuthorizationService {
-    fun canEdit(taskDefinition: TaskDefinition, memberId: MemberId): Boolean
-    fun canDelete(taskDefinition: TaskDefinition, memberId: MemberId): Boolean
-
-    fun requireEditPermission(taskDefinition: TaskDefinition, memberId: MemberId)
-    fun requireDeletePermission(taskDefinition: TaskDefinition, memberId: MemberId)
-}
-
 @Singleton
-class TaskDefinitionAuthorizationServiceImpl : TaskDefinitionAuthorizationService {
+class TaskDefinitionAuthServiceImpl : TaskDefinitionAuthService {
 
     override fun canEdit(taskDefinition: TaskDefinition, memberId: MemberId): Boolean {
         return when (taskDefinition.scope) {

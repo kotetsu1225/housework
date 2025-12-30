@@ -8,6 +8,7 @@ import com.task.domain.taskDefinition.*
 interface UpdateTaskDefinitionUseCase {
     data class Input(
         val id: TaskDefinitionId,
+        val requesterId: MemberId,
         val name: TaskDefinitionName? = null,
         val description: TaskDefinitionDescription? = null,
         val scheduledTimeRange: ScheduledTimeRange? = null,

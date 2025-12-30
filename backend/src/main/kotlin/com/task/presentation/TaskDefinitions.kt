@@ -8,6 +8,8 @@ import com.task.usecase.taskDefinition.get.GetTaskDefinitionUseCase
 import com.task.usecase.taskDefinition.get.GetTaskDefinitionsUseCase
 import com.task.usecase.taskDefinition.update.UpdateTaskDefinitionUseCase
 import io.ktor.http.HttpStatusCode
+import io.ktor.server.auth.jwt.JWTPrincipal
+import io.ktor.server.auth.principal
 import io.ktor.resources.Resource
 import io.ktor.server.application.call
 import io.ktor.server.request.receive
@@ -145,8 +147,8 @@ class TaskDefinitions {
 
     @Serializable
     data class ScheduledTimeRangeDto(
-        val startTime: String,  // ISO-8601 形式
-        val endTime: String,    // ISO-8601 形式
+        val startTime: String,
+        val endTime: String,
     )
 
     @Serializable
@@ -275,11 +277,15 @@ fun Route.taskDefinitions() {
     }
 
     post<TaskDefinitions.Update> { resource ->
+        val principal = call.principal<JWTPrincipal>()
+        val requesterId = MemberId(UUID.fromString(principal?.subject ?: throw IllegalArgumentException("No principal")))
+
         val request = call.receive<TaskDefinitions.Update.Request>()
 
         val output = instance<UpdateTaskDefinitionUseCase>().execute(
             UpdateTaskDefinitionUseCase.Input(
                 id = TaskDefinitionId(UUID.fromString(resource.taskDefinitionId)),
+                requesterId = requesterId,
                 name = request.name?.let { TaskDefinitionName(it) },
                 description = request.description?.let { TaskDefinitionDescription(it) },
                 scheduledTimeRange = request.scheduledTimeRange?.toDomain(),
@@ -305,9 +311,13 @@ fun Route.taskDefinitions() {
     }
 
     post<TaskDefinitions.Delete> { resource ->
+        val principal = call.principal<JWTPrincipal>()
+        val requesterId = MemberId(UUID.fromString(principal?.subject ?: throw IllegalArgumentException("No principal")))
+
         val output = instance<DeleteTaskDefinitionUseCase>().execute(
             DeleteTaskDefinitionUseCase.Input(
                 id = TaskDefinitionId(UUID.fromString(resource.taskDefinitionId)),
+                requesterId = requesterId,
             )
         )
 

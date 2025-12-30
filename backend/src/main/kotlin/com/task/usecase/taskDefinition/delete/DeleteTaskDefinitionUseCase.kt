@@ -13,6 +13,7 @@ import com.task.domain.taskDefinition.TaskScope
 interface DeleteTaskDefinitionUseCase {
     data class Input(
         val id: TaskDefinitionId,
+        val requesterId: MemberId,
     )
 
     data class Output(

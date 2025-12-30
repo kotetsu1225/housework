@@ -193,7 +193,7 @@ export function TaskActionModal({
         <div className="flex items-center gap-4 text-sm text-white/70">
           <div className="flex items-center gap-1">
             <Clock className="w-4 h-4" />
-            <span>{task.estimatedMinutes}分</span>
+            <span>{task.scheduledStartTime} - {task.scheduledEndTime}</span>
           </div>
           <div className="flex items-center gap-1">
             {scopeIcon}

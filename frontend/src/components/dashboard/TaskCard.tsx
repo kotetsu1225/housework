@@ -9,7 +9,7 @@ import { CheckCircle2, Circle, PlayCircle, XCircle } from 'lucide-react'
 import { Card } from '../ui/Card'
 import { Badge } from '../ui/Badge'
 import { Avatar } from '../ui/Avatar'
-import { isParentRole } from '../../utils'
+import { isParentRole, formatTimeFromISO } from '../../utils'
 import type { TaskExecution, Member, ExecutionStatus } from '../../types'
 
 /**
@@ -85,7 +85,8 @@ export function TaskCard({ task, assignee, onClick, onStatusClick }: TaskCardPro
 
   // タスク名の取得（NOT_STARTEDの場合はsnapshotがない可能性があるため）
   const taskName = task.taskSnapshot?.name || '(タスク名未設定)'
-  const estimatedMinutes = task.taskSnapshot?.estimatedMinutes || 0
+  const scheduledStartTime = task.taskSnapshot?.scheduledStartTime
+  const scheduledEndTime = task.taskSnapshot?.scheduledEndTime
 
   return (
     <Card
@@ -120,7 +121,11 @@ export function TaskCard({ task, assignee, onClick, onStatusClick }: TaskCardPro
           {getStatusBadge(task.status)}
         </div>
         <div className="flex items-center gap-3 text-sm text-white/50">
-          {estimatedMinutes > 0 && <span>{estimatedMinutes}分</span>}
+          {scheduledStartTime && scheduledEndTime && (
+            <span>
+              {formatTimeFromISO(scheduledStartTime)} - {formatTimeFromISO(scheduledEndTime)}
+            </span>
+          )}
           {assignee && (
             <div className="flex items-center gap-1">
               <Avatar

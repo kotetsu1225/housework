@@ -7,6 +7,34 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'
 import { AuthProvider } from '../../contexts/AuthContext'
 import { Login } from '../Login'
+import * as api from '../../api'
+
+// APIをモック
+vi.mock('../../api', () => ({
+  loginApi: vi.fn(),
+  getStoredToken: vi.fn(),
+  getMember: vi.fn(),
+  setStoredToken: vi.fn(),
+  ApiError: class ApiError extends Error {
+    constructor(message: string, public status: number) {
+      super(message)
+    }
+  },
+}))
+
+// JWTペイロードのモック作成ヘルパー
+const createMockToken = (sub: string, role: string) => {
+  const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }))
+  const payload = btoa(
+    JSON.stringify({
+      sub,
+      name: 'Test User',
+      role,
+      exp: Math.floor(Date.now() / 1000) + 3600,
+    })
+  )
+  return `${header}.${payload}.signature`
+}
 
 const renderLoginPage = (route = '/login') => {
   return render(
@@ -25,6 +53,8 @@ const renderLoginPage = (route = '/login') => {
 describe('Login', () => {
   beforeEach(() => {
     localStorage.clear()
+    vi.clearAllMocks()
+    vi.mocked(api.getStoredToken).mockReturnValue(null)
   })
 
   describe('レンダリング', () => {
@@ -43,49 +73,62 @@ describe('Login', () => {
   })
 
   describe('バリデーション', () => {
-    it('名前が空の場合エラーが表示される', async () => {
+    it('名前が空の場合ボタンが無効化される', async () => {
       renderLoginPage()
-      fireEvent.click(screen.getByRole('button', { name: 'ログイン' }))
+      fireEvent.change(screen.getByLabelText('パスワード'), { target: { value: 'password' } })
       
-      await waitFor(() => {
-        expect(screen.getByText('名前を入力してください')).toBeInTheDocument()
-      })
+      const button = screen.getByRole('button', { name: 'ログイン' })
+      expect(button).toBeDisabled()
     })
 
-    it('空白のみの名前でエラーが表示される', async () => {
+    it('パスワードが短すぎる場合ボタンが無効化される', async () => {
       renderLoginPage()
-      fireEvent.change(screen.getByLabelText('名前'), { target: { value: '   ' } })
-      fireEvent.click(screen.getByRole('button', { name: 'ログイン' }))
+      fireEvent.change(screen.getByLabelText('名前'), { target: { value: 'user' } })
+      fireEvent.change(screen.getByLabelText('パスワード'), { target: { value: '1234' } }) // 5文字未満
       
-      await waitFor(() => {
-        expect(screen.getByText('名前を入力してください')).toBeInTheDocument()
-      })
+      const button = screen.getByRole('button', { name: 'ログイン' })
+      expect(button).toBeDisabled()
     })
   })
 
   describe('ログイン処理', () => {
-    it('存在しないユーザーでログインするとエラーが表示される', async () => {
+    it('認証エラー時にエラーメッセージが表示される', async () => {
+      vi.mocked(api.loginApi).mockRejectedValue(new api.ApiError('認証失敗', 401))
+
       renderLoginPage()
       fireEvent.change(screen.getByLabelText('名前'), { target: { value: '存在しないユーザー' } })
-      fireEvent.click(screen.getByRole('button', { name: 'ログイン' }))
+      fireEvent.change(screen.getByLabelText('パスワード'), { target: { value: 'password' } })
+      
+      const button = screen.getByRole('button', { name: 'ログイン' })
+      expect(button).not.toBeDisabled()
+      fireEvent.click(button)
       
       await waitFor(() => {
-        expect(screen.getByText('ユーザーが見つかりませんでした')).toBeInTheDocument()
+        expect(screen.getByText('名前またはパスワードが正しくありません')).toBeInTheDocument()
       })
     })
 
     it('存在するユーザーでログインするとホームに遷移する', async () => {
-      // ユーザーを事前登録
-      const user = {
+      const token = createMockToken('test-user', 'FATHER')
+      vi.mocked(api.loginApi).mockResolvedValue({
+        token,
+        memberId: 'test-user',
+        memberName: 'テストユーザー',
+        role: 'FATHER'
+      })
+      vi.mocked(api.getMember).mockResolvedValue({
         id: 'test-user',
         name: 'テストユーザー',
-        role: 'FATHER',
+        email: 'test@example.com',
+        familyRole: 'FATHER',
         createdAt: new Date().toISOString(),
-      }
-      localStorage.setItem('housework_users', JSON.stringify([user]))
+        updatedAt: new Date().toISOString(),
+      })
 
       renderLoginPage()
       fireEvent.change(screen.getByLabelText('名前'), { target: { value: 'テストユーザー' } })
+      fireEvent.change(screen.getByLabelText('パスワード'), { target: { value: 'password' } })
+      
       fireEvent.click(screen.getByRole('button', { name: 'ログイン' }))
       
       await waitFor(() => {

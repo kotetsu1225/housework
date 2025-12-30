@@ -6,7 +6,7 @@
  */
 
 import { useState, useCallback, useMemo } from 'react'
-import { RefreshCw, ListTodo, Users, Clock, CheckCircle2, Circle, PlayCircle, Calendar } from 'lucide-react'
+import { RefreshCw, ListTodo, Users, Clock, CheckCircle2, Circle, PlayCircle, Calendar, ChevronDown } from 'lucide-react'
 import { Header } from '../components/layout/Header'
 import { PageContainer } from '../components/layout/PageContainer'
 import { Button } from '../components/ui/Button'
@@ -99,10 +99,10 @@ function TodayTaskCard({ task, onClick, showDate = false }: TodayTaskCardProps) 
               {formatJa(new Date(task.scheduledDate), 'M月d日')}
             </span>
           )}
-          {task.estimatedMinutes > 0 && (
+          {task.scheduledStartTime && task.scheduledEndTime && (
             <span className="flex items-center gap-1">
               <Clock className="w-3.5 h-3.5" />
-              {task.estimatedMinutes}分
+              {task.scheduledStartTime} - {task.scheduledEndTime}
             </span>
           )}
           <span className="flex items-center gap-1 whitespace-nowrap">
@@ -181,6 +181,7 @@ export function Dashboard() {
   // 選択中のタスク（モーダル表示用）
   const [selectedTask, setSelectedTask] = useState<TodayTaskDto | null>(null)
   const [showTaskModal, setShowTaskModal] = useState(false)
+  const [showCompleted, setShowCompleted] = useState(false)
 
   // ダッシュボードデータ取得（CQRS Query）
   const {
@@ -205,12 +206,18 @@ export function Dashboard() {
   })
 
   // タスクを今日のタスクと将来のタスクに分離
-  const { todayActiveTasks, futureTasks } = useMemo(() => {
+  const { todayActiveTasks, completedTasks, futureTasks } = useMemo(() => {
     const todayActive = todayTasks.filter((task) => {
       // キャンセル済みは除外
       if (task.status === 'CANCELLED') return false
+      // 完了済みは除外
+      if (task.status === 'COMPLETED') return false
       // 予定日が今日のタスク
       return task.scheduledDate === todayStr
+    })
+    
+    const completed = todayTasks.filter((task) => {
+      return task.status === 'COMPLETED' && task.scheduledDate === todayStr
     })
     
     const future = todayTasks.filter((task) => {
@@ -219,14 +226,17 @@ export function Dashboard() {
       return task.scheduledDate > todayStr
     })
     
-    return { todayActiveTasks: todayActive, futureTasks: future }
+    return { todayActiveTasks: todayActive, completedTasks: completed, futureTasks: future }
   }, [todayTasks, todayStr])
 
   // 進捗サマリーの計算（今日のタスクのみ）
   const { completedCount, totalCount } = useMemo(() => {
-    const completed = todayActiveTasks.filter((t) => t.status === 'COMPLETED').length
-    return { completedCount: completed, totalCount: todayActiveTasks.length }
-  }, [todayActiveTasks])
+    // 完了数はcompletedTasksの数、総数はactive + completed
+    return { 
+      completedCount: completedTasks.length, 
+      totalCount: todayActiveTasks.length + completedTasks.length 
+    }
+  }, [todayActiveTasks, completedTasks])
 
   /**
    * タスククリック時の処理（モーダル表示）
@@ -340,6 +350,32 @@ export function Dashboard() {
             )}
           </div>
         </section>
+
+        {/* 完了済みタスク */}
+        {completedTasks.length > 0 && (
+          <section className="mt-8">
+            <button
+              onClick={() => setShowCompleted(!showCompleted)}
+              className="flex items-center gap-2 text-lg font-bold text-white/50 mb-4 hover:text-white/70 transition-colors"
+            >
+              <CheckCircle2 className="w-5 h-5 text-emerald-400/50" />
+              完了済み ({completedTasks.length})
+              <ChevronDown className={`w-4 h-4 transition-transform ${showCompleted ? 'rotate-180' : ''}`} />
+            </button>
+            
+            {showCompleted && (
+              <div className="space-y-3 opacity-60">
+                {completedTasks.map((task) => (
+                  <TodayTaskCard
+                    key={task.taskExecutionId}
+                    task={task}
+                    onClick={handleTaskClick}
+                  />
+                ))}
+              </div>
+            )}
+          </section>
+        )}
 
         {/* 将来の単発タスク（存在する場合のみ表示） */}
         {futureTasks.length > 0 && (

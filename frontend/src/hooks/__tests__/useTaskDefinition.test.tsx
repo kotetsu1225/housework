@@ -26,7 +26,11 @@ const mockTaskDefinitions: TaskDefinition[] = [
     id: 'task-def-1',
     name: 'お風呂掃除',
     description: '浴槽を洗う',
-    estimatedMinutes: 15,
+    scheduledTimeRange: {
+      startTime: '2024-01-01T20:00:00Z',
+      endTime: '2024-01-01T20:15:00Z',
+    },
+    estimatedMinutes: 15, // 後方互換性のため残す場合は残すが、今回は削除
     scope: 'FAMILY',
     scheduleType: 'RECURRING',
     recurrence: {
@@ -68,7 +72,11 @@ describe('useTaskDefinition', () => {
             id: 'task-def-1',
             name: 'お風呂掃除',
             description: '浴槽を洗う',
-            estimatedMinutes: 15,
+            scheduledTimeRange: {
+              startTime: '2024-01-01T20:00:00Z',
+              endTime: '2024-01-01T20:15:00Z',
+            },
+            estimatedMinutes: 15, // 型定義から削除したので不要だが、もし型に残っているなら...
             scope: 'FAMILY',
             ownerMemberId: null,
             schedule: {
@@ -130,6 +138,10 @@ describe('useTaskDefinition', () => {
         id: 'new-task-def',
         name: '洗濯',
         description: '洗濯をする',
+        scheduledTimeRange: {
+          startTime: '2024-01-01T08:00:00Z',
+          endTime: '2024-01-01T08:30:00Z',
+        },
         estimatedMinutes: 30,
         scope: 'FAMILY',
         ownerMemberId: null,
@@ -149,7 +161,11 @@ describe('useTaskDefinition', () => {
         success = await result.current.addTaskDefinition({
           name: '洗濯',
           description: '洗濯をする',
-          estimatedMinutes: 30,
+          scheduledTimeRange: {
+            startTime: '2024-01-01T08:00:00Z',
+            endTime: '2024-01-01T08:30:00Z',
+          },
+          estimatedMinutes: 30, // 必要なら残す
           scope: 'FAMILY',
           schedule: {
             type: 'Recurring',
@@ -175,6 +191,10 @@ describe('useTaskDefinition', () => {
       await act(async () => {
         success = await result.current.addTaskDefinition({
           name: 'テスト',
+          scheduledTimeRange: {
+            startTime: '2024-01-01T10:00:00Z',
+            endTime: '2024-01-01T10:10:00Z',
+          },
           estimatedMinutes: 10,
           scope: 'FAMILY',
           schedule: {
@@ -195,6 +215,10 @@ describe('useTaskDefinition', () => {
         id: 'task-def-1',
         name: 'お風呂掃除（更新）',
         description: '浴槽と床を洗う',
+        scheduledTimeRange: {
+          startTime: '2024-01-01T20:00:00Z',
+          endTime: '2024-01-01T20:20:00Z',
+        },
         estimatedMinutes: 20,
         scope: 'FAMILY',
         ownerMemberId: null,
@@ -214,6 +238,10 @@ describe('useTaskDefinition', () => {
         success = await result.current.editTaskDefinition('task-def-1', {
           name: 'お風呂掃除（更新）',
           description: '浴槽と床を洗う',
+          scheduledTimeRange: {
+            startTime: '2024-01-01T20:00:00Z',
+            endTime: '2024-01-01T20:20:00Z',
+          },
           estimatedMinutes: 20,
         })
       })
@@ -288,4 +316,3 @@ describe('useTaskDefinition', () => {
     })
   })
 })
-

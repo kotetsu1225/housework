@@ -71,6 +71,16 @@ export type TaskScope = 'FAMILY' | 'PERSONAL'
 export type ScheduleType = 'RECURRING' | 'ONE_TIME'
 export type PatternType = 'DAILY' | 'WEEKLY' | 'MONTHLY'
 
+/**
+ * 予定時間帯
+ */
+export interface ScheduledTimeRange {
+  /** 予定開始時刻（ISO8601形式） */
+  startTime: string
+  /** 予定終了時刻（ISO8601形式） */
+  endTime: string
+}
+
 export interface RecurrencePattern {
   patternType: PatternType
   dailySkipWeekends?: boolean
@@ -84,7 +94,7 @@ export interface TaskDefinition {
   id: string
   name: string
   description?: string
-  estimatedMinutes: number
+  scheduledTimeRange: ScheduledTimeRange
   scope: TaskScope
   ownerMemberId?: string
   scheduleType: ScheduleType
@@ -105,7 +115,8 @@ export type ExecutionStatus = 'NOT_STARTED' | 'IN_PROGRESS' | 'COMPLETED' | 'CAN
 export interface TaskSnapshot {
   name: string
   description?: string
-  estimatedMinutes: number
+  scheduledStartTime: string
+  scheduledEndTime: string
   definitionVersion: number
   createdAt: string
 }

@@ -247,13 +247,24 @@ export interface MonthlyPatternDto {
 }
 
 /**
+ * 予定時間帯DTO
+ * @see backend/src/main/kotlin/com/task/presentation/TaskDefinitions.kt
+ */
+export interface ScheduledTimeRangeDto {
+  /** 予定開始時刻（ISO8601形式: 2025-01-01T09:00:00Z） */
+  startTime: string
+  /** 予定終了時刻（ISO8601形式: 2025-01-01T10:00:00Z） */
+  endTime: string
+}
+
+/**
  * タスク定義作成リクエスト
  * POST /api/task-definitions/create
  */
 export interface CreateTaskDefinitionRequest {
   name: string
   description: string
-  estimatedMinutes: number
+  scheduledTimeRange: ScheduledTimeRangeDto
   scope: 'FAMILY' | 'PERSONAL'
   ownerMemberId?: string | null
   schedule: ScheduleDto
@@ -266,7 +277,7 @@ export interface CreateTaskDefinitionResponse {
   id: string
   name: string
   description: string
-  estimatedMinutes: number
+  scheduledTimeRange: ScheduledTimeRangeDto
   scope: string
   ownerMemberId?: string | null
   schedule: ScheduleDto
@@ -280,7 +291,7 @@ export interface CreateTaskDefinitionResponse {
 export interface UpdateTaskDefinitionRequest {
   name?: string | null
   description?: string | null
-  estimatedMinutes?: number | null
+  scheduledTimeRange?: ScheduledTimeRangeDto | null
   scope?: 'FAMILY' | 'PERSONAL' | null
   ownerMemberId?: string | null
   schedule?: ScheduleDto | null
@@ -293,7 +304,7 @@ export interface UpdateTaskDefinitionResponse {
   id: string
   name: string
   description: string
-  estimatedMinutes: number
+  scheduledTimeRange: ScheduledTimeRangeDto
   scope: string
   ownerMemberId?: string | null
   schedule: ScheduleDto
@@ -308,7 +319,7 @@ export interface DeleteTaskDefinitionResponse {
   id: string
   name: string
   description: string
-  estimatedMinutes: number
+  scheduledTimeRange: ScheduledTimeRangeDto
   scope: string
   ownerMemberId?: string | null
   schedule: ScheduleDto
@@ -329,7 +340,7 @@ export interface TaskDefinitionResponse {
   id: string
   name: string
   description: string
-  estimatedMinutes: number
+  scheduledTimeRange: ScheduledTimeRangeDto
   scope: string
   ownerMemberId?: string | null
   schedule: ScheduleDto
@@ -376,7 +387,8 @@ export interface TaskExecutionResponse {
 export interface TaskSnapshotResponse {
   name: string
   description: string | null
-  estimatedMinutes: number
+  scheduledStartTime: string
+  scheduledEndTime: string
   definitionVersion: number
   createdAt: string
 }

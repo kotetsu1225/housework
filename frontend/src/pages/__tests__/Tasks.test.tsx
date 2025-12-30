@@ -16,6 +16,7 @@ vi.mock('../../api', () => ({
   updateTaskDefinition: vi.fn(),
   deleteTaskDefinition: vi.fn(),
   getMembers: vi.fn(),
+  getStoredToken: vi.fn(),
   ApiError: class ApiError extends Error {
     constructor(message: string, public status: number) {
       super(message)
@@ -87,7 +88,7 @@ describe('Tasks', () => {
       renderTasksPage()
 
       await waitFor(() => {
-        expect(screen.getByText(/タスクが見つかりません/)).toBeInTheDocument()
+        expect(screen.getByText(/タスク設定が見つかりません/)).toBeInTheDocument()
       })
     })
 
@@ -98,7 +99,10 @@ describe('Tasks', () => {
             id: 'task-1',
             name: 'お風呂掃除',
             description: '浴槽を洗う',
-            estimatedMinutes: 15,
+            scheduledTimeRange: {
+              startTime: '2024-01-01T20:00:00Z',
+              endTime: '2024-01-01T20:15:00Z',
+            },
             scope: 'FAMILY',
             ownerMemberId: null,
             schedule: {

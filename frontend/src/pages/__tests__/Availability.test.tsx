@@ -16,6 +16,7 @@ vi.mock('../../api', () => ({
   createMemberAvailability: vi.fn(),
   updateMemberAvailability: vi.fn(),
   deleteMemberAvailabilitySlots: vi.fn(),
+  getStoredToken: vi.fn(),
   ApiError: class ApiError extends Error {
     constructor(message: string, public status: number) {
       super(message)

@@ -28,7 +28,8 @@ export const MOCK_TASK_EXECUTIONS: TaskExecution[] = [
     taskSnapshot: {
       name: 'お風呂掃除',
       description: '浴槽と床を洗う',
-      estimatedMinutes: 15,
+      scheduledStartTime: '2025-01-01T20:00:00Z',
+      scheduledEndTime: '2025-01-01T20:15:00Z',
       definitionVersion: 1,
       createdAt: new Date().toISOString(),
     },
@@ -47,7 +48,8 @@ export const MOCK_TASK_EXECUTIONS: TaskExecution[] = [
     taskSnapshot: {
       name: '洗濯物を干す',
       description: '洗濯機を回してからベランダに干す',
-      estimatedMinutes: 20,
+      scheduledStartTime: '2025-01-01T08:00:00Z',
+      scheduledEndTime: '2025-01-01T08:20:00Z',
       definitionVersion: 1,
       createdAt: new Date().toISOString(),
     },
@@ -63,7 +65,8 @@ export const MOCK_TASK_EXECUTIONS: TaskExecution[] = [
     taskSnapshot: {
       name: '夕食の準備',
       description: 'カレーを作る',
-      estimatedMinutes: 45,
+      scheduledStartTime: '2025-01-01T17:30:00Z',
+      scheduledEndTime: '2025-01-01T18:15:00Z',
       definitionVersion: 1,
       createdAt: '',
     },
@@ -79,7 +82,8 @@ export const MOCK_TASK_EXECUTIONS: TaskExecution[] = [
     taskSnapshot: {
       name: 'ゴミ出し',
       description: '燃えるゴミを出す',
-      estimatedMinutes: 5,
+      scheduledStartTime: '2025-01-01T07:45:00Z',
+      scheduledEndTime: '2025-01-01T07:50:00Z',
       definitionVersion: 1,
       createdAt: '',
     },
@@ -95,7 +99,8 @@ export const MOCK_TASK_EXECUTIONS: TaskExecution[] = [
     taskSnapshot: {
       name: '買い物',
       description: '牛乳と卵を買う',
-      estimatedMinutes: 30,
+      scheduledStartTime: '2025-01-01T16:00:00Z',
+      scheduledEndTime: '2025-01-01T17:00:00Z',
       definitionVersion: 1,
       createdAt: new Date().toISOString(),
     },
@@ -153,4 +158,3 @@ export function getMockTodayTaskSummary(): {
     cancelled: todayTasks.filter((t) => t.status === 'CANCELLED').length,
   }
 }
-

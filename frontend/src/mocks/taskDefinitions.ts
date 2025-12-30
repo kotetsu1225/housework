@@ -15,7 +15,10 @@ export const MOCK_TASK_DEFINITIONS: TaskDefinition[] = [
     id: '1',
     name: 'お風呂掃除',
     description: '浴槽と床を洗う。排水溝も忘れずに。',
-    estimatedMinutes: 15,
+    scheduledTimeRange: {
+      startTime: '2024-01-01T20:00:00Z',
+      endTime: '2024-01-01T20:15:00Z',
+    },
     scope: 'FAMILY',
     scheduleType: 'RECURRING',
     recurrence: {
@@ -32,7 +35,10 @@ export const MOCK_TASK_DEFINITIONS: TaskDefinition[] = [
     id: '2',
     name: '洗濯物を干す',
     description: '洗濯機を回してからベランダに干す',
-    estimatedMinutes: 20,
+    scheduledTimeRange: {
+      startTime: '2024-01-01T08:00:00Z',
+      endTime: '2024-01-01T08:20:00Z',
+    },
     scope: 'FAMILY',
     scheduleType: 'RECURRING',
     recurrence: {
@@ -49,7 +55,10 @@ export const MOCK_TASK_DEFINITIONS: TaskDefinition[] = [
     id: '3',
     name: '夕食の準備',
     description: 'メニューは冷蔵庫に貼ってある献立表を参照',
-    estimatedMinutes: 45,
+    scheduledTimeRange: {
+      startTime: '2024-01-01T17:30:00Z',
+      endTime: '2024-01-01T18:15:00Z',
+    },
     scope: 'FAMILY',
     scheduleType: 'RECURRING',
     recurrence: {
@@ -66,7 +75,10 @@ export const MOCK_TASK_DEFINITIONS: TaskDefinition[] = [
     id: '4',
     name: 'ゴミ出し',
     description: '月曜日と木曜日が燃えるゴミ、水曜日がプラスチック',
-    estimatedMinutes: 5,
+    scheduledTimeRange: {
+      startTime: '2024-01-01T07:45:00Z',
+      endTime: '2024-01-01T07:50:00Z',
+    },
     scope: 'FAMILY',
     scheduleType: 'RECURRING',
     recurrence: {
@@ -83,7 +95,10 @@ export const MOCK_TASK_DEFINITIONS: TaskDefinition[] = [
     id: '5',
     name: '宿題',
     description: '学校の宿題をやる',
-    estimatedMinutes: 60,
+    scheduledTimeRange: {
+      startTime: '2024-01-01T16:00:00Z',
+      endTime: '2024-01-01T17:00:00Z',
+    },
     scope: 'PERSONAL',
     ownerMemberId: '2',
     scheduleType: 'RECURRING',
@@ -105,4 +120,3 @@ export const MOCK_TASK_DEFINITIONS: TaskDefinition[] = [
 export function getMockTaskDefinitionById(id: string): TaskDefinition | undefined {
   return MOCK_TASK_DEFINITIONS.find((td) => td.id === id)
 }
-

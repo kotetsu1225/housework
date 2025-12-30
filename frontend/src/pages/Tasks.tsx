@@ -10,6 +10,7 @@ import { Modal } from '../components/ui/Modal'
 import { Alert } from '../components/ui/Alert'
 import { useTaskDefinition, useMember } from '../hooks'
 import { useAuth } from '../contexts/AuthContext'
+import { timeToISOString, formatTimeFromISO, calculateDurationMinutes } from '../utils'
 import type { TaskDefinition, TaskScope, PatternType } from '../types'
 import type { CreateTaskDefinitionRequest, ScheduleDto, PatternDto } from '../types/api'
 
@@ -79,7 +80,9 @@ function TaskCard({ task, onEdit, onDelete, canEdit }: TaskCardProps) {
           <div className="flex items-center gap-4 text-sm text-white/40">
             <div className="flex items-center gap-1">
               <Clock className="w-3.5 h-3.5" />
-              <span>{task.estimatedMinutes}分</span>
+              <span>
+                {formatTimeFromISO(task.scheduledTimeRange.startTime)} - {formatTimeFromISO(task.scheduledTimeRange.endTime)}
+              </span>
             </div>
             {task.recurrence && (
               <div className="flex items-center gap-1">
@@ -188,7 +191,8 @@ export function Tasks() {
   const getDefaultFormState = () => ({
     name: '',
     description: '',
-    estimatedMinutes: 15,
+    scheduledStartTime: '09:00',
+    scheduledEndTime: '10:00',
     scope: 'FAMILY' as TaskScope,
     ownerMemberId: '',
     scheduleType: 'RECURRING' as 'RECURRING' | 'ONE_TIME',
@@ -325,7 +329,10 @@ export function Tasks() {
     const request: CreateTaskDefinitionRequest = {
       name: newTask.name,
       description: newTask.description,
-      estimatedMinutes: newTask.estimatedMinutes,
+      scheduledTimeRange: {
+        startTime: timeToISOString(newTask.scheduledStartTime),
+        endTime: timeToISOString(newTask.scheduledEndTime),
+      },
       scope: newTask.scope,
       ownerMemberId: newTask.scope === 'PERSONAL' ? (user?.id ?? null) : null,
       schedule,
@@ -382,7 +389,8 @@ export function Tasks() {
     setEditTask({
       name: task.name,
       description: task.description ?? '',
-      estimatedMinutes: task.estimatedMinutes,
+      scheduledStartTime: formatTimeFromISO(task.scheduledTimeRange.startTime),
+      scheduledEndTime: formatTimeFromISO(task.scheduledTimeRange.endTime),
       scope: task.scope,
       ownerMemberId: task.ownerMemberId ?? '',
       scheduleType: task.scheduleType,
@@ -436,7 +444,10 @@ export function Tasks() {
     const request = {
       name: editTask.name,
       description: editTask.description || null,
-      estimatedMinutes: editTask.estimatedMinutes,
+      scheduledTimeRange: {
+        startTime: timeToISOString(editTask.scheduledStartTime),
+        endTime: timeToISOString(editTask.scheduledEndTime),
+      },
       scope: editTask.scope,
       ownerMemberId: editTask.scope === 'PERSONAL' ? (user?.id ?? null) : null,
       schedule,
@@ -614,16 +625,34 @@ export function Tasks() {
               onChange={(e) => setNewTask({ ...newTask, description: e.target.value })}
             />
 
-            <Input
-              label="見積時間（分）"
-              type="number"
-              min={1}
-              max={1440}
-              value={newTask.estimatedMinutes}
-              onChange={(e) =>
-                setNewTask({ ...newTask, estimatedMinutes: Number(e.target.value) })
-              }
-            />
+            <div className="grid grid-cols-2 gap-4">
+              <label className="block">
+                <span className="text-sm text-white/70 mb-1 block">開始時刻</span>
+                <Input
+                  type="time"
+                  value={newTask.scheduledStartTime}
+                  onChange={(e) =>
+                    setNewTask({ ...newTask, scheduledStartTime: e.target.value })
+                  }
+                  required
+                />
+              </label>
+              <label className="block">
+                <span className="text-sm text-white/70 mb-1 block">終了時刻</span>
+                <Input
+                  type="time"
+                  value={newTask.scheduledEndTime}
+                  onChange={(e) =>
+                    setNewTask({ ...newTask, scheduledEndTime: e.target.value })
+                  }
+                  required
+                />
+              </label>
+            </div>
+            {/* 所要時間の自動計算表示 */}
+            <p className="text-sm text-white/50 mt-1">
+              所要時間: {calculateDurationMinutes(newTask.scheduledStartTime, newTask.scheduledEndTime)}分
+            </p>
 
             {/* スコープ選択 */}
             <div>
@@ -855,16 +884,34 @@ export function Tasks() {
               onChange={(e) => setEditTask({ ...editTask, description: e.target.value })}
             />
 
-            <Input
-              label="見積時間（分）"
-              type="number"
-              min={1}
-              max={1440}
-              value={editTask.estimatedMinutes}
-              onChange={(e) =>
-                setEditTask({ ...editTask, estimatedMinutes: Number(e.target.value) })
-              }
-            />
+            <div className="grid grid-cols-2 gap-4">
+              <label className="block">
+                <span className="text-sm text-white/70 mb-1 block">開始時刻</span>
+                <Input
+                  type="time"
+                  value={editTask.scheduledStartTime}
+                  onChange={(e) =>
+                    setEditTask({ ...editTask, scheduledStartTime: e.target.value })
+                  }
+                  required
+                />
+              </label>
+              <label className="block">
+                <span className="text-sm text-white/70 mb-1 block">終了時刻</span>
+                <Input
+                  type="time"
+                  value={editTask.scheduledEndTime}
+                  onChange={(e) =>
+                    setEditTask({ ...editTask, scheduledEndTime: e.target.value })
+                  }
+                  required
+                />
+              </label>
+            </div>
+            {/* 所要時間の自動計算表示 */}
+            <p className="text-sm text-white/50 mt-1">
+              所要時間: {calculateDurationMinutes(editTask.scheduledStartTime, editTask.scheduledEndTime)}分
+            </p>
 
             {/* スコープ選択 */}
             <div>

@@ -15,7 +15,8 @@ export interface TodayTaskDto {
   taskDefinitionId: string
   taskName: string
   taskDescription: string | null
-  estimatedMinutes: number
+  scheduledStartTime: string // HH:mm format
+  scheduledEndTime: string // HH:mm format
   scope: 'FAMILY' | 'PERSONAL'
   status: 'NOT_STARTED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED'
   assigneeMemberId: string | null

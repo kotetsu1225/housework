@@ -2,22 +2,40 @@
  * AuthContextのテスト
  */
 
-import { describe, it, expect, beforeEach } from 'vitest'
-import { render, screen, fireEvent, act, waitFor } from '@testing-library/react'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { AuthProvider, useAuth } from '../AuthContext'
+import * as api from '../../api'
+
+// APIをモック
+vi.mock('../../api', () => ({
+  loginApi: vi.fn(),
+  registerApi: vi.fn(),
+  getMember: vi.fn(),
+  getStoredToken: vi.fn(),
+  setStoredToken: vi.fn(),
+  removeStoredToken: vi.fn(),
+  ApiError: class ApiError extends Error {
+    constructor(message: string, public status: number) {
+      super(message)
+    }
+  },
+}))
 
 // テスト用コンポーネント
 function TestComponent() {
-  const { user, isAuthenticated, login, logout, register, getUsers } = useAuth()
+  const { user, isAuthenticated, login, logout, register, error } = useAuth()
 
   return (
     <div>
       <div data-testid="is-authenticated">{isAuthenticated ? 'true' : 'false'}</div>
       <div data-testid="user-name">{user?.name || 'none'}</div>
       <div data-testid="user-role">{user?.role || 'none'}</div>
-      <div data-testid="users-count">{getUsers().length}</div>
-      <button onClick={() => register('テスト太郎', 'FATHER')}>登録</button>
-      <button onClick={() => login('テスト太郎')}>ログイン</button>
+      <div data-testid="error">{error || 'none'}</div>
+      <button onClick={() => register('新規ユーザー', 'new@example.com', 'FATHER', 'password')}>
+        登録
+      </button>
+      <button onClick={() => login('既存ユーザー', 'password')}>ログイン</button>
       <button onClick={logout}>ログアウト</button>
     </div>
   )
@@ -29,31 +47,57 @@ function TestWithoutProvider() {
   return <div>テスト</div>
 }
 
+// JWTペイロードのモック作成ヘルパー
+const createMockToken = (sub: string, role: string, expSeconds = 3600) => {
+  const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }))
+  const payload = btoa(
+    JSON.stringify({
+      sub,
+      name: 'Test User',
+      role,
+      exp: Math.floor(Date.now() / 1000) + expSeconds,
+    })
+  )
+  return `${header}.${payload}.signature`
+}
+
 describe('AuthContext', () => {
   beforeEach(() => {
     localStorage.clear()
+    vi.clearAllMocks()
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
   })
 
   describe('初期状態', () => {
-    it('未認証状態で開始する', () => {
+    it('未認証状態で開始する（トークンなし）', async () => {
+      vi.mocked(api.getStoredToken).mockReturnValue(null)
+
       render(
         <AuthProvider>
           <TestComponent />
         </AuthProvider>
       )
-      expect(screen.getByTestId('is-authenticated')).toHaveTextContent('false')
-      expect(screen.getByTestId('user-name')).toHaveTextContent('none')
+
+      await waitFor(() => {
+        expect(screen.getByTestId('is-authenticated')).toHaveTextContent('false')
+        expect(screen.getByTestId('user-name')).toHaveTextContent('none')
+      })
     })
 
-    it('localStorageに保存されたユーザーがあれば復元される', async () => {
-      const savedUser = {
-        id: 'saved-user-1',
+    it('有効なトークンがあれば復元される', async () => {
+      const token = createMockToken('user-1', 'MOTHER')
+      vi.mocked(api.getStoredToken).mockReturnValue(token)
+      vi.mocked(api.getMember).mockResolvedValue({
+        id: 'user-1',
         name: '保存済みユーザー',
-        role: 'MOTHER',
+        email: 'saved@example.com',
+        familyRole: 'MOTHER',
         createdAt: new Date().toISOString(),
-      }
-      localStorage.setItem('housework_currentUser', JSON.stringify(savedUser))
-      localStorage.setItem('housework_users', JSON.stringify([savedUser]))
+        updatedAt: new Date().toISOString(),
+      })
 
       render(
         <AuthProvider>
@@ -64,52 +108,59 @@ describe('AuthContext', () => {
       await waitFor(() => {
         expect(screen.getByTestId('is-authenticated')).toHaveTextContent('true')
         expect(screen.getByTestId('user-name')).toHaveTextContent('保存済みユーザー')
+        expect(screen.getByTestId('user-role')).toHaveTextContent('MOTHER')
+      })
+    })
+
+    it('トークンが無効ならセッションがクリアされる', async () => {
+      // 期限切れトークン
+      const token = createMockToken('user-1', 'MOTHER', -3600)
+      vi.mocked(api.getStoredToken).mockReturnValue(token)
+
+      render(
+        <AuthProvider>
+          <TestComponent />
+        </AuthProvider>
+      )
+
+      await waitFor(() => {
+        expect(screen.getByTestId('is-authenticated')).toHaveTextContent('false')
+        expect(api.removeStoredToken).toHaveBeenCalled()
       })
     })
   })
 
   describe('register', () => {
     it('新規ユーザーを登録できる', async () => {
+      vi.mocked(api.getStoredToken).mockReturnValue(null)
+      const token = createMockToken('new-user', 'FATHER')
+      
+      vi.mocked(api.registerApi).mockResolvedValue({
+        token,
+        memberId: 'new-user',
+        memberName: '新規ユーザー',
+        role: 'FATHER',
+      })
+
       render(
         <AuthProvider>
           <TestComponent />
         </AuthProvider>
       )
 
-      await act(async () => {
-        fireEvent.click(screen.getByText('登録'))
-      })
+      fireEvent.click(screen.getByText('登録'))
 
-      expect(screen.getByTestId('is-authenticated')).toHaveTextContent('true')
-      expect(screen.getByTestId('user-name')).toHaveTextContent('テスト太郎')
-      expect(screen.getByTestId('user-role')).toHaveTextContent('FATHER')
+      await waitFor(() => {
+        expect(screen.getByTestId('is-authenticated')).toHaveTextContent('true')
+        expect(screen.getByTestId('user-name')).toHaveTextContent('新規ユーザー')
+        expect(screen.getByTestId('user-role')).toHaveTextContent('FATHER')
+        expect(api.setStoredToken).toHaveBeenCalledWith(token)
+      })
     })
 
-    it('登録後にlocalStorageに保存される', async () => {
-      render(
-        <AuthProvider>
-          <TestComponent />
-        </AuthProvider>
-      )
-
-      await act(async () => {
-        fireEvent.click(screen.getByText('登録'))
-      })
-
-      const users = JSON.parse(localStorage.getItem('housework_users') || '[]')
-      expect(users).toHaveLength(1)
-      expect(users[0].name).toBe('テスト太郎')
-    })
-
-    it('複数ユーザーを登録できる', async () => {
-      // 最初のユーザーを手動で追加
-      const firstUser = {
-        id: 'first-user',
-        name: '最初のユーザー',
-        role: 'BROTHER',
-        createdAt: new Date().toISOString(),
-      }
-      localStorage.setItem('housework_users', JSON.stringify([firstUser]))
+    it('登録に失敗した場合はエラーが表示される', async () => {
+      vi.mocked(api.getStoredToken).mockReturnValue(null)
+      vi.mocked(api.registerApi).mockRejectedValue(new Error('登録エラー'))
 
       render(
         <AuthProvider>
@@ -117,23 +168,35 @@ describe('AuthContext', () => {
         </AuthProvider>
       )
 
-      await act(async () => {
-        fireEvent.click(screen.getByText('登録'))
-      })
+      fireEvent.click(screen.getByText('登録'))
 
-      expect(screen.getByTestId('users-count')).toHaveTextContent('2')
+      await waitFor(() => {
+        expect(screen.getByTestId('is-authenticated')).toHaveTextContent('false')
+        expect(screen.getByTestId('error')).toHaveTextContent('登録エラー')
+      })
     })
   })
 
   describe('login', () => {
     it('既存ユーザーでログインできる', async () => {
-      const existingUser = {
-        id: 'existing-user',
-        name: 'テスト太郎',
+      vi.mocked(api.getStoredToken).mockReturnValue(null)
+      const token = createMockToken('existing-user', 'FATHER')
+      
+      vi.mocked(api.loginApi).mockResolvedValue({
+        token,
+        memberId: 'existing-user',
+        memberName: '既存ユーザー',
         role: 'FATHER',
+      })
+      
+      vi.mocked(api.getMember).mockResolvedValue({
+        id: 'existing-user',
+        name: '既存ユーザー',
+        email: 'existing@example.com',
+        familyRole: 'FATHER',
         createdAt: new Date().toISOString(),
-      }
-      localStorage.setItem('housework_users', JSON.stringify([existingUser]))
+        updatedAt: new Date().toISOString(),
+      })
 
       render(
         <AuthProvider>
@@ -141,39 +204,46 @@ describe('AuthContext', () => {
         </AuthProvider>
       )
 
-      await act(async () => {
-        fireEvent.click(screen.getByText('ログイン'))
-      })
+      fireEvent.click(screen.getByText('ログイン'))
 
-      expect(screen.getByTestId('is-authenticated')).toHaveTextContent('true')
-      expect(screen.getByTestId('user-name')).toHaveTextContent('テスト太郎')
+      await waitFor(() => {
+        expect(screen.getByTestId('is-authenticated')).toHaveTextContent('true')
+        expect(screen.getByTestId('user-name')).toHaveTextContent('既存ユーザー')
+        expect(api.setStoredToken).toHaveBeenCalledWith(token)
+      })
     })
 
-    it('存在しないユーザーではログインできない', async () => {
+    it('ログイン失敗時にエラーが表示される', async () => {
+      vi.mocked(api.getStoredToken).mockReturnValue(null)
+      vi.mocked(api.loginApi).mockRejectedValue(new api.ApiError('認証失敗', 401))
+
       render(
         <AuthProvider>
           <TestComponent />
         </AuthProvider>
       )
 
-      await act(async () => {
-        fireEvent.click(screen.getByText('ログイン'))
-      })
+      fireEvent.click(screen.getByText('ログイン'))
 
-      expect(screen.getByTestId('is-authenticated')).toHaveTextContent('false')
+      await waitFor(() => {
+        expect(screen.getByTestId('is-authenticated')).toHaveTextContent('false')
+        expect(screen.getByTestId('error')).toHaveTextContent('名前またはパスワードが正しくありません')
+      })
     })
   })
 
   describe('logout', () => {
     it('ログアウトできる', async () => {
-      const user = {
-        id: 'test-user',
-        name: 'テスト太郎',
-        role: 'FATHER',
+      const token = createMockToken('user-1', 'MOTHER')
+      vi.mocked(api.getStoredToken).mockReturnValue(token)
+      vi.mocked(api.getMember).mockResolvedValue({
+        id: 'user-1',
+        name: 'ユーザー',
+        email: 'user@example.com',
+        familyRole: 'MOTHER',
         createdAt: new Date().toISOString(),
-      }
-      localStorage.setItem('housework_users', JSON.stringify([user]))
-      localStorage.setItem('housework_currentUser', JSON.stringify(user))
+        updatedAt: new Date().toISOString(),
+      })
 
       render(
         <AuthProvider>
@@ -185,69 +255,13 @@ describe('AuthContext', () => {
         expect(screen.getByTestId('is-authenticated')).toHaveTextContent('true')
       })
 
-      await act(async () => {
-        fireEvent.click(screen.getByText('ログアウト'))
-      })
-
-      expect(screen.getByTestId('is-authenticated')).toHaveTextContent('false')
-      expect(screen.getByTestId('user-name')).toHaveTextContent('none')
-    })
-
-    it('ログアウト後にlocalStorageからcurrentUserが削除される', async () => {
-      const user = {
-        id: 'test-user',
-        name: 'テスト太郎',
-        role: 'FATHER',
-        createdAt: new Date().toISOString(),
-      }
-      localStorage.setItem('housework_users', JSON.stringify([user]))
-      localStorage.setItem('housework_currentUser', JSON.stringify(user))
-
-      render(
-        <AuthProvider>
-          <TestComponent />
-        </AuthProvider>
-      )
+      fireEvent.click(screen.getByText('ログアウト'))
 
       await waitFor(() => {
-        expect(screen.getByTestId('is-authenticated')).toHaveTextContent('true')
+        expect(screen.getByTestId('is-authenticated')).toHaveTextContent('false')
+        expect(screen.getByTestId('user-name')).toHaveTextContent('none')
+        expect(api.removeStoredToken).toHaveBeenCalled()
       })
-
-      await act(async () => {
-        fireEvent.click(screen.getByText('ログアウト'))
-      })
-
-      expect(localStorage.getItem('housework_currentUser')).toBeNull()
-      // ユーザー一覧は削除されない
-      expect(localStorage.getItem('housework_users')).not.toBeNull()
-    })
-  })
-
-  describe('getUsers', () => {
-    it('ユーザー一覧を取得できる', () => {
-      const users = [
-        { id: '1', name: 'ユーザー1', role: 'FATHER', createdAt: new Date().toISOString() },
-        { id: '2', name: 'ユーザー2', role: 'MOTHER', createdAt: new Date().toISOString() },
-      ]
-      localStorage.setItem('housework_users', JSON.stringify(users))
-
-      render(
-        <AuthProvider>
-          <TestComponent />
-        </AuthProvider>
-      )
-
-      expect(screen.getByTestId('users-count')).toHaveTextContent('2')
-    })
-
-    it('ユーザーがいない場合は空配列を返す', () => {
-      render(
-        <AuthProvider>
-          <TestComponent />
-        </AuthProvider>
-      )
-
-      expect(screen.getByTestId('users-count')).toHaveTextContent('0')
     })
   })
 
@@ -256,19 +270,6 @@ describe('AuthContext', () => {
       expect(() => render(<TestWithoutProvider />)).toThrow(
         'useAuth must be used within an AuthProvider'
       )
-    })
-
-    it('不正なJSONがlocalStorageにあっても安全に処理される', () => {
-      localStorage.setItem('housework_currentUser', 'invalid-json')
-
-      render(
-        <AuthProvider>
-          <TestComponent />
-        </AuthProvider>
-      )
-
-      // エラーなく未認証状態になる
-      expect(screen.getByTestId('is-authenticated')).toHaveTextContent('false')
     })
   })
 })

@@ -34,7 +34,8 @@ const mockTaskExecutions: TaskExecution[] = [
     taskSnapshot: {
       name: 'お風呂掃除',
       description: '浴槽を洗う',
-      estimatedMinutes: 15,
+      scheduledStartTime: '2024-01-15T20:00:00Z',
+      scheduledEndTime: '2024-01-15T20:15:00Z',
       definitionVersion: 1,
       createdAt: '2024-01-15T00:00:00Z',
     },
@@ -52,7 +53,8 @@ const mockApiResponse = {
   taskSnapshot: {
     name: 'お風呂掃除',
     description: '浴槽を洗う',
-    estimatedMinutes: 15,
+    scheduledStartTime: '2024-01-15T20:00:00Z',
+    scheduledEndTime: '2024-01-15T20:15:00Z',
     definitionVersion: 1,
     createdAt: '2024-01-15T00:00:00Z',
   },
@@ -87,8 +89,7 @@ describe('useTaskExecution', () => {
       vi.mocked(api.getTaskExecutions).mockResolvedValueOnce({
         taskExecutions: [mockApiResponse],
         total: 1,
-        limit: 20,
-        offset: 0,
+        hasMore: false,
       })
 
       const { result } = renderHook(() => useTaskExecution())
@@ -231,13 +232,9 @@ describe('useTaskExecution', () => {
   describe('generateTasks', () => {
     it('タスクを一括生成できる', async () => {
       vi.mocked(api.generateTaskExecutions).mockResolvedValueOnce({
-        generatedExecutions: [
-          {
-            ...mockApiResponse,
-            id: 'exec-new',
-          },
-        ],
+        taskExecutionIds: ['exec-new'],
         generatedCount: 1,
+        targetDate: '2024-01-15'
       })
 
       const { result } = renderHook(() => useTaskExecution())
@@ -248,29 +245,7 @@ describe('useTaskExecution', () => {
       })
 
       expect(success!).toBe(true)
-      expect(result.current.taskExecutions).toHaveLength(1)
-    })
-
-    it('既存タスクと重複しないように追加される', async () => {
-      vi.mocked(api.generateTaskExecutions).mockResolvedValueOnce({
-        generatedExecutions: [
-          mockApiResponse, // 既存と同じID
-          {
-            ...mockApiResponse,
-            id: 'exec-new', // 新しいID
-          },
-        ],
-        generatedCount: 2,
-      })
-
-      const { result } = renderHook(() => useTaskExecution(mockTaskExecutions))
-
-      await act(async () => {
-        await result.current.generateTasks('2024-01-15')
-      })
-
-      // 重複を除いて2件（既存1 + 新規1）
-      expect(result.current.taskExecutions).toHaveLength(2)
+      // generateTasks does not update taskExecutions list
     })
   })
 
@@ -323,4 +298,3 @@ describe('useTaskExecution', () => {
     })
   })
 })
-

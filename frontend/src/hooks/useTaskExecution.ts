@@ -116,7 +116,8 @@ function responseToTaskExecution(response: TaskExecutionResponse): TaskExecution
       ? {
           name: response.taskSnapshot.name,
           description: response.taskSnapshot.description ?? undefined,
-          estimatedMinutes: response.taskSnapshot.estimatedMinutes,
+          scheduledStartTime: response.taskSnapshot.scheduledStartTime,
+          scheduledEndTime: response.taskSnapshot.scheduledEndTime,
           definitionVersion: response.taskSnapshot.definitionVersion,
           createdAt: response.taskSnapshot.createdAt,
         }
@@ -125,7 +126,8 @@ function responseToTaskExecution(response: TaskExecutionResponse): TaskExecution
           // フロントエンドの型では必須なのでプレースホルダーを設定
           // 実際のUI表示では、NOT_STARTED状態では別の表示を行う
           name: '',
-          estimatedMinutes: 0,
+          scheduledStartTime: '',
+          scheduledEndTime: '',
           definitionVersion: 0,
           createdAt: '',
         },

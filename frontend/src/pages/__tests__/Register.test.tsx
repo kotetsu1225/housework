@@ -2,11 +2,38 @@
  * Registerページのテスト
  */
 
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'
 import { AuthProvider } from '../../contexts/AuthContext'
 import { Register } from '../Register'
+import * as api from '../../api'
+
+// APIをモック
+vi.mock('../../api', () => ({
+  registerApi: vi.fn(),
+  getStoredToken: vi.fn(),
+  setStoredToken: vi.fn(),
+  ApiError: class ApiError extends Error {
+    constructor(message: string, public status: number) {
+      super(message)
+    }
+  },
+}))
+
+// JWTペイロードのモック作成ヘルパー
+const createMockToken = (sub: string, role: string) => {
+  const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }))
+  const payload = btoa(
+    JSON.stringify({
+      sub,
+      name: 'Test User',
+      role,
+      exp: Math.floor(Date.now() / 1000) + 3600,
+    })
+  )
+  return `${header}.${payload}.signature`
+}
 
 const renderRegisterPage = (route = '/register') => {
   return render(
@@ -25,6 +52,8 @@ const renderRegisterPage = (route = '/register') => {
 describe('Register', () => {
   beforeEach(() => {
     localStorage.clear()
+    vi.clearAllMocks()
+    vi.mocked(api.getStoredToken).mockReturnValue(null)
   })
 
   describe('レンダリング', () => {
@@ -68,48 +97,65 @@ describe('Register', () => {
   })
 
   describe('バリデーション', () => {
-    it('名前が空の場合エラーが表示される', async () => {
+    it('名前が空の場合ボタンが無効化される', async () => {
       renderRegisterPage()
-      fireEvent.click(screen.getByRole('button', { name: '登録する' }))
+      fireEvent.change(screen.getByLabelText('メールアドレス'), { target: { value: 'test@example.com' } })
+      fireEvent.change(screen.getByLabelText('パスワード'), { target: { value: 'password' } })
+      fireEvent.change(screen.getByLabelText('パスワード（確認）'), { target: { value: 'password' } })
       
-      await waitFor(() => {
-        expect(screen.getByText('名前を入力してください')).toBeInTheDocument()
-      })
+      const button = screen.getByRole('button', { name: '登録する' })
+      expect(button).toBeDisabled()
     })
 
-    it('空白のみの名前でエラーが表示される', async () => {
+    it('パスワードが一致しない場合ボタンが無効化される', async () => {
       renderRegisterPage()
-      fireEvent.change(screen.getByLabelText('名前'), { target: { value: '   ' } })
-      fireEvent.click(screen.getByRole('button', { name: '登録する' }))
+      fireEvent.change(screen.getByLabelText('名前'), { target: { value: 'test' } })
+      fireEvent.change(screen.getByLabelText('メールアドレス'), { target: { value: 'test@example.com' } })
+      fireEvent.change(screen.getByLabelText('パスワード'), { target: { value: 'password' } })
+      fireEvent.change(screen.getByLabelText('パスワード（確認）'), { target: { value: 'drowssap' } })
       
-      await waitFor(() => {
-        expect(screen.getByText('名前を入力してください')).toBeInTheDocument()
-      })
+      const button = screen.getByRole('button', { name: '登録する' })
+      expect(button).toBeDisabled()
     })
   })
 
   describe('登録処理', () => {
     it('登録成功するとホームに遷移する', async () => {
+      const token = createMockToken('new-user', 'FATHER')
+      vi.mocked(api.registerApi).mockResolvedValue({
+        token,
+        memberId: 'new-user',
+        memberName: '新規ユーザー',
+        role: 'FATHER'
+      })
+
       renderRegisterPage()
       fireEvent.change(screen.getByLabelText('名前'), { target: { value: '新規ユーザー' } })
+      fireEvent.change(screen.getByLabelText('メールアドレス'), { target: { value: 'new@example.com' } })
+      fireEvent.change(screen.getByLabelText('パスワード'), { target: { value: 'password' } })
+      fireEvent.change(screen.getByLabelText('パスワード（確認）'), { target: { value: 'password' } })
+      
       fireEvent.click(screen.getByRole('button', { name: '登録する' }))
       
       await waitFor(() => {
         expect(screen.getByText('ホームページ')).toBeInTheDocument()
       })
+      expect(api.setStoredToken).toHaveBeenCalledWith(token)
     })
 
-    it('登録後にlocalStorageにユーザーが保存される', async () => {
+    it('登録失敗時にエラーが表示される', async () => {
+      vi.mocked(api.registerApi).mockRejectedValue(new Error('登録エラー'))
+
       renderRegisterPage()
       fireEvent.change(screen.getByLabelText('名前'), { target: { value: '新規ユーザー' } })
-      fireEvent.click(screen.getByRole('button', { name: /母/ }))
+      fireEvent.change(screen.getByLabelText('メールアドレス'), { target: { value: 'new@example.com' } })
+      fireEvent.change(screen.getByLabelText('パスワード'), { target: { value: 'password' } })
+      fireEvent.change(screen.getByLabelText('パスワード（確認）'), { target: { value: 'password' } })
+      
       fireEvent.click(screen.getByRole('button', { name: '登録する' }))
       
       await waitFor(() => {
-        const users = JSON.parse(localStorage.getItem('housework_users') || '[]')
-        expect(users).toHaveLength(1)
-        expect(users[0].name).toBe('新規ユーザー')
-        expect(users[0].role).toBe('MOTHER')
+        expect(screen.getByText('登録エラー')).toBeInTheDocument()
       })
     })
   })

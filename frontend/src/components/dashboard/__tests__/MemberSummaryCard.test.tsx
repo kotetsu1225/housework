@@ -52,7 +52,7 @@ describe('MemberSummaryCard', () => {
   })
 
   describe('アバター', () => {
-    it('メンバー名のイニシャルがアバターに表示される', () => {
+    it('メンバーのアバター画像が表示される', () => {
       render(
         <MemberSummaryCard
           member={mockMember}
@@ -60,7 +60,7 @@ describe('MemberSummaryCard', () => {
           totalCount={0}
         />
       )
-      expect(screen.getByText('太')).toBeInTheDocument()
+      expect(screen.getByAltText('太郎')).toBeInTheDocument()
     })
 
     it('親役割のメンバーにparent variantが適用される', () => {
@@ -72,7 +72,7 @@ describe('MemberSummaryCard', () => {
           totalCount={0}
         />
       )
-      const avatar = screen.getByText('太').closest('div')
+      const avatar = screen.getByAltText('太郎').closest('div')
       expect(avatar).toHaveClass('from-coral-400')
     })
 
@@ -84,7 +84,7 @@ describe('MemberSummaryCard', () => {
           totalCount={0}
         />
       )
-      const avatar = screen.getByText('太').closest('div')
+      const avatar = screen.getByAltText('太郎').closest('div')
       // 子役割のアバターはcoral以外の色
       expect(avatar?.className).not.toMatch(/from-coral/)
     })
@@ -97,7 +97,7 @@ describe('MemberSummaryCard', () => {
           totalCount={0}
         />
       )
-      const avatar = screen.getByText('太').closest('div')
+      const avatar = screen.getByAltText('太郎').closest('div')
       expect(avatar).toHaveClass('w-12', 'h-12')
     })
   })

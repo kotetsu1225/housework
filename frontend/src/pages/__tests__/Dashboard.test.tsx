@@ -13,6 +13,7 @@ import * as api from '../../api'
 vi.mock('../../api', () => ({
   getTaskExecutions: vi.fn(),
   getMembers: vi.fn(),
+  getStoredToken: vi.fn(),
   ApiError: class ApiError extends Error {
     constructor(message: string, public status: number) {
       super(message)

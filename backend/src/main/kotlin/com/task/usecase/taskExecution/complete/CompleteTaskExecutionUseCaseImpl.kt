@@ -4,6 +4,7 @@ import com.google.inject.Inject
 import com.google.inject.Singleton
 import com.task.domain.event.DomainEventDispatcher
 import com.task.domain.taskDefinition.TaskDefinitionRepository
+import com.task.domain.taskDefinition.TaskSchedule
 import com.task.domain.taskExecution.TaskExecution
 import com.task.domain.taskExecution.TaskExecutionRepository
 import com.task.infra.database.Database
@@ -46,6 +47,14 @@ class CompleteTaskExecutionUseCaseImpl @Inject constructor(
             taskExecutionRepository.update(completedExecution, session)
 
             domainEventDispatcher.dispatchAll(listOf(stateChange.event), session)
+
+            // 単発タスクは完了したらタスク定義も論理削除して「タスク設定(/tasks)」から見えないようにする
+            if (taskDefinition.schedule is TaskSchedule.OneTime) {
+                val deletedDefinition = taskDefinition.delete()
+                taskDefinitionRepository.update(deletedDefinition, session)
+                domainEventDispatcher.dispatchAll(deletedDefinition.domainEvents, session)
+                deletedDefinition.clearDomainEvents()
+            }
 
             CompleteTaskExecutionUseCase.Output(
                 id = completedExecution.id,

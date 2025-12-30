@@ -118,7 +118,7 @@ export interface TaskSnapshot {
   scheduledStartTime: string
   scheduledEndTime: string
   definitionVersion: number
-  createdAt: string
+  capturedAt: string
 }
 
 export interface TaskExecution {

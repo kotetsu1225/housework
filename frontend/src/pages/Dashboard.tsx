@@ -7,6 +7,7 @@
 
 import { useState, useCallback, useMemo } from 'react'
 import { RefreshCw, ListTodo, Users, Clock, CheckCircle2, Circle, PlayCircle, Calendar, ChevronDown } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 import { Header } from '../components/layout/Header'
 import { PageContainer } from '../components/layout/PageContainer'
 import { Button } from '../components/ui/Button'
@@ -177,6 +178,7 @@ export function Dashboard() {
   const today = new Date()
   const todayStr = toISODateString(today)
   const { user } = useAuth()
+  const navigate = useNavigate()
 
   // 選択中のタスク（モーダル表示用）
   const [selectedTask, setSelectedTask] = useState<TodayTaskDto | null>(null)
@@ -354,14 +356,24 @@ export function Dashboard() {
         {/* 完了済みタスク */}
         {completedTasks.length > 0 && (
           <section className="mt-8">
-            <button
-              onClick={() => setShowCompleted(!showCompleted)}
-              className="flex items-center gap-2 text-lg font-bold text-white/50 mb-4 hover:text-white/70 transition-colors"
-            >
-              <CheckCircle2 className="w-5 h-5 text-emerald-400/50" />
-              完了済み ({completedTasks.length})
-              <ChevronDown className={`w-4 h-4 transition-transform ${showCompleted ? 'rotate-180' : ''}`} />
-            </button>
+            <div className="flex items-center justify-between gap-3 mb-4">
+              <button
+                onClick={() => setShowCompleted(!showCompleted)}
+                className="flex items-center gap-2 text-lg font-bold text-white/50 hover:text-white/70 transition-colors"
+              >
+                <CheckCircle2 className="w-5 h-5 text-emerald-400/50" />
+                完了済み ({completedTasks.length})
+                <ChevronDown className={`w-4 h-4 transition-transform ${showCompleted ? 'rotate-180' : ''}`} />
+              </button>
+
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => navigate('/executions/completed')}
+              >
+                一覧を見る
+              </Button>
+            </div>
             
             {showCompleted && (
               <div className="space-y-3 opacity-60">

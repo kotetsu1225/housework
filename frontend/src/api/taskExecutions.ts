@@ -27,7 +27,12 @@ export interface GetTaskExecutionsOptions {
   scheduledDate?: string
   /** ステータスでフィルタ */
   status?: 'NOT_STARTED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED'
-  /** 担当者IDでフィルタ */
+  /** 担当者IDでフィルタ（バックエンド: assigneeMemberId） */
+  assigneeMemberId?: string
+  /**
+   * 互換用（非推奨）
+   * 以前の実装で memberId を使っていたため残している
+   */
   memberId?: string
   /** 取得件数（デフォルト: 20） */
   limit?: number
@@ -63,7 +68,8 @@ export async function getTaskExecutions(
 
   if (options.scheduledDate) params.append('scheduledDate', options.scheduledDate)
   if (options.status) params.append('status', options.status)
-  if (options.memberId) params.append('memberId', options.memberId)
+  const assignee = options.assigneeMemberId ?? options.memberId
+  if (assignee) params.append('assigneeMemberId', assignee)
   if (options.limit !== undefined) params.append('limit', String(options.limit))
   if (options.offset !== undefined) params.append('offset', String(options.offset))
 

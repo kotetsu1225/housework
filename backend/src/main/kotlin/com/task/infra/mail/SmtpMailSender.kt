@@ -20,14 +20,47 @@ class SmtpMailSender @Inject constructor(
     private val logger = LoggerFactory.getLogger(this::class.java)
 
     private val session: Session by lazy {
+        logger.info(
+            "SMTP settings: host={}, port={}, useSsl={}, useStartTls={}, startTlsRequired={}, sslTrust={}, connectionTimeoutMs={}, timeoutMs={}",
+            config.host,
+            config.port,
+            config.useSsl,
+            config.useStartTls,
+            config.startTlsRequired,
+            config.sslTrust ?: "",
+            config.connectionTimeoutMs,
+            config.timeoutMs,
+        )
+
         val props = Properties().apply {
             put("mail.smtp.auth", "true")
-            put("mail.smtp.starttls.enable", "true")
             put("mail.smtp.host", config.host)
             put("mail.smtp.port", config.port.toString())
             // タイムアウト設定
-            put("mail.smtp.connectiontimeout", "10000")
-            put("mail.smtp.timeout", "10000")
+            put("mail.smtp.connectiontimeout", config.connectionTimeoutMs.toString())
+            put("mail.smtp.timeout", config.timeoutMs.toString())
+
+            // TLS設定
+            if (config.useStartTls) {
+                put("mail.smtp.starttls.enable", "true")
+                if (config.startTlsRequired) {
+                    put("mail.smtp.starttls.required", "true")
+                }
+            } else {
+                put("mail.smtp.starttls.enable", "false")
+            }
+
+            if (config.useSsl) {
+                put("mail.smtp.ssl.enable", "true")
+                // 一部環境でのTLSネゴシエーション失敗を避ける
+                put("mail.smtp.ssl.protocols", "TLSv1.2")
+            } else {
+                put("mail.smtp.ssl.enable", "false")
+            }
+
+            config.sslTrust?.let { trust ->
+                put("mail.smtp.ssl.trust", trust)
+            }
         }
 
         Session.getInstance(props, object : Authenticator() {
@@ -62,6 +95,12 @@ class SmtpMailSender @Inject constructor(
 data class SmtpConfig(
     val host: String,
     val port: Int,
+    val useStartTls: Boolean,
+    val startTlsRequired: Boolean,
+    val useSsl: Boolean,
+    val sslTrust: String? = null,
+    val connectionTimeoutMs: Int = 10_000,
+    val timeoutMs: Int = 10_000,
     val username: String,
     val password: String,
     val fromAddress: String,

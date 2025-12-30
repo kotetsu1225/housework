@@ -119,7 +119,7 @@ function responseToTaskExecution(response: TaskExecutionResponse): TaskExecution
           scheduledStartTime: response.taskSnapshot.scheduledStartTime,
           scheduledEndTime: response.taskSnapshot.scheduledEndTime,
           definitionVersion: response.taskSnapshot.definitionVersion,
-          createdAt: response.taskSnapshot.createdAt,
+          capturedAt: response.taskSnapshot.capturedAt,
         }
       : {
           // NOT_STARTEDの場合はtaskSnapshotがnullだが、
@@ -129,7 +129,7 @@ function responseToTaskExecution(response: TaskExecutionResponse): TaskExecution
           scheduledStartTime: '',
           scheduledEndTime: '',
           definitionVersion: 0,
-          createdAt: '',
+          capturedAt: '',
         },
     startedAt: response.startedAt ?? undefined,
     completedAt: response.completedAt ?? undefined,

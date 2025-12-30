@@ -390,7 +390,7 @@ export interface TaskSnapshotResponse {
   scheduledStartTime: string
   scheduledEndTime: string
   definitionVersion: number
-  createdAt: string
+  capturedAt: string
 }
 
 /**

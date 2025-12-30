@@ -103,6 +103,12 @@ class AppModule : AbstractModule() {
                 val smtpConfig = SmtpConfig(
                     host = appConfig.getString("mail.smtp.host"),
                     port = appConfig.getInt("mail.smtp.port"),
+                    useStartTls = appConfig.getBoolean("mail.smtp.useStartTls"),
+                    startTlsRequired = appConfig.getBoolean("mail.smtp.startTlsRequired"),
+                    useSsl = appConfig.getBoolean("mail.smtp.useSsl"),
+                    sslTrust = appConfig.getString("mail.smtp.sslTrust").takeIf { it.isNotBlank() },
+                    connectionTimeoutMs = appConfig.getInt("mail.smtp.connectionTimeoutMs"),
+                    timeoutMs = appConfig.getInt("mail.smtp.timeoutMs"),
                     username = appConfig.getString("mail.smtp.username"),
                     password = appConfig.getString("mail.smtp.password"),
                     fromAddress = appConfig.getString("mail.smtp.fromAddress"),

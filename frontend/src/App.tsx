@@ -8,6 +8,7 @@ import { Dashboard } from './pages/Dashboard'
 import { Tasks } from './pages/Tasks'
 import { Members } from './pages/Members'
 import { Availability } from './pages/Availability'
+import { CompletedExecutions } from './pages/CompletedExecutions'
 import { Login } from './pages/Login'
 import { Register } from './pages/Register'
 import { NotFound } from './pages/NotFound'
@@ -55,6 +56,14 @@ function AppContent() {
           element={
             <ProtectedRoute>
               <Tasks />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/executions/completed"
+          element={
+            <ProtectedRoute>
+              <CompletedExecutions />
             </ProtectedRoute>
           }
         />

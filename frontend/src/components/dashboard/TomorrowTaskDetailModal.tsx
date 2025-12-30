@@ -4,7 +4,7 @@
  * - 明日のタスク一覧からクリックしたタスクを、読みやすいレイアウトで表示する
  * - 状態変更（開始/完了/割り当て）は行わない
  */
-import { Calendar, Clock, User, Users } from 'lucide-react'
+import { AlertCircle, Calendar, Clock, User, Users } from 'lucide-react'
 import { Modal } from '../ui/Modal'
 import { Badge } from '../ui/Badge'
 import { Card } from '../ui/Card'
@@ -76,11 +76,25 @@ export function TomorrowTaskDetailModal({
       }
     >
       <div className="space-y-4">
+        {/* SCHEDULED ステータスの場合は注意書きを表示 */}
+        {task.status === 'SCHEDULED' && (
+          <div className="flex items-start gap-2 p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg">
+            <AlertCircle className="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" />
+            <div className="text-sm text-amber-200">
+              <p className="font-medium">予定タスク</p>
+              <p className="text-amber-200/70 mt-0.5">
+                このタスクはまだ実行が作成されていません。当日の朝に自動で作成されます。
+              </p>
+            </div>
+          </div>
+        )}
+
         <div>
           <h3 className="text-lg font-bold text-white leading-snug">{task.taskName}</h3>
           <div className="mt-2 flex flex-wrap items-center gap-2">
             {getScheduleBadge(task.scheduleType)}
             {getScopeBadge(task.scope)}
+            {task.status === 'SCHEDULED' && <Badge variant="warning">予定</Badge>}
           </div>
         </div>
 

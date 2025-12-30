@@ -20,7 +20,15 @@ export interface TodayTaskDto {
   scope: 'FAMILY' | 'PERSONAL'
   /** タスク定義のスケジュール種別 */
   scheduleType: 'RECURRING' | 'ONE_TIME'
-  status: 'NOT_STARTED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED'
+  /**
+   * タスクの状態
+   * - NOT_STARTED: 未着手（実行あり）
+   * - IN_PROGRESS: 進行中（実行あり）
+   * - COMPLETED: 完了（実行あり）
+   * - CANCELLED: キャンセル（実行あり）
+   * - SCHEDULED: 予定（実行未生成、定義のみ）
+   */
+  status: 'NOT_STARTED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED' | 'SCHEDULED'
   /** PERSONALの場合のオーナー（FAMILYはnull） */
   ownerMemberId: string | null
   assigneeMemberId: string | null
@@ -34,7 +42,7 @@ export interface TodayTaskDto {
 export interface MemberTaskDto {
   taskExecutionId: string
   taskName: string
-  status: 'NOT_STARTED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED'
+  status: 'NOT_STARTED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED' | 'SCHEDULED'
 }
 
 /**

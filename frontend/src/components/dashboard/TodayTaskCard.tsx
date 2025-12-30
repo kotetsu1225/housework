@@ -33,6 +33,8 @@ function getStatusIcon(status: TodayTaskDto['status']) {
       return <CheckCircle2 className="w-5 h-5 text-emerald-400" />
     case 'IN_PROGRESS':
       return <PlayCircle className="w-5 h-5 text-shazam-400" />
+    case 'SCHEDULED':
+      return <Calendar className="w-5 h-5 text-white/40" />
     default:
       return <Circle className="w-5 h-5 text-white/30" />
   }
@@ -47,6 +49,8 @@ function getStatusBadge(status: TodayTaskDto['status']) {
       return <Badge variant="success">完了</Badge>
     case 'IN_PROGRESS':
       return <Badge variant="info">進行中</Badge>
+    case 'SCHEDULED':
+      return <Badge variant="default">予定</Badge>
     default:
       return <Badge variant="default">やること</Badge>
   }

@@ -223,6 +223,7 @@ export function Availability() {
     error,
     fetchAvailabilities,
     addAvailability,
+    editAvailability,
     removeSlots,
     removeAvailability,
     setAvailabilities,
@@ -318,25 +319,19 @@ export function Availability() {
     )
 
     if (existingAvailability) {
-      // 既存データがある場合はローカルでスロット追加
-      setAvailabilities((prev) =>
-        prev.map((av) =>
-          av.id === existingAvailability.id
-            ? {
-                ...av,
-                slots: [
-                  ...av.slots,
-                  {
-                    startTime: newSlot.startTime,
-                    endTime: newSlot.endTime,
-                    memo: newSlot.memo || null,
-                  },
-                ],
-              }
-            : av
-        )
-      )
-      handleCloseModal()
+      // 既存データがある場合はAPIを呼び出してスロット追加
+      // バックエンドの updateSlots がマージを行うため、新規スロットのみ送信する
+      const success = await editAvailability(existingAvailability.id, [
+        {
+          startTime: newSlot.startTime,
+          endTime: newSlot.endTime,
+          memo: newSlot.memo || undefined,
+        },
+      ])
+
+      if (success) {
+        handleCloseModal()
+      }
     } else {
       const success = await addAvailability(memberId, targetDate, [
         {

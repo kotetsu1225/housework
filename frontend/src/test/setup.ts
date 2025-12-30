@@ -27,3 +27,6 @@ const localStorageMock = (() => {
 Object.defineProperty(window, 'localStorage', {
   value: localStorageMock,
 })
+
+// JSDOMで実装されていないメソッドのモック
+Element.prototype.scrollTo = () => {}

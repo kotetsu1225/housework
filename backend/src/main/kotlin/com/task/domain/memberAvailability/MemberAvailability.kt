@@ -45,10 +45,12 @@ class MemberAvailability private constructor(
 
         validateNoOverlapWithExisting(newSlots, existingSlots)
 
+        val mergedSlots = (existingSlots ?: emptyList()) + newSlots
+
         return MemberAvailability(
             id = this.id,
             memberId = this.memberId,
-            slots = newSlots,
+            slots = mergedSlots,
             targetDate = this.targetDate,
         )
     }

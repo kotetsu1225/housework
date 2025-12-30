@@ -5,9 +5,10 @@ import { PageContainer } from '../components/layout/PageContainer'
 import { Card } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
 import { Alert } from '../components/ui/Alert'
+import { Avatar } from '../components/ui/Avatar'
 import { getTaskExecutions, ApiError } from '../api'
 import { useMember } from '../hooks'
-import { toISODateString, formatJa } from '../utils'
+import { toISODateString, formatJa, formatTimeFromISO, isParentRole } from '../utils'
 import type { TaskExecutionWithDetails, TaskExecution } from '../types'
 
 type LoadState = {
@@ -167,12 +168,17 @@ export function CompletedExecutions() {
                       {t.taskSnapshot.scheduledStartTime && t.taskSnapshot.scheduledEndTime && (
                         <span className="flex items-center gap-1">
                           <Clock className="w-3.5 h-3.5" />
-                          {t.taskSnapshot.scheduledStartTime} - {t.taskSnapshot.scheduledEndTime}
+                          {formatTimeFromISO(t.taskSnapshot.scheduledStartTime)} - {formatTimeFromISO(t.taskSnapshot.scheduledEndTime)}
                         </span>
                       )}
                       {t.completedBy && (
-                        <span className="flex items-center gap-1">
-                          <User className="w-3.5 h-3.5" />
+                        <span className="flex items-center gap-1.5 text-coral-400 font-medium">
+                          <Avatar
+                            name={t.completedBy.name}
+                            size="sm"
+                            role={t.completedBy.role}
+                            variant={isParentRole(t.completedBy.role) ? 'parent' : 'child'}
+                          />
                           {t.completedBy.name}
                         </span>
                       )}

@@ -147,7 +147,11 @@ export function useMemberAvailability(
         })),
       }))
 
-      setAvailabilities(fetchedAvailabilities)
+      setAvailabilities((prev) => {
+        // 新しく取得したメンバーID以外のデータを残し、新しいデータを追加
+        const otherMembers = prev.filter((a) => a.memberId !== memberId)
+        return [...otherMembers, ...fetchedAvailabilities]
+      })
     } catch (err) {
       if (err instanceof ApiError) {
         setError(err.message)

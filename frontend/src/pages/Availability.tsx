@@ -285,15 +285,6 @@ export function Availability() {
     return availabilities.some((av) => av.targetDate === dateStr && av.slots.length > 0)
   }
 
-  /**
-   * メンバーごとの総スロット数を取得
-   */
-  const getTotalSlotsForMember = (memberId: string): number => {
-    return availabilities
-      .filter((av) => av.memberId === memberId)
-      .reduce((sum, av) => sum + av.slots.length, 0)
-  }
-
   const selectedDateAvailabilities = getAvailabilitiesForDate(selectedDate)
 
   /**
@@ -445,39 +436,6 @@ export function Availability() {
             </div>
           ) : (
             <EmptyState onAdd={() => setShowAddModal(true)} />
-          )}
-        </section>
-
-        {/* メンバー別サマリー */}
-        <section className="mt-8">
-          <h2 className="text-lg font-bold text-white mb-4">メンバー別</h2>
-          {members.length > 0 ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-              {members.map((member) => (
-                <Card
-                  key={member.id}
-                  variant="glass"
-                  className="text-center"
-                >
-                  <Avatar
-                    name={member.name}
-                    size="lg"
-                    variant={isParentRole(member.role) ? 'parent' : 'child'}
-                    className="mx-auto mb-2"
-                  />
-                  <p className="font-medium text-white text-sm">{member.name}</p>
-                  <p className="text-xs text-dark-400">
-                    {getTotalSlotsForMember(member.id)}件の登録
-                  </p>
-                </Card>
-              ))}
-            </div>
-          ) : (
-            <Card variant="glass" className="text-center py-4">
-              <p className="text-dark-400">
-                {membersLoading ? '読み込み中...' : 'メンバーがいません'}
-              </p>
-            </Card>
           )}
         </section>
 

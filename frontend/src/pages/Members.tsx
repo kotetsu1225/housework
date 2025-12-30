@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { UserPlus, CheckCircle2, Clock, TrendingUp, RefreshCw, Mail } from 'lucide-react'
+import { UserPlus, CheckCircle2, TrendingUp, RefreshCw, Mail } from 'lucide-react'
 import { Header } from '../components/layout/Header'
 import { PageContainer } from '../components/layout/PageContainer'
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card'
@@ -73,10 +73,6 @@ function MemberCard({ member }: { member: MemberWithStats }) {
             <div className="flex items-center gap-1">
               <CheckCircle2 className="w-4 h-4 text-emerald-400" />
               <span>{member.stats.completed}完了</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <Clock className="w-4 h-4 text-amber-400" />
-              <span>{member.stats.streak}日連続</span>
             </div>
           </div>
         </div>

@@ -10,7 +10,7 @@ import { Modal } from '../ui/Modal'
 import { Button } from '../ui/Button'
 import { Badge } from '../ui/Badge'
 import { Avatar } from '../ui/Avatar'
-import { isParentRole } from '../../utils'
+import { isParentRole, formatTimeFromISO } from '../../utils'
 import type { TodayTaskDto } from '../../api/dashboard'
 import type { Member } from '../../types'
 
@@ -193,7 +193,7 @@ export function TaskActionModal({
         <div className="flex items-center gap-4 text-sm text-white/70">
           <div className="flex items-center gap-1">
             <Clock className="w-4 h-4" />
-            <span>{task.scheduledStartTime} - {task.scheduledEndTime}</span>
+            <span>{formatTimeFromISO(task.scheduledStartTime)} - {formatTimeFromISO(task.scheduledEndTime)}</span>
           </div>
           <div className="flex items-center gap-1">
             {scopeIcon}
@@ -267,7 +267,23 @@ export function TaskActionModal({
         {(isInProgress || isCompleted) && task.assigneeMemberName && (
           <div className="flex items-center gap-2 text-sm text-white/70">
             <span>担当:</span>
-            <span className="text-white font-medium">{task.assigneeMemberName}</span>
+            <div className="flex items-center gap-2 bg-dark-800/50 px-3 py-1.5 rounded-full">
+              {(() => {
+                const assignee = members.find(m => m.id === task.assigneeMemberId)
+                if (assignee) {
+                  return (
+                    <Avatar
+                      name={assignee.name}
+                      size="sm"
+                      role={assignee.role}
+                      variant={isParentRole(assignee.role) ? 'parent' : 'child'}
+                    />
+                  )
+                }
+                return <span className="w-6 h-6 rounded-full bg-coral-500/20 flex items-center justify-center text-[10px]">?</span>
+              })()}
+              <span className="text-white font-medium">{task.assigneeMemberName}</span>
+            </div>
           </div>
         )}
       </div>

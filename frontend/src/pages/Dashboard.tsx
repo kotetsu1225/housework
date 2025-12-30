@@ -1,7 +1,7 @@
 /**
  * ダッシュボードページ
  *
- * 今日のタスク一覧、メンバー進捗、空き時間を表示するホーム画面
+ * 今日のタスク一覧、空き時間を表示するホーム画面
  * CQRSパターン: DashboardQueryServiceを使用して一括データ取得
  */
 
@@ -20,10 +20,9 @@ import { TaskActionModal } from '../components/dashboard/TaskActionModal'
 import { MemberAvailabilitySection } from '../components/dashboard/MemberAvailabilitySection'
 import { useDashboard, useMember } from '../hooks'
 import { useAuth } from '../contexts'
-import { formatJa, toISODateString, isParentRole } from '../utils'
-import { getFamilyRoleLabel } from '../utils/familyRole'
-import type { TodayTaskDto, MemberTaskSummaryDto } from '../api/dashboard'
-import type { FamilyRole, Member } from '../types'
+import { formatJa, toISODateString, formatTimeFromISO, isParentRole } from '../utils'
+import type { TodayTaskDto } from '../api/dashboard'
+import type { Member } from '../types'
 
 /**
  * ステータスに応じたアイコンを取得
@@ -61,10 +60,15 @@ interface TodayTaskCardProps {
   onClick: (task: TodayTaskDto) => void
   /** 将来のタスク用に日付を表示するか */
   showDate?: boolean
+  /** メンバー一覧（アバター表示用） */
+  members: Member[]
 }
 
-function TodayTaskCard({ task, onClick, showDate = false }: TodayTaskCardProps) {
+function TodayTaskCard({ task, onClick, showDate = false, members }: TodayTaskCardProps) {
   const handleClick = () => onClick(task)
+  
+  // 担当者情報を取得
+  const assignee = members.find(m => m.id === task.assigneeMemberId)
 
   return (
     <Card
@@ -103,68 +107,32 @@ function TodayTaskCard({ task, onClick, showDate = false }: TodayTaskCardProps) 
           {task.scheduledStartTime && task.scheduledEndTime && (
             <span className="flex items-center gap-1">
               <Clock className="w-3.5 h-3.5" />
-              {task.scheduledStartTime} - {task.scheduledEndTime}
+              {formatTimeFromISO(task.scheduledStartTime)} - {formatTimeFromISO(task.scheduledEndTime)}
             </span>
           )}
           <span className="flex items-center gap-1 whitespace-nowrap">
             {task.scope === 'FAMILY' ? (
               <Users className="w-3.5 h-3.5" />
             ) : (
-              <span className="w-3.5 h-3.5">👤</span>
+              <span className="w-3.5 h-3.5 text-xs">👤</span>
             )}
             {task.scope === 'FAMILY' ? '家族' : '個人'}
           </span>
           {task.assigneeMemberName && (
-            <span className="text-coral-400">
+            <span className="flex items-center gap-1.5 text-coral-400 font-medium">
+              {assignee ? (
+                <Avatar
+                  name={assignee.name}
+                  size="sm"
+                  role={assignee.role}
+                  variant={isParentRole(assignee.role) ? 'parent' : 'child'}
+                />
+              ) : (
+                <span className="w-4 h-4 rounded-full bg-coral-500/20 flex items-center justify-center text-[10px]">?</span>
+              )}
               {task.assigneeMemberName}
             </span>
           )}
-        </div>
-      </div>
-    </Card>
-  )
-}
-
-/**
- * メンバー進捗カードコンポーネント
- */
-interface MemberProgressCardProps {
-  summary: MemberTaskSummaryDto
-}
-
-function MemberProgressCard({ summary }: MemberProgressCardProps) {
-  const progress = summary.totalCount > 0
-    ? Math.round((summary.completedCount / summary.totalCount) * 100)
-    : 0
-  const familyRole = summary.familyRole as FamilyRole
-
-  return (
-    <Card variant="glass" className="min-w-[140px] flex-shrink-0">
-      <div className="flex flex-col items-center gap-2">
-        <Avatar
-          name={summary.memberName}
-          size="lg"
-          role={familyRole}
-          variant={isParentRole(familyRole) ? 'parent' : 'child'}
-        />
-        <div className="text-center">
-          <p className="font-medium text-white text-sm">{summary.memberName}</p>
-          <p className="text-xs text-white/50">
-            {getFamilyRoleLabel(familyRole)}
-          </p>
-        </div>
-        <div className="text-center">
-          <p className="text-lg font-bold text-coral-400">
-            {summary.completedCount}/{summary.totalCount}
-          </p>
-          <p className="text-xs text-white/50">完了</p>
-        </div>
-        {/* プログレスバー */}
-        <div className="w-full h-1.5 bg-dark-700 rounded-full overflow-hidden">
-          <div
-            className="h-full bg-gradient-to-r from-coral-500 to-shazam-500 transition-all duration-300"
-            style={{ width: `${progress}%` }}
-          />
         </div>
       </div>
     </Card>
@@ -188,7 +156,6 @@ export function Dashboard() {
   // ダッシュボードデータ取得（CQRS Query）
   const {
     todayTasks,
-    memberSummaries,
     memberAvailabilities,
     loading,
     error,
@@ -340,6 +307,7 @@ export function Dashboard() {
                   key={task.taskExecutionId}
                   task={task}
                   onClick={handleTaskClick}
+                  members={members}
                 />
               ))
             ) : (
@@ -382,6 +350,7 @@ export function Dashboard() {
                     key={task.taskExecutionId}
                     task={task}
                     onClick={handleTaskClick}
+                    members={members}
                   />
                 ))}
               </div>
@@ -404,28 +373,12 @@ export function Dashboard() {
                   task={task}
                   onClick={handleTaskClick}
                   showDate
+                  members={members}
                 />
               ))}
             </div>
           </section>
         )}
-
-        {/* メンバー進捗 */}
-        <section className="mt-8">
-          <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-            <Users className="w-5 h-5 text-coral-400" />
-            メンバーの進捗
-          </h2>
-          {/* 横スクロール可能なカードリスト */}
-          <div className="flex gap-4 overflow-x-auto pb-2 -mx-4 px-4 md:mx-0 md:px-0 md:grid md:grid-cols-2 lg:grid-cols-4 md:overflow-visible">
-            {memberSummaries.map((summary) => (
-              <MemberProgressCard
-                key={summary.memberId}
-                summary={summary}
-              />
-            ))}
-          </div>
-        </section>
 
         {/* メンバーの空き時間 */}
         <section className="mt-8">

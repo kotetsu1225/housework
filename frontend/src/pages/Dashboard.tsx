@@ -245,19 +245,19 @@ export function Dashboard() {
         </section>
 
         {/* 完了済みタスク */}
-        {completedTasks.length > 0 && (
           <section className="mt-8">
             <div className="flex items-center justify-between gap-3 mb-4">
-              <button
-                onClick={() => setShowCompleted(!showCompleted)}
-                className="flex items-center gap-2 text-lg font-bold text-white/50 hover:text-white/70 transition-colors"
-                type="button"
-              >
-                <CheckCircle2 className="w-5 h-5 text-emerald-400/50" />
-                完了済み家族タスク ({completedTasks.length})
-                <ChevronDown className={`w-4 h-4 transition-transform ${showCompleted ? 'rotate-180' : ''}`} />
-              </button>
-
+              {completedTasks.length > 0 && (
+                <button
+                  onClick={() => setShowCompleted(!showCompleted)}
+                  className="flex items-center gap-2 text-lg font-bold text-white/50 hover:text-white/70 transition-colors"
+                  type="button"
+                >
+                  <CheckCircle2 className="w-5 h-5 text-emerald-400/50" />
+                  完了済み家族タスク ({completedTasks.length})
+                  <ChevronDown className={`w-4 h-4 transition-transform ${showCompleted ? 'rotate-180' : ''}`} />
+                </button>
+              )}
               <Button
                 variant="secondary"
                 size="sm"
@@ -267,7 +267,7 @@ export function Dashboard() {
               </Button>
             </div>
             
-            {showCompleted && (
+            {completedTasks.length > 0 && showCompleted && (
               <div className="opacity-60">
                 <TaskGroupsSection
                   tasks={completedTasks}
@@ -279,7 +279,6 @@ export function Dashboard() {
               </div>
             )}
           </section>
-        )}
 
         {/* 将来の単発タスク（存在する場合のみ表示） */}
         {futureTasks.length > 0 && (

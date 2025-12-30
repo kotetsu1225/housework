@@ -107,7 +107,7 @@ export function Modal({
       >
         {/* ヘッダー */}
         <div className="flex items-center justify-between mb-6">
-          <h2 id="modal-title" className="text-xl font-bold text-white">
+          <h2 id="modal-title" className="text-xl font-bold text-white pt-4">
             {title}
           </h2>
           {showCloseButton && (

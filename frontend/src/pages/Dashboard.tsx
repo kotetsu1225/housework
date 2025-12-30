@@ -263,7 +263,7 @@ export function Dashboard() {
                 size="sm"
                 onClick={() => navigate('/executions/completed')}
               >
-                一覧を見る
+                完了タスク一覧を見る
               </Button>
             </div>
             
@@ -328,7 +328,7 @@ export function Dashboard() {
           isOpen={showTomorrowModal}
           onClose={() => setShowTomorrowModal(false)}
           title={`明日のタスク（${formatJa(tomorrowDate, 'M月d日（E）')}）`}
-          className="pt-8"
+          className=""
           footer={
             <Button variant="secondary" onClick={() => setShowTomorrowModal(false)} className="flex-1">
               閉じる

@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
-import { CheckCircle2, RefreshCw, Calendar, Clock, User, Users, ChevronDown } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { CheckCircle2, RefreshCw, Clock, User, Users, ChevronDown } from 'lucide-react'
 import { Header } from '../components/layout/Header'
 import { PageContainer } from '../components/layout/PageContainer'
 import { Card } from '../components/ui/Card'
@@ -47,9 +47,10 @@ function getScopeLabel(scope?: string) {
  */
 export function CompletedExecutions() {
   const today = new Date()
-  const [date, setDate] = useState<string>(toISODateString(today))
+  const todayStr = toISODateString(today)
   const [mode, setMode] = useState<'today' | 'all'>('today')
   const [showOtherMembers, setShowOtherMembers] = useState(false)
+  const requestIdRef = useRef(0)
   const [state, setState] = useState<LoadState>({
     loading: true,
     error: null,
@@ -89,13 +90,15 @@ export function CompletedExecutions() {
     }
   }, [])
 
-  const fetchCompleted = useCallback(async (opts?: { append?: boolean }) => {
+  const fetchCompleted = useCallback(async (opts?: { append?: boolean; offset?: number }) => {
     const append = opts?.append ?? false
+    const offset = append ? (opts?.offset ?? 0) : 0
+    const requestId = ++requestIdRef.current
+
     setState((prev) => ({ ...prev, loading: true, error: null }))
     try {
-      const offset = append ? state.items.length : 0
       const res = await getTaskExecutions({
-        scheduledDate: mode === 'today' ? date : undefined,
+        scheduledDate: mode === 'today' ? todayStr : undefined,
         status: 'COMPLETED',
         limit: mode === 'today' ? 200 : 50,
         offset,
@@ -130,23 +133,29 @@ export function CompletedExecutions() {
         updatedAt: t.updatedAt,
       }))
 
-      const merged = append ? [...state.items, ...items] : items
-      // 表示は「新しい日付→古い日付」（同日内は completedAt → createdAt の降順）
-      merged.sort((a, b) => {
-        const dateCmp = (b.scheduledDate ?? '').localeCompare(a.scheduledDate ?? '')
-        if (dateCmp !== 0) return dateCmp
-        const aTime = a.completedAt ?? a.updatedAt ?? a.createdAt
-        const bTime = b.completedAt ?? b.updatedAt ?? b.createdAt
-        return (bTime ?? '').localeCompare(aTime ?? '')
-      })
+      // 最新リクエスト以外の結果は破棄（連打・切替の競合対策）
+      if (requestId !== requestIdRef.current) return
 
-      setState({ loading: false, error: null, items: merged, hasMore: res.hasMore })
+      setState((prev) => {
+        const merged = append ? [...prev.items, ...items] : items
+        // 表示は「新しい日付→古い日付」（同日内は completedAt → createdAt の降順）
+        merged.sort((a, b) => {
+          const dateCmp = (b.scheduledDate ?? '').localeCompare(a.scheduledDate ?? '')
+          if (dateCmp !== 0) return dateCmp
+          const aTime = a.completedAt ?? a.updatedAt ?? a.createdAt
+          const bTime = b.completedAt ?? b.updatedAt ?? b.createdAt
+          return (bTime ?? '').localeCompare(aTime ?? '')
+        })
+
+        return { loading: false, error: null, items: merged, hasMore: res.hasMore }
+      })
     } catch (err) {
+      if (requestId !== requestIdRef.current) return
       const message =
         err instanceof ApiError ? err.message : '完了一覧の取得に失敗しました'
       setState((prev) => ({ ...prev, loading: false, error: message }))
     }
-  }, [date, mode, state.items])
+  }, [mode, todayStr])
 
   useEffect(() => {
     fetchMembers()
@@ -156,7 +165,7 @@ export function CompletedExecutions() {
   useEffect(() => {
     // モード変更時は先頭から取り直す
     fetchCompleted({ append: false })
-  }, [fetchCompleted, mode, date])
+  }, [fetchCompleted, mode])
 
   const itemsWithMembers: TaskExecutionWithDetails[] = useMemo(() => {
     const map = new Map(members.map((m) => [m.id, m]))
@@ -333,7 +342,7 @@ export function CompletedExecutions() {
     <>
       <Header
         title="完了したタスク"
-        subtitle={mode === 'all' ? '全て' : formatJa(new Date(date), 'M月d日（E）')}
+        subtitle={mode === 'all' ? '全て' : formatJa(today, 'M月d日（E）')}
         action={
           <Button
             variant="secondary"
@@ -373,23 +382,6 @@ export function CompletedExecutions() {
             </Button>
           </div>
         </section>
-
-        {mode === 'today' && (
-          <section className="pb-4">
-            <label className="block text-sm text-white/70 mb-2">日付</label>
-            <div className="flex items-center gap-2">
-              <div className="flex items-center gap-2 text-white/70">
-                <Calendar className="w-4 h-4" />
-              </div>
-              <input
-                type="date"
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-                className="w-full bg-dark-800 border border-dark-700 rounded-xl px-4 py-3 text-white"
-              />
-            </div>
-          </section>
-        )}
 
         <section className="space-y-3">
           {state.loading ? (
@@ -491,7 +483,9 @@ export function CompletedExecutions() {
             </div>
           ) : (
             <Card variant="glass" className="text-center py-10">
-              <p className="text-white/50">この日の完了タスクはありません</p>
+              <p className="text-white/50">
+                {mode === 'today' ? '今日の完了タスクはありません' : '完了タスクはありません'}
+              </p>
             </Card>
           )}
         </section>
@@ -501,7 +495,7 @@ export function CompletedExecutions() {
             <Button
               variant="secondary"
               className="w-full"
-              onClick={() => fetchCompleted({ append: true })}
+              onClick={() => fetchCompleted({ append: true, offset: state.items.length })}
             >
               もっと読み込む
             </Button>

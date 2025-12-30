@@ -9,6 +9,10 @@ export interface Member {
   name: string
   email: string
   role: FamilyRole
+  /** personal(owner)+assignee 母集団の総数（CANCELLED/削除済み除外） */
+  totalCount?: number
+  /** 上記母集団のうち、本人が完了(completedBy=本人)した件数 */
+  completedCount?: number
   createdAt: string
   updatedAt: string
 }

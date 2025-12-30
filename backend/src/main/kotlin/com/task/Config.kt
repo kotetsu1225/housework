@@ -61,6 +61,8 @@ import com.task.infra.event.handler.EmailNotificationHandler
 // Query Services (CQRS)
 import com.task.usecase.query.dashboard.DashboardQueryService
 import com.task.infra.query.DashboardQueryServiceImpl
+import com.task.usecase.query.member.MemberStatsQueryService
+import com.task.infra.query.MemberStatsQueryServiceImpl
 
 class AppModule : AbstractModule() {
     override fun configure() {
@@ -140,6 +142,7 @@ class AppModule : AbstractModule() {
 
         // Query Services (CQRS)
         bind(DashboardQueryService::class.java).to(DashboardQueryServiceImpl::class.java)
+        bind(MemberStatsQueryService::class.java).to(MemberStatsQueryServiceImpl::class.java)
 
         val handlerBinder = Multibinder.newSetBinder(
             binder(),

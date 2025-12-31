@@ -11,6 +11,7 @@ import com.task.domain.taskExecution.event.TaskExecutionCreated
 import com.task.domain.taskExecution.event.TaskExecutionEvent
 import com.task.domain.taskExecution.event.TaskExecutionStarted
 import org.jooq.DSLContext
+import org.slf4j.LoggerFactory
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import com.google.inject.Inject
@@ -21,6 +22,8 @@ class EmailNotificationHandler @Inject constructor(
 ) : DomainEventHandler<DomainEvent> {
 
     override val eventType: Class<DomainEvent> = DomainEvent::class.java
+
+    private val logger = LoggerFactory.getLogger(EmailNotificationHandler::class.java)
 
     private val timeFormatter = DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm")
         .withZone(ZoneId.systemDefault())
@@ -99,7 +102,12 @@ class EmailNotificationHandler @Inject constructor(
         }
 
         if (mails.isNotEmpty()) {
-            mailSender.sendMultiple(mails)
+            try {
+                mailSender.sendMultiple(mails)
+            } catch (e: Exception) {
+                // メール送信失敗はログに記録するが、メイン処理は継続
+                logger.error("メール通知の送信に失敗しましたが、処理は継続します", e)
+            }
         }
     }
 }

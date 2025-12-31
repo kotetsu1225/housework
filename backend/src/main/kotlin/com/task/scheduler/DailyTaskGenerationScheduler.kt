@@ -11,7 +11,7 @@ import java.time.LocalTime
 
 class DailyTaskGenerationScheduler (
     private val generateDailyExecutionsUseCase: GenerateDailyExecutionsUseCase,
-    private val executionTime: LocalTime = LocalTime.of(6, 0)
+    private val executionTime: LocalTime = LocalTime.of(13, 0)
 ){
     private val logger = LoggerFactory.getLogger(DailyTaskGenerationScheduler::class.java)
     private var job: Job? = null

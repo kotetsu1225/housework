@@ -4,7 +4,7 @@
  * タスクの状態変更（開始、完了）と担当者割り当てを行う確認ダイアログ
  */
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Clock, Users, User, Play, CheckCircle2 } from 'lucide-react'
 import { Modal } from '../ui/Modal'
 import { Button } from '../ui/Button'
@@ -69,6 +69,11 @@ export function TaskActionModal({
   const [loading, setLoading] = useState(false)
   const [selectedAssignee, setSelectedAssignee] = useState<string | null>(null)
 
+  // タスクが変わったら選択状態をリセット
+  useEffect(() => {
+    setSelectedAssignee(null)
+  }, [task?.taskExecutionId])
+
   if (!task) return null
 
   const isNotStarted = task.status === 'NOT_STARTED'
@@ -79,17 +84,25 @@ export function TaskActionModal({
   const scopeIcon = task.scope === 'FAMILY' ? <Users className="w-4 h-4" /> : <User className="w-4 h-4" />
 
   /**
+   * 実行に使用するメンバーIDを決定
+   * 1. 画面上で選択したメンバー
+   * 2. すでに割り当てられているメンバー
+   * 3. 現在のログインユーザー
+   */
+  const getEffectiveMemberId = () => {
+    return selectedAssignee || task.assigneeMemberId || currentMemberId
+  }
+
+  /**
    * タスク開始処理
    */
   const handleStart = async () => {
-    if (!currentMemberId) {
-      // currentMemberIdがない場合は開始できない
-      return
-    }
+    const memberId = getEffectiveMemberId()
+    if (!memberId) return
 
     setLoading(true)
     try {
-      const success = await onStart(task.taskExecutionId, currentMemberId)
+      const success = await onStart(task.taskExecutionId, memberId)
       if (success) {
         onClose()
       }
@@ -102,11 +115,12 @@ export function TaskActionModal({
    * タスク完了処理
    */
   const handleComplete = async () => {
-    if (!currentMemberId) return
+    const memberId = getEffectiveMemberId()
+    if (!memberId) return
 
     setLoading(true)
     try {
-      const success = await onComplete(task.taskExecutionId, currentMemberId)
+      const success = await onComplete(task.taskExecutionId, memberId)
       if (success) {
         onClose()
       }
@@ -219,8 +233,8 @@ export function TaskActionModal({
           </p>
         )}
 
-        {/* 担当者選択（未着手の場合のみ） */}
-        {isNotStarted && members.length > 0 && (
+        {/* 担当者選択（未着手または進行中の場合） */}
+        {(isNotStarted || isInProgress) && members.length > 0 && (
           <div className="space-y-3">
             <p className="text-sm text-white/70 font-medium">
               担当者を選択
@@ -263,8 +277,8 @@ export function TaskActionModal({
           </div>
         )}
 
-        {/* 現在の担当者（進行中または完了の場合） */}
-        {(isInProgress || isCompleted) && task.assigneeMemberName && (
+        {/* 現在の担当者（完了の場合のみ表示。進行中は上の選択UIで表示されるため） */}
+        {isCompleted && task.assigneeMemberName && (
           <div className="flex items-center gap-2 text-sm text-white/70">
             <span>担当:</span>
             <div className="flex items-center gap-2 bg-dark-800/50 px-3 py-1.5 rounded-full">

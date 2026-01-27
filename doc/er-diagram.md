@@ -43,14 +43,18 @@ erDiagram
     TASK_EXECUTIONS {
         UUID id PK
         UUID task_definition_id FK
-        UUID assignee_member_id FK
         DATE scheduled_date
         VARCHAR status
         TIMESTAMPTZ started_at
         TIMESTAMPTZ completed_at
-        UUID completed_by_member_id FK
         TIMESTAMPTZ created_at
         TIMESTAMPTZ updated_at
+    }
+
+    TASK_EXECUTION_PARTICIPANTS {
+        UUID task_execution_id PK, FK
+        UUID member_id PK, FK
+        TIMESTAMPTZ joined_at
     }
 
     TASK_SNAPSHOTS {
@@ -69,6 +73,6 @@ erDiagram
     TASK_DEFINITIONS ||--o{ TASK_EXECUTIONS : issues
     TASK_EXECUTIONS ||--o| TASK_SNAPSHOTS : snapshots
 
-    MEMBERS ||--o{ TASK_EXECUTIONS : assignee
-    MEMBERS ||--o{ TASK_EXECUTIONS : completed_by
+    TASK_EXECUTIONS ||--o{ TASK_EXECUTION_PARTICIPANTS : has
+    MEMBERS ||--o{ TASK_EXECUTION_PARTICIPANTS : participates
 ```

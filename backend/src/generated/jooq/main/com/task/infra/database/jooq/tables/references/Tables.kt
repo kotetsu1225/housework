@@ -7,6 +7,7 @@ package com.task.infra.database.jooq.tables.references
 import com.task.infra.database.jooq.tables.Members
 import com.task.infra.database.jooq.tables.ScheduledNotifications
 import com.task.infra.database.jooq.tables.TaskDefinitions
+import com.task.infra.database.jooq.tables.TaskExecutionParticipants
 import com.task.infra.database.jooq.tables.TaskExecutions
 import com.task.infra.database.jooq.tables.TaskRecurrences
 import com.task.infra.database.jooq.tables.TaskSnapshots
@@ -27,6 +28,11 @@ val SCHEDULED_NOTIFICATIONS: ScheduledNotifications = ScheduledNotifications.SCH
  * タスク定義（カタログ）
  */
 val TASK_DEFINITIONS: TaskDefinitions = TaskDefinitions.TASK_DEFINITIONS
+
+/**
+ * タスク実行の参加者
+ */
+val TASK_EXECUTION_PARTICIPANTS: TaskExecutionParticipants = TaskExecutionParticipants.TASK_EXECUTION_PARTICIPANTS
 
 /**
  * タスク実行（チケット）

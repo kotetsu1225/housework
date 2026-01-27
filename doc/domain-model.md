@@ -88,31 +88,32 @@ classDiagram
         }
 
         class NotStarted {
-            +MemberId? assigneeMemberId
+            +Set<MemberId> participantMemberIds
             +start(memberId, taskDefinition) InProgress
-            +assign(memberId) NotStarted
+            +addParticipant(memberId) NotStarted
+            +removeParticipant(memberId) NotStarted
             +cancel(taskDefinition) Cancelled
         }
 
         class InProgress {
-            +MemberId assigneeMemberId
+            +Set<MemberId> participantMemberIds
             +TaskSnapshot taskSnapshot
             +Instant startedAt
             +complete(memberId, definitionIsDeleted) Completed
-            +assign(memberId) InProgress
+            +addParticipant(memberId) InProgress
+            +removeParticipant(memberId) InProgress
             +cancel(definitionIsDeleted) Cancelled
         }
 
         class Completed {
-            +MemberId assigneeMemberId
+            +Set<MemberId> participantMemberIds
             +TaskSnapshot taskSnapshot
             +Instant startedAt
             +Instant completedAt
-            +MemberId completedByMemberId
         }
 
         class Cancelled {
-            +MemberId? assigneeMemberId
+            +Set<MemberId> participantMemberIds
             +TaskSnapshot? taskSnapshot
             +Instant? startedAt
             +Instant cancelledAt
@@ -140,6 +141,6 @@ classDiagram
     %% 4. 集約間の関係（ID参照）
     %% ==========================================================
     TaskExecution ..> TaskDefinition : taskDefinitionId
-    TaskExecution ..> Member : assigneeMemberId / completedByMemberId
+    TaskExecution ..> Member : participantMemberIds
     TaskDefinition ..> Member : ownerMemberId
 ```

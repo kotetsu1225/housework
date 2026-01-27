@@ -7,6 +7,7 @@ package com.task.infra.database.jooq
 import com.task.infra.database.jooq.tables.Members
 import com.task.infra.database.jooq.tables.ScheduledNotifications
 import com.task.infra.database.jooq.tables.TaskDefinitions
+import com.task.infra.database.jooq.tables.TaskExecutionParticipants
 import com.task.infra.database.jooq.tables.TaskExecutions
 import com.task.infra.database.jooq.tables.TaskRecurrences
 import com.task.infra.database.jooq.tables.TaskSnapshots
@@ -47,6 +48,11 @@ open class Public : SchemaImpl("public", DefaultCatalog.DEFAULT_CATALOG) {
     val TASK_DEFINITIONS: TaskDefinitions get() = TaskDefinitions.TASK_DEFINITIONS
 
     /**
+     * タスク実行の参加者
+     */
+    val TASK_EXECUTION_PARTICIPANTS: TaskExecutionParticipants get() = TaskExecutionParticipants.TASK_EXECUTION_PARTICIPANTS
+
+    /**
      * タスク実行（チケット）
      */
     val TASK_EXECUTIONS: TaskExecutions get() = TaskExecutions.TASK_EXECUTIONS
@@ -67,6 +73,7 @@ open class Public : SchemaImpl("public", DefaultCatalog.DEFAULT_CATALOG) {
         Members.MEMBERS,
         ScheduledNotifications.SCHEDULED_NOTIFICATIONS,
         TaskDefinitions.TASK_DEFINITIONS,
+        TaskExecutionParticipants.TASK_EXECUTION_PARTICIPANTS,
         TaskExecutions.TASK_EXECUTIONS,
         TaskRecurrences.TASK_RECURRENCES,
         TaskSnapshots.TASK_SNAPSHOTS

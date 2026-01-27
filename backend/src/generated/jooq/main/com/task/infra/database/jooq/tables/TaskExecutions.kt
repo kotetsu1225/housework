@@ -5,14 +5,11 @@ package com.task.infra.database.jooq.tables
 
 
 import com.task.infra.database.jooq.Public
-import com.task.infra.database.jooq.indexes.IDX_TASK_EXECUTIONS_ASSIGNEE
 import com.task.infra.database.jooq.indexes.IDX_TASK_EXECUTIONS_DATE_STATUS
 import com.task.infra.database.jooq.indexes.IDX_TASK_EXECUTIONS_DEFINITION
 import com.task.infra.database.jooq.indexes.IDX_TASK_EXECUTIONS_SCHEDULED_DATE
 import com.task.infra.database.jooq.indexes.IDX_TASK_EXECUTIONS_STATUS
 import com.task.infra.database.jooq.keys.TASK_EXECUTIONS_PKEY
-import com.task.infra.database.jooq.keys.TASK_EXECUTIONS__TASK_EXECUTIONS_ASSIGNEE_MEMBER_ID_FKEY
-import com.task.infra.database.jooq.keys.TASK_EXECUTIONS__TASK_EXECUTIONS_COMPLETED_BY_MEMBER_ID_FKEY
 import com.task.infra.database.jooq.keys.TASK_EXECUTIONS__TASK_EXECUTIONS_TASK_DEFINITION_ID_FKEY
 import com.task.infra.database.jooq.tables.records.TaskExecutionsRecord
 
@@ -30,7 +27,7 @@ import org.jooq.Index
 import org.jooq.Name
 import org.jooq.Record
 import org.jooq.Records
-import org.jooq.Row10
+import org.jooq.Row8
 import org.jooq.Schema
 import org.jooq.SelectField
 import org.jooq.Table
@@ -88,12 +85,6 @@ open class TaskExecutions(
     val TASK_DEFINITION_ID: TableField<TaskExecutionsRecord, UUID?> = createField(DSL.name("task_definition_id"), SQLDataType.UUID.nullable(false), this, "元タスク定義ID（外部キー）")
 
     /**
-     * The column <code>public.task_executions.assignee_member_id</code>.
-     * 担当者ID（外部キー）
-     */
-    val ASSIGNEE_MEMBER_ID: TableField<TaskExecutionsRecord, UUID?> = createField(DSL.name("assignee_member_id"), SQLDataType.UUID, this, "担当者ID（外部キー）")
-
-    /**
      * The column <code>public.task_executions.scheduled_date</code>. 実行予定日
      */
     val SCHEDULED_DATE: TableField<TaskExecutionsRecord, LocalDate?> = createField(DSL.name("scheduled_date"), SQLDataType.LOCALDATE.nullable(false), this, "実行予定日")
@@ -113,12 +104,6 @@ open class TaskExecutions(
      * The column <code>public.task_executions.completed_at</code>. 完了日時
      */
     val COMPLETED_AT: TableField<TaskExecutionsRecord, OffsetDateTime?> = createField(DSL.name("completed_at"), SQLDataType.TIMESTAMPWITHTIMEZONE(6), this, "完了日時")
-
-    /**
-     * The column <code>public.task_executions.completed_by_member_id</code>.
-     * 完了者ID（外部キー）
-     */
-    val COMPLETED_BY_MEMBER_ID: TableField<TaskExecutionsRecord, UUID?> = createField(DSL.name("completed_by_member_id"), SQLDataType.UUID, this, "完了者ID（外部キー）")
 
     /**
      * The column <code>public.task_executions.created_at</code>. 作成日時
@@ -150,13 +135,11 @@ open class TaskExecutions(
 
     constructor(child: Table<out Record>, key: ForeignKey<out Record, TaskExecutionsRecord>): this(Internal.createPathAlias(child, key), child, key, TASK_EXECUTIONS, null)
     override fun getSchema(): Schema? = if (aliased()) null else Public.PUBLIC
-    override fun getIndexes(): List<Index> = listOf(IDX_TASK_EXECUTIONS_ASSIGNEE, IDX_TASK_EXECUTIONS_DATE_STATUS, IDX_TASK_EXECUTIONS_DEFINITION, IDX_TASK_EXECUTIONS_SCHEDULED_DATE, IDX_TASK_EXECUTIONS_STATUS)
+    override fun getIndexes(): List<Index> = listOf(IDX_TASK_EXECUTIONS_DATE_STATUS, IDX_TASK_EXECUTIONS_DEFINITION, IDX_TASK_EXECUTIONS_SCHEDULED_DATE, IDX_TASK_EXECUTIONS_STATUS)
     override fun getPrimaryKey(): UniqueKey<TaskExecutionsRecord> = TASK_EXECUTIONS_PKEY
-    override fun getReferences(): List<ForeignKey<TaskExecutionsRecord, *>> = listOf(TASK_EXECUTIONS__TASK_EXECUTIONS_TASK_DEFINITION_ID_FKEY, TASK_EXECUTIONS__TASK_EXECUTIONS_ASSIGNEE_MEMBER_ID_FKEY, TASK_EXECUTIONS__TASK_EXECUTIONS_COMPLETED_BY_MEMBER_ID_FKEY)
+    override fun getReferences(): List<ForeignKey<TaskExecutionsRecord, *>> = listOf(TASK_EXECUTIONS__TASK_EXECUTIONS_TASK_DEFINITION_ID_FKEY)
 
     private lateinit var _taskDefinitions: TaskDefinitions
-    private lateinit var _taskExecutionsAssigneeMemberIdFkey: Members
-    private lateinit var _taskExecutionsCompletedByMemberIdFkey: Members
 
     /**
      * Get the implicit join path to the <code>public.task_definitions</code>
@@ -171,36 +154,8 @@ open class TaskExecutions(
 
     val taskDefinitions: TaskDefinitions
         get(): TaskDefinitions = taskDefinitions()
-
-    /**
-     * Get the implicit join path to the <code>public.members</code> table, via
-     * the <code>task_executions_assignee_member_id_fkey</code> key.
-     */
-    fun taskExecutionsAssigneeMemberIdFkey(): Members {
-        if (!this::_taskExecutionsAssigneeMemberIdFkey.isInitialized)
-            _taskExecutionsAssigneeMemberIdFkey = Members(this, TASK_EXECUTIONS__TASK_EXECUTIONS_ASSIGNEE_MEMBER_ID_FKEY)
-
-        return _taskExecutionsAssigneeMemberIdFkey;
-    }
-
-    val taskExecutionsAssigneeMemberIdFkey: Members
-        get(): Members = taskExecutionsAssigneeMemberIdFkey()
-
-    /**
-     * Get the implicit join path to the <code>public.members</code> table, via
-     * the <code>task_executions_completed_by_member_id_fkey</code> key.
-     */
-    fun taskExecutionsCompletedByMemberIdFkey(): Members {
-        if (!this::_taskExecutionsCompletedByMemberIdFkey.isInitialized)
-            _taskExecutionsCompletedByMemberIdFkey = Members(this, TASK_EXECUTIONS__TASK_EXECUTIONS_COMPLETED_BY_MEMBER_ID_FKEY)
-
-        return _taskExecutionsCompletedByMemberIdFkey;
-    }
-
-    val taskExecutionsCompletedByMemberIdFkey: Members
-        get(): Members = taskExecutionsCompletedByMemberIdFkey()
     override fun getChecks(): List<Check<TaskExecutionsRecord>> = listOf(
-        Internal.createCheck(this, DSL.name("chk_completed"), "((((status)::text <> 'COMPLETED'::text) OR ((completed_at IS NOT NULL) AND (completed_by_member_id IS NOT NULL))))", true),
+        Internal.createCheck(this, DSL.name("chk_completed_at"), "((((status)::text <> 'COMPLETED'::text) OR (completed_at IS NOT NULL)))", true),
         Internal.createCheck(this, DSL.name("chk_started_at"), "((((status)::text = ANY ((ARRAY['NOT_STARTED'::character varying, 'CANCELLED'::character varying])::text[])) OR (started_at IS NOT NULL)))", true),
         Internal.createCheck(this, DSL.name("task_executions_status_check"), "(((status)::text = ANY ((ARRAY['NOT_STARTED'::character varying, 'IN_PROGRESS'::character varying, 'COMPLETED'::character varying, 'CANCELLED'::character varying])::text[])))", true)
     )
@@ -224,18 +179,18 @@ open class TaskExecutions(
     override fun rename(name: Table<*>): TaskExecutions = TaskExecutions(name.getQualifiedName(), null)
 
     // -------------------------------------------------------------------------
-    // Row10 type methods
+    // Row8 type methods
     // -------------------------------------------------------------------------
-    override fun fieldsRow(): Row10<UUID?, UUID?, UUID?, LocalDate?, String?, OffsetDateTime?, OffsetDateTime?, UUID?, OffsetDateTime?, OffsetDateTime?> = super.fieldsRow() as Row10<UUID?, UUID?, UUID?, LocalDate?, String?, OffsetDateTime?, OffsetDateTime?, UUID?, OffsetDateTime?, OffsetDateTime?>
+    override fun fieldsRow(): Row8<UUID?, UUID?, LocalDate?, String?, OffsetDateTime?, OffsetDateTime?, OffsetDateTime?, OffsetDateTime?> = super.fieldsRow() as Row8<UUID?, UUID?, LocalDate?, String?, OffsetDateTime?, OffsetDateTime?, OffsetDateTime?, OffsetDateTime?>
 
     /**
      * Convenience mapping calling {@link SelectField#convertFrom(Function)}.
      */
-    fun <U> mapping(from: (UUID?, UUID?, UUID?, LocalDate?, String?, OffsetDateTime?, OffsetDateTime?, UUID?, OffsetDateTime?, OffsetDateTime?) -> U): SelectField<U> = convertFrom(Records.mapping(from))
+    fun <U> mapping(from: (UUID?, UUID?, LocalDate?, String?, OffsetDateTime?, OffsetDateTime?, OffsetDateTime?, OffsetDateTime?) -> U): SelectField<U> = convertFrom(Records.mapping(from))
 
     /**
      * Convenience mapping calling {@link SelectField#convertFrom(Class,
      * Function)}.
      */
-    fun <U> mapping(toType: Class<U>, from: (UUID?, UUID?, UUID?, LocalDate?, String?, OffsetDateTime?, OffsetDateTime?, UUID?, OffsetDateTime?, OffsetDateTime?) -> U): SelectField<U> = convertFrom(toType, Records.mapping(from))
+    fun <U> mapping(toType: Class<U>, from: (UUID?, UUID?, LocalDate?, String?, OffsetDateTime?, OffsetDateTime?, OffsetDateTime?, OffsetDateTime?) -> U): SelectField<U> = convertFrom(toType, Records.mapping(from))
 }

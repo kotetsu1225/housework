@@ -17,12 +17,10 @@ import java.util.UUID
 data class TaskExecutions(
     val id: UUID? = null,
     val taskDefinitionId: UUID,
-    val assigneeMemberId: UUID? = null,
     val scheduledDate: LocalDate,
     val status: String? = null,
     val startedAt: OffsetDateTime? = null,
     val completedAt: OffsetDateTime? = null,
-    val completedByMemberId: UUID? = null,
     val createdAt: OffsetDateTime? = null,
     val updatedAt: OffsetDateTime? = null
 ): Serializable {
@@ -42,12 +40,6 @@ data class TaskExecutions(
         else if (this.id != o.id)
             return false
         if (this.taskDefinitionId != o.taskDefinitionId)
-            return false
-        if (this.assigneeMemberId == null) {
-            if (o.assigneeMemberId != null)
-                return false
-        }
-        else if (this.assigneeMemberId != o.assigneeMemberId)
             return false
         if (this.scheduledDate != o.scheduledDate)
             return false
@@ -69,12 +61,6 @@ data class TaskExecutions(
         }
         else if (this.completedAt != o.completedAt)
             return false
-        if (this.completedByMemberId == null) {
-            if (o.completedByMemberId != null)
-                return false
-        }
-        else if (this.completedByMemberId != o.completedByMemberId)
-            return false
         if (this.createdAt == null) {
             if (o.createdAt != null)
                 return false
@@ -95,12 +81,10 @@ data class TaskExecutions(
         var result = 1
         result = prime * result + (if (this.id == null) 0 else this.id.hashCode())
         result = prime * result + this.taskDefinitionId.hashCode()
-        result = prime * result + (if (this.assigneeMemberId == null) 0 else this.assigneeMemberId.hashCode())
         result = prime * result + this.scheduledDate.hashCode()
         result = prime * result + (if (this.status == null) 0 else this.status.hashCode())
         result = prime * result + (if (this.startedAt == null) 0 else this.startedAt.hashCode())
         result = prime * result + (if (this.completedAt == null) 0 else this.completedAt.hashCode())
-        result = prime * result + (if (this.completedByMemberId == null) 0 else this.completedByMemberId.hashCode())
         result = prime * result + (if (this.createdAt == null) 0 else this.createdAt.hashCode())
         result = prime * result + (if (this.updatedAt == null) 0 else this.updatedAt.hashCode())
         return result
@@ -111,12 +95,10 @@ data class TaskExecutions(
 
         sb.append(id)
         sb.append(", ").append(taskDefinitionId)
-        sb.append(", ").append(assigneeMemberId)
         sb.append(", ").append(scheduledDate)
         sb.append(", ").append(status)
         sb.append(", ").append(startedAt)
         sb.append(", ").append(completedAt)
-        sb.append(", ").append(completedByMemberId)
         sb.append(", ").append(createdAt)
         sb.append(", ").append(updatedAt)
 

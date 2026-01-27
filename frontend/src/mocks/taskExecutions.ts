@@ -2,7 +2,7 @@
  * タスク実行関連のモックデータ
  *
  * @note バックエンドのTaskExecution APIが実装されるまでの暫定データ
- * @see docs/TASK_EXECUTION_API.md
+ * @see doc/task-execution-api.md
  */
 
 import type { TaskExecution, ExecutionStatus } from '../types'

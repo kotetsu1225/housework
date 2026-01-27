@@ -2,7 +2,7 @@
  * タスクカードコンポーネント
  *
  * 個別のタスク実行を表示するカード
- * @see docs/TASK_EXECUTION_API.md
+ * @see doc/task-execution-api.md
  */
 
 import { CheckCircle2, Circle, PlayCircle, XCircle } from 'lucide-react'

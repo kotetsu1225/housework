@@ -3,7 +3,6 @@
  *
  * バックエンドのPresentation層の型に対応する型定義
  * @see backend/src/main/kotlin/com/task/presentation/Members.kt
- * @see backend/src/main/kotlin/com/task/presentation/MemberAvailabilities.kt
  */
 
 import type { FamilyRole } from './index'
@@ -113,99 +112,6 @@ export interface RegisterRequest {
 export interface RegisterResponse {
   token: string
   memberName: string
-}
-
-// ==========================================
-// MemberAvailability API Types
-// ==========================================
-
-/**
- * 空き時間スロットリクエスト
- */
-export interface TimeSlotRequest {
-  startTime: string // HH:mm format
-  endTime: string // HH:mm format
-  memo?: string | null
-}
-
-/**
- * 空き時間スロットレスポンス
- */
-export interface TimeSlotResponse {
-  startTime: string // HH:mm format
-  endTime: string // HH:mm format
-  memo: string | null
-}
-
-/**
- * 空き時間作成リクエスト
- * POST /api/member-availabilities/create
- */
-export interface CreateMemberAvailabilityRequest {
-  memberId: string
-  targetDate: string // YYYY-MM-DD format
-  slots: TimeSlotRequest[]
-}
-
-/**
- * 空き時間作成レスポンス
- */
-export interface CreateMemberAvailabilityResponse {
-  id: string
-  memberId: string
-  targetDate: string
-  slots: TimeSlotResponse[]
-}
-
-/**
- * 空き時間更新リクエスト
- * POST /api/member-availabilities/{availabilityId}/update
- */
-export interface UpdateMemberAvailabilityRequest {
-  slots: TimeSlotRequest[]
-}
-
-/**
- * 空き時間更新レスポンス
- */
-export interface UpdateMemberAvailabilityResponse {
-  id: string
-  memberId: string
-  targetDate: string
-  slots: TimeSlotResponse[]
-}
-
-/**
- * 空き時間スロット削除リクエスト
- * POST /api/member-availabilities/{availabilityId}/delete-slots
- */
-export interface DeleteMemberAvailabilitySlotsRequest {
-  slots: TimeSlotRequest[]
-}
-
-/**
- * 空き時間スロット削除レスポンス
- */
-export interface DeleteMemberAvailabilitySlotsResponse {
-  id: string
-  memberId: string
-  targetDate: string
-  slots: TimeSlotResponse[]
-}
-
-/**
- * メンバー別空き時間一覧取得レスポンス
- * GET /api/member-availabilities/member/{memberId}
- */
-export interface GetMemberAvailabilitiesResponse {
-  availabilities: MemberAvailabilityResponse[]
-}
-
-export interface MemberAvailabilityResponse {
-  id: string
-  memberId: string
-  targetDate: string
-  slots: TimeSlotResponse[]
 }
 
 // ==========================================
@@ -358,7 +264,7 @@ export interface TaskDefinitionResponse {
 /**
  * TaskExecution一覧取得レスポンス
  * GET /api/task-executions
- * @see docs/TASK_EXECUTION_API.md
+ * @see doc/task-execution-api.md
  */
 export interface GetTaskExecutionsResponse {
   taskExecutions: TaskExecutionResponse[]
@@ -426,7 +332,7 @@ export interface AssignTaskExecutionRequest {
  * POST /api/task-generations/daily または POST /api/task-generations/daily/{date}
  *
  * @note バックエンドは `/api/task-generations/` エンドポイントを使用しています。
- *       @see docs/BACKEND_ISSUES.md - 4. APIエンドポイントの命名不整合
+ *       @see doc/backend-issues.md - 4. APIエンドポイントの命名不整合
  * @see backend/src/main/kotlin/com/task/presentation/TaskGenerations.kt
  */
 export interface GenerateTaskExecutionsResponse {
@@ -449,4 +355,3 @@ export interface GenerateTaskExecutionsResponse {
 export interface ApiErrorResponse {
   error: string
 }
-

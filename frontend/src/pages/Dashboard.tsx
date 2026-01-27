@@ -1,7 +1,7 @@
 /**
  * ダッシュボードページ
  *
- * 今日のタスク一覧、空き時間を表示するホーム画面
+ * 今日のタスク一覧を表示するホーム画面
  * CQRSパターン: DashboardQueryServiceを使用して一括データ取得
  */
 import { useState, useCallback, useMemo } from 'react'
@@ -16,7 +16,6 @@ import { Card } from '../components/ui/Card'
 import { Modal } from '../components/ui/Modal'
 import { ProgressSummaryCard, TaskGroupsSection, TodayTaskCard, TomorrowTaskDetailModal } from '../components/dashboard'
 import { TaskActionModal } from '../components/dashboard/TaskActionModal'
-import { MemberAvailabilitySection } from '../components/dashboard/MemberAvailabilitySection'
 import { useDashboard, useMember } from '../hooks'
 import { useAuth } from '../contexts'
 import { formatJa, toISODateString } from '../utils'
@@ -51,7 +50,6 @@ export function Dashboard() {
   // ダッシュボードデータ取得（CQRS Query）
   const {
     todayTasks,
-    memberAvailabilities,
     loading,
     error,
     refetch,
@@ -301,14 +299,6 @@ export function Dashboard() {
             </div>
           </section>
         )}
-
-        {/* メンバーの空き時間 */}
-        <section className="mt-8">
-          <MemberAvailabilitySection
-            availabilities={memberAvailabilities}
-            title="今日の空き時間"
-          />
-        </section>
 
         {/* タスクアクションモーダル */}
         <TaskActionModal

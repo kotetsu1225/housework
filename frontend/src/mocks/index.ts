@@ -11,8 +11,6 @@ export {
 } from './members'
 export type { MemberStats, MemberWithStats } from './members'
 
-export { createMockAvailabilities } from './memberAvailabilities'
-
 export {
   MOCK_TASK_DEFINITIONS,
   getMockTaskDefinitionById,
@@ -26,4 +24,3 @@ export {
   getMockTaskExecutionsByMember,
   getMockTodayTaskSummary,
 } from './taskExecutions'
-

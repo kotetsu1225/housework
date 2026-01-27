@@ -4,21 +4,14 @@
 package com.task.infra.database.jooq.tables.references
 
 
-import com.task.infra.database.jooq.tables.MemberAvailabilities
 import com.task.infra.database.jooq.tables.Members
 import com.task.infra.database.jooq.tables.ScheduledNotifications
 import com.task.infra.database.jooq.tables.TaskDefinitions
 import com.task.infra.database.jooq.tables.TaskExecutions
 import com.task.infra.database.jooq.tables.TaskRecurrences
 import com.task.infra.database.jooq.tables.TaskSnapshots
-import com.task.infra.database.jooq.tables.TimeSlots
 
 
-
-/**
- * メンバーの空き時間（物理削除方式）
- */
-val MEMBER_AVAILABILITIES: MemberAvailabilities = MemberAvailabilities.MEMBER_AVAILABILITIES
 
 /**
  * 家族メンバー
@@ -49,8 +42,3 @@ val TASK_RECURRENCES: TaskRecurrences = TaskRecurrences.TASK_RECURRENCES
  * タスクスナップショット（実行時点の凍結情報）
  */
 val TASK_SNAPSHOTS: TaskSnapshots = TaskSnapshots.TASK_SNAPSHOTS
-
-/**
- * TimeSlot値オブジェクト（MemberAvailability集約の一部）
- */
-val TIME_SLOTS: TimeSlots = TimeSlots.TIME_SLOTS

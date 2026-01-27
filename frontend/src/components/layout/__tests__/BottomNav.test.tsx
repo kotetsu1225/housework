@@ -17,12 +17,11 @@ const renderWithRouter = (route = '/') => {
 
 describe('BottomNav', () => {
   describe('レンダリング', () => {
-    it('4つのナビゲーションリンクが表示される', () => {
+    it('3つのナビゲーションリンクが表示される', () => {
       renderWithRouter()
       expect(screen.getByText('ホーム')).toBeInTheDocument()
       expect(screen.getByText('タスク')).toBeInTheDocument()
       expect(screen.getByText('メンバー')).toBeInTheDocument()
-      expect(screen.getByText('空き時間')).toBeInTheDocument()
     })
 
     it('nav要素としてレンダリングされる', () => {
@@ -30,10 +29,10 @@ describe('BottomNav', () => {
       expect(screen.getByRole('navigation')).toBeInTheDocument()
     })
 
-    it('4つのリンクがレンダリングされる', () => {
+    it('3つのリンクがレンダリングされる', () => {
       renderWithRouter()
       const links = screen.getAllByRole('link')
-      expect(links).toHaveLength(4)
+      expect(links).toHaveLength(3)
     })
   })
 
@@ -56,11 +55,6 @@ describe('BottomNav', () => {
       expect(membersLink).toHaveAttribute('href', '/members')
     })
 
-    it('空き時間は/availabilityにリンクする', () => {
-      renderWithRouter()
-      const availabilityLink = screen.getByText('空き時間').closest('a')
-      expect(availabilityLink).toHaveAttribute('href', '/availability')
-    })
   })
 
   describe('アクティブ状態', () => {
@@ -80,12 +74,6 @@ describe('BottomNav', () => {
       renderWithRouter('/members')
       const membersLink = screen.getByText('メンバー').closest('a')
       expect(membersLink).toHaveClass('text-coral-400')
-    })
-
-    it('/availabilityで空き時間リンクがアクティブになる', () => {
-      renderWithRouter('/availability')
-      const availabilityLink = screen.getByText('空き時間').closest('a')
-      expect(availabilityLink).toHaveClass('text-coral-400')
     })
 
     it('非アクティブなリンクにdark系の色が適用される', () => {
@@ -109,4 +97,3 @@ describe('BottomNav', () => {
     })
   })
 })
-

@@ -23,6 +23,3 @@ export type { TaskActionModalProps } from './TaskActionModal'
 export { TomorrowTaskDetailModal } from './TomorrowTaskDetailModal'
 export type { TomorrowTaskDetailModalProps } from './TomorrowTaskDetailModal'
 
-export { MemberAvailabilitySection } from './MemberAvailabilitySection'
-export type { MemberAvailabilitySectionProps } from './MemberAvailabilitySection'
-

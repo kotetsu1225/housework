@@ -2,7 +2,7 @@
  * TaskExecution API関数
  *
  * タスク実行関連のAPI呼び出しを提供
- * @see docs/TASK_EXECUTION_API.md
+ * @see doc/task-execution-api.md
  */
 
 import { apiGet, apiPost } from './client'
@@ -217,7 +217,7 @@ export async function assignTaskExecution(
  *
  * @note バックエンドは `/api/task-generations/daily/{date}` を使用しています。
  *       将来的に `/api/task-executions/generate` に統一される可能性があります。
- *       @see docs/BACKEND_ISSUES.md - 4. APIエンドポイントの命名不整合
+ *       @see doc/backend-issues.md - 4. APIエンドポイントの命名不整合
  *
  * @example
  * ```typescript

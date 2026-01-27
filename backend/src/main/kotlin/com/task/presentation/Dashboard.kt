@@ -1,10 +1,8 @@
 package com.task.presentation
 
 import com.task.usecase.query.dashboard.DashboardQueryService
-import com.task.usecase.query.dashboard.MemberAvailabilityTodayDto
 import com.task.usecase.query.dashboard.MemberTaskDto
 import com.task.usecase.query.dashboard.MemberTaskSummaryDto
-import com.task.usecase.query.dashboard.TimeSlotDto
 import com.task.usecase.query.dashboard.TodayTaskDto
 import io.ktor.http.HttpStatusCode
 import io.ktor.resources.Resource
@@ -31,8 +29,7 @@ class Dashboard {
 @Serializable
 data class DashboardResponse(
     val todayTasks: List<TodayTaskResponse>,
-    val memberSummaries: List<MemberTaskSummaryResponse>,
-    val memberAvailabilities: List<MemberAvailabilityTodayResponse>
+    val memberSummaries: List<MemberTaskSummaryResponse>
 )
 
 @Serializable
@@ -69,21 +66,6 @@ data class MemberTaskResponse(
     val status: String
 )
 
-@Serializable
-data class MemberAvailabilityTodayResponse(
-    val memberId: String,
-    val memberName: String,
-    val familyRole: String,
-    val slots: List<TimeSlotResponse>
-)
-
-@Serializable
-data class TimeSlotResponse(
-    val startTime: String,
-    val endTime: String,
-    val memo: String?
-)
-
 /**
  * DTOをレスポンスに変換
  */
@@ -118,19 +100,6 @@ private fun MemberTaskSummaryDto.toResponse() = MemberTaskSummaryResponse(
     tasks = tasks.map { it.toResponse() }
 )
 
-private fun TimeSlotDto.toResponse() = TimeSlotResponse(
-    startTime = startTime,
-    endTime = endTime,
-    memo = memo
-)
-
-private fun MemberAvailabilityTodayDto.toResponse() = MemberAvailabilityTodayResponse(
-    memberId = memberId,
-    memberName = memberName,
-    familyRole = familyRole,
-    slots = slots.map { it.toResponse() }
-)
-
 /**
  * ダッシュボードAPIルート
  *
@@ -151,8 +120,7 @@ fun Route.dashboard() {
             HttpStatusCode.OK,
             DashboardResponse(
                 todayTasks = output.todayTasks.map { it.toResponse() },
-                memberSummaries = output.memberSummaries.map { it.toResponse() },
-                memberAvailabilities = output.memberAvailabilities.map { it.toResponse() }
+                memberSummaries = output.memberSummaries.map { it.toResponse() }
             )
         )
     }

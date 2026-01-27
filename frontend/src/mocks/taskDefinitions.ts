@@ -2,7 +2,7 @@
  * タスク定義関連のモックデータ
  *
  * @note バックエンドにGETエンドポイントが追加されるまでの暫定データ
- * @see docs/BACKEND_ISSUES.md - GETエンドポイントの欠如
+ * @see doc/backend-issues.md - GETエンドポイントの欠如
  */
 
 import type { TaskDefinition } from '../types'

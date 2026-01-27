@@ -285,13 +285,22 @@ database {
 ```
 
 ### `backend/src/main/kotlin/com/task/Application.kt`
-```1:73:backend/src/main/kotlin/com/task/Application.kt
+```1:122:backend/src/main/kotlin/com/task/Application.kt
 package com.task
 
+import com.task.infra.security.JwtConfig
 import com.task.presentation.GuicePlugin
+import com.task.presentation.auth
+import com.task.presentation.configureJwtAuth
+import com.task.presentation.guiceInjectorKey
 import com.task.presentation.members
-import com.task.presentation.memberAvailabilities
 import com.task.presentation.taskDefinitions
+import com.task.presentation.taskExecutions
+import com.task.presentation.taskGenerations
+import com.task.presentation.dashboard
+import com.task.presentation.health
+import com.task.scheduler.DailyTaskGenerationScheduler
+import com.task.usecase.task.GenerateDailyExecutionsUseCase
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpMethod
 import io.ktor.serialization.kotlinx.json.*
@@ -305,6 +314,8 @@ import io.ktor.server.resources.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.ktor.http.HttpStatusCode
+import io.ktor.server.auth.authenticate
+import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 
 fun main() {
@@ -328,6 +339,20 @@ fun Application.module() {
     }
 
     install(CORS) {
+        val allowedOriginsEnv = System.getenv("CORS_ALLOWED_ORIGINS")
+        val allowedOrigins = allowedOriginsEnv
+            ?.split(",")
+            ?.map { it.trim() }
+            ?: listOf(
+                "http://localhost:3000",
+                "http://127.0.0.1:3000",
+            )
+
+        allowedOrigins.forEach { origin ->
+            allowHost(origin.removePrefix("http://").removePrefix("https://"),
+                     schemes = listOf(if (origin.startsWith("https")) "https" else "http"))
+        }
+
         allowMethod(HttpMethod.Options)
         allowMethod(HttpMethod.Get)
         allowMethod(HttpMethod.Post)
@@ -336,7 +361,7 @@ fun Application.module() {
         allowMethod(HttpMethod.Delete)
         allowHeader(HttpHeaders.Authorization)
         allowHeader(HttpHeaders.ContentType)
-        anyHost()
+        allowCredentials = true  // 認証情報（Cookie、Authorization）を許可
     }
 
     install(StatusPages) {
@@ -348,31 +373,57 @@ fun Application.module() {
         }
     }
 
+    val injector = attributes[guiceInjectorKey]
+
+    // JWT認証を設定
+    val jwtConfig = injector.getInstance(JwtConfig::class.java)
+    configureJwtAuth(jwtConfig)
+
+    val scheduler = DailyTaskGenerationScheduler(
+        injector.getInstance(GenerateDailyExecutionsUseCase::class.java),
+    )
+
+    launch{
+        scheduler.start(this)
+    }
+
+    environment.monitor.subscribe(ApplicationStopped) {
+        scheduler.stop()
+    }
+
     routing {
         get("/health") {
             call.respondText("ok")
         }
+        auth()
 
-        members()
-        memberAvailabilities()
-        taskDefinitions()
+        authenticate("jwt") {
+            health()
+            members()
+            taskDefinitions()
+            taskExecutions()
+            taskGenerations()
+            dashboard()
+        }
+
     }
 }
 ```
 
 ### `backend/src/main/kotlin/com/task/Config.kt`
-```1:77:backend/src/main/kotlin/com/task/Config.kt
+```1:150:backend/src/main/kotlin/com/task/Config.kt
 package com.task
 
 import com.google.inject.AbstractModule
+import com.google.inject.TypeLiteral
+import com.google.inject.multibindings.Multibinder
+import com.task.domain.event.DomainEventDispatcher
+import com.task.domain.event.DomainEventHandler
 import com.task.domain.member.MemberRepository
-import com.task.domain.memberAvailability.MemberAvailabilityRepository
 import com.task.domain.taskDefinition.TaskDefinitionRepository
 import com.task.infra.database.Database
+import com.task.infra.event.InMemoryDomainEventDispatcher
 import com.task.infra.member.MemberRepositoryImpl
-import com.task.infra.memberAvailability.MemberAvailabilityRepositoryImpl
-// TaskDefinitionRepositoryImpl: ドメインのインターフェースをインフラの実装に接続
-// DIP: 依存性逆転の原則
 import com.task.infra.taskDefinition.TaskDefinitionRepositoryImpl
 // Member UseCases
 import com.task.usecase.member.CreateMemberUseCase
@@ -383,15 +434,6 @@ import com.task.usecase.member.GetMembersUseCase
 import com.task.usecase.member.GetMembersUseCaseImpl
 import com.task.usecase.member.UpdateMemberUseCase
 import com.task.usecase.member.UpdateMemberUseCaseImpl
-// MemberAvailability UseCases
-import com.task.usecase.memberAvailability.create.CreateMemberAvailabilityUseCase
-import com.task.usecase.memberAvailability.create.CreateMemberAvailabilityUseCaseImpl
-import com.task.usecase.memberAvailability.get.GetMemberAvailabilitiesUseCase
-import com.task.usecase.memberAvailability.get.GetMemberAvailabilitiesUseCaseImpl
-import com.task.usecase.memberAvailability.update.UpdateMemberAvailabilityTimeSlotsUseCase
-import com.task.usecase.memberAvailability.update.UpdateMemberAvailabilityTimeSlotsUseCaseImpl
-import com.task.usecase.memberAvailability.update.DeleteMemberAvailabilityTimeSlotsUseCase
-import com.task.usecase.memberAvailability.update.DeleteMemberAvailabilityTimeSlotsUseCaseImpl
 // TaskDefinition UseCases
 import com.task.usecase.taskDefinition.create.CreateTaskDefinitionUseCase
 import com.task.usecase.taskDefinition.create.CreateTaskDefinitionUseCaseImpl
@@ -401,17 +443,37 @@ import com.task.usecase.taskDefinition.get.GetTaskDefinitionUseCase
 import com.task.usecase.taskDefinition.get.GetTaskDefinitionUseCaseImpl
 import com.task.usecase.taskDefinition.get.GetTaskDefinitionsUseCase
 import com.task.usecase.taskDefinition.get.GetTaskDefinitionsUseCaseImpl
+import com.task.usecase.taskDefinition.handler.CreateTaskExecutionOnTaskDefinitionCreatedHandler
+import com.task.usecase.taskDefinition.handler.TaskDefinitionDeletedHandler
 import com.task.usecase.taskDefinition.update.UpdateTaskDefinitionUseCase
 import com.task.usecase.taskDefinition.update.UpdateTaskDefinitionUseCaseImpl
 import kotlin.jvm.java
+
+import com.task.infra.security.JwtConfig
+import com.task.infra.security.JwtService
+import com.task.usecase.auth.LoginUseCase
+import com.task.usecase.auth.LoginUseCaseImpl
+import com.typesafe.config.ConfigFactory
+import com.task.domain.mail.MailSender
+import com.task.infra.mail.LoggingMailSender
+import com.task.infra.mail.SendGridConfig
+import com.task.infra.mail.SendGridMailSender
+import com.task.infra.mail.SmtpMailSender
+import com.task.infra.mail.SmtpConfig
+import com.task.infra.event.handler.EmailNotificationHandler
+// Query Services (CQRS)
+import com.task.usecase.query.dashboard.DashboardQueryService
+import com.task.infra.query.DashboardQueryServiceImpl
+import com.task.usecase.query.member.MemberStatsQueryService
+import com.task.infra.query.MemberStatsQueryServiceImpl
 
 class AppModule : AbstractModule() {
     override fun configure() {
         bind(Database::class.java).asEagerSingleton()
 
         bind(MemberRepository::class.java).to(MemberRepositoryImpl::class.java)
-        bind(MemberAvailabilityRepository::class.java).to(MemberAvailabilityRepositoryImpl::class.java)
-        // Bind interface to implementation
+        // 修正: インターフェースを実装クラスにバインド（元のコードは自身にバインドしていたバグ）
+        // GuiceはTaskDefinitionRepositoryImplをインスタンス化し、TaskDefinitionRepositoryとして注入
         bind(TaskDefinitionRepository::class.java).to(TaskDefinitionRepositoryImpl::class.java)
 
         // Member UseCase bindings
@@ -421,13 +483,6 @@ class AppModule : AbstractModule() {
         bind(GetMembersUseCase::class.java).to(GetMembersUseCaseImpl::class.java)
         bind(GetMemberUseCase::class.java).to(GetMemberUseCaseImpl::class.java)
 
-        // MemberAvailability UseCase bindings
-        bind(CreateMemberAvailabilityUseCase::class.java).to(CreateMemberAvailabilityUseCaseImpl::class.java)
-        bind(UpdateMemberAvailabilityTimeSlotsUseCase::class.java).to(UpdateMemberAvailabilityTimeSlotsUseCaseImpl::class.java)
-        bind(DeleteMemberAvailabilityTimeSlotsUseCase::class.java).to(DeleteMemberAvailabilityTimeSlotsUseCaseImpl::class.java)
-        // 追加: GETエンドポイント用UseCase
-        bind(GetMemberAvailabilitiesUseCase::class.java).to(GetMemberAvailabilitiesUseCaseImpl::class.java)
-
         // TaskDefinition UseCase bindings
         bind(CreateTaskDefinitionUseCase::class.java).to(CreateTaskDefinitionUseCaseImpl::class.java)
         bind(UpdateTaskDefinitionUseCase::class.java).to(UpdateTaskDefinitionUseCaseImpl::class.java)
@@ -435,6 +490,76 @@ class AppModule : AbstractModule() {
         // 追加: GETエンドポイント用UseCase（ページネーション対応）
         bind(GetTaskDefinitionsUseCase::class.java).to(GetTaskDefinitionsUseCaseImpl::class.java)
         bind(GetTaskDefinitionUseCase::class.java).to(GetTaskDefinitionUseCaseImpl::class.java)
+
+        bind(DomainEventDispatcher::class.java).to(InMemoryDomainEventDispatcher::class.java)
+
+        // Mail bindings (環境変数で切り替え)
+        val appConfig = ConfigFactory.load()
+        val mailProvider = appConfig.getString("mail.provider")
+
+        when (mailProvider) {
+            "smtp" -> {
+                val sslTrust = appConfig.getString("mail.smtp.sslTrust")
+                val smtpConfig = SmtpConfig(
+                    host = appConfig.getString("mail.smtp.host"),
+                    port = appConfig.getInt("mail.smtp.port"),
+                    useStartTls = appConfig.getBoolean("mail.smtp.useStartTls"),
+                    startTlsRequired = appConfig.getBoolean("mail.smtp.startTlsRequired"),
+                    useSsl = appConfig.getBoolean("mail.smtp.useSsl"),
+                    sslTrust = sslTrust.takeIf { it.isNotBlank() },
+                    connectionTimeoutMs = appConfig.getInt("mail.smtp.connectionTimeoutMs"),
+                    timeoutMs = appConfig.getInt("mail.smtp.timeoutMs"),
+                    username = appConfig.getString("mail.smtp.username"),
+                    password = appConfig.getString("mail.smtp.password"),
+                    fromAddress = appConfig.getString("mail.smtp.fromAddress"),
+                    fromName = appConfig.getString("mail.smtp.fromName")
+                )
+                bind(SmtpConfig::class.java).toInstance(smtpConfig)
+                bind(MailSender::class.java).to(SmtpMailSender::class.java)
+            }
+            "sendgrid" -> {
+                val sendGridConfig = SendGridConfig(
+                    apiKey = appConfig.getString("mail.sendgrid.apiKey"),
+                    fromAddress = appConfig.getString("mail.sendgrid.fromAddress"),
+                    fromName = appConfig.getString("mail.sendgrid.fromName"),
+                )
+                bind(SendGridConfig::class.java).toInstance(sendGridConfig)
+                bind(MailSender::class.java).to(SendGridMailSender::class.java)
+            }
+            else -> {
+                // デフォルト: ログ出力のみ
+                bind(MailSender::class.java).to(LoggingMailSender::class.java)
+            }
+        }
+
+        // Auth UseCase bindings
+        bind(LoginUseCase::class.java).to(LoginUseCaseImpl::class.java)
+
+        // Query Services (CQRS)
+        bind(DashboardQueryService::class.java).to(DashboardQueryServiceImpl::class.java)
+        bind(MemberStatsQueryService::class.java).to(MemberStatsQueryServiceImpl::class.java)
+
+        val handlerBinder = Multibinder.newSetBinder(
+            binder(),
+            object : TypeLiteral<DomainEventHandler<*>>() {}
+        )
+        handlerBinder.addBinding().to(CreateTaskExecutionOnTaskDefinitionCreatedHandler::class.java)
+        handlerBinder.addBinding().to(TaskDefinitionDeletedHandler::class.java)
+        handlerBinder.addBinding().to(EmailNotificationHandler::class.java)
+
+        val jwtConfig = JwtConfig(
+            secret = appConfig.getString("jwt.secret"),
+            issuer =  appConfig.getString("jwt.issuer"),
+            audience =  appConfig.getString("jwt.audience"),
+            realm =  appConfig.getString("jwt.realm"),
+            expiresInMs =  appConfig.getLong("jwt.expiresInMs")
+        )
+
+        // JwtConfigをシングルトンとして登録
+        bind(JwtConfig::class.java).toInstance(jwtConfig)
+
+        // JwtServiceをシングルトンとして登録
+        bind(JwtService::class.java).toInstance(JwtService(jwtConfig))
     }
 }
 ```
@@ -954,6 +1079,5 @@ volumes:
 
 ここまでが、基盤系/設定周りの主要ファイルの現行状態をそのまま1つのmdに統合したものです。ファイルごとにコードブロックを設け、元のインデント・構造を保持しています。
 
-この文書をそのままリポジトリに保存しますか？保存します場合、保存先とファイル名（デフォルトは `docs/PROJECT_CONFIGURATION_SUMMARY.md`）を確認させてください。次に実ファイルとして保存します。
-
+この文書をそのままリポジトリに保存しますか？保存します場合、保存先とファイル名（デフォルトは `doc/project-configuration-summary.md`）を確認させてください。次に実ファイルとして保存します。
 

@@ -7,7 +7,6 @@ import { BottomNav } from './components/layout/BottomNav'
 import { Dashboard } from './pages/Dashboard'
 import { Tasks } from './pages/Tasks'
 import { Members } from './pages/Members'
-import { Availability } from './pages/Availability'
 import { CompletedExecutions } from './pages/CompletedExecutions'
 import { Login } from './pages/Login'
 import { Register } from './pages/Register'
@@ -72,14 +71,6 @@ function AppContent() {
           element={
             <ProtectedRoute>
               <Members />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/availability"
-          element={
-            <ProtectedRoute>
-              <Availability />
             </ProtectedRoute>
           }
         />

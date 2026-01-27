@@ -22,7 +22,7 @@ import type {
  * @returns 作成されたメンバー情報
  *
  * @note バックエンドのレスポンス実装後に動作確認が必要
- * @see docs/BACKEND_ISSUES.md - 問題1: レスポンス未返却
+ * @see doc/backend-issues.md - 問題1: レスポンス未返却
  *
  * @example
  * ```typescript
@@ -49,7 +49,7 @@ export async function createMember(
  * @returns 更新されたメンバー情報
  *
  * @note バックエンドのレスポンス実装後に動作確認が必要
- * @see docs/BACKEND_ISSUES.md - 問題1: レスポンス未返却
+ * @see doc/backend-issues.md - 問題1: レスポンス未返却
  *
  * @example
  * ```typescript

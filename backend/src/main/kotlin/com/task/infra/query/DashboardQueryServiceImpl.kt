@@ -4,12 +4,10 @@ import com.google.inject.Inject
 import com.task.domain.AppTimeZone
 import com.task.infra.database.Database
 import com.task.infra.database.jooq.tables.references.MEMBERS
-import com.task.infra.database.jooq.tables.references.MEMBER_AVAILABILITIES
 import com.task.infra.database.jooq.tables.references.TASK_DEFINITIONS
 import com.task.infra.database.jooq.tables.references.TASK_EXECUTIONS
 import com.task.infra.database.jooq.tables.references.TASK_RECURRENCES
 import com.task.infra.database.jooq.tables.references.TASK_SNAPSHOTS
-import com.task.infra.database.jooq.tables.references.TIME_SLOTS
 import com.task.usecase.query.dashboard.*
 import org.jooq.DSLContext
 import org.jooq.impl.DSL
@@ -28,7 +26,6 @@ class DashboardQueryServiceImpl @Inject constructor(
 ) : DashboardQueryService {
 
     private val dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
-    private val timeFormatter = DateTimeFormatter.ofPattern("HH:mm")
 
     override fun fetchDashboardData(input: DashboardQueryService.Input): DashboardQueryService.Output {
         return database.withSession { dsl ->
@@ -45,13 +42,9 @@ class DashboardQueryServiceImpl @Inject constructor(
             // 2. メンバーごとのタスクサマリー
             val memberSummaries = fetchMemberSummaries(dsl, targetDate)
 
-            // 3. メンバーの本日の空き時間
-            val memberAvailabilities = fetchMemberAvailabilities(dsl, targetDate)
-
             DashboardQueryService.Output(
                 todayTasks = todayTasks,
-                memberSummaries = memberSummaries,
-                memberAvailabilities = memberAvailabilities
+                memberSummaries = memberSummaries
             )
         }
     }
@@ -388,57 +381,6 @@ class DashboardQueryServiceImpl @Inject constructor(
                 completedCount = completedCount,
                 totalCount = totalCount,
                 tasks = memberTasks
-            )
-        }
-    }
-
-    /**
-     * メンバーの本日の空き時間を取得
-     *
-     * MemberAvailability + TimeSlots + Member をJOINして取得
-     */
-    private fun fetchMemberAvailabilities(dsl: DSLContext, targetDate: LocalDate): List<MemberAvailabilityTodayDto> {
-        val ma = MEMBER_AVAILABILITIES
-        val ts = TIME_SLOTS
-        val m = MEMBERS
-
-        // まず該当日の空き時間を持つメンバーを取得
-        val availabilityData = dsl.select(
-            m.ID,
-            m.NAME,
-            m.ROLE,
-            ts.START_TIME,
-            ts.END_TIME,
-            ts.MEMO
-        )
-            .from(ma)
-            .join(m).on(ma.MEMBER_ID.eq(m.ID))
-            .join(ts).on(ts.MEMBER_AVAILABILITY_ID.eq(ma.ID))
-            .where(ma.TARGET_DATE.eq(targetDate))
-            .orderBy(m.NAME, ts.START_TIME)
-            .fetch()
-
-        // メンバーごとにグループ化
-        return availabilityData.groupBy { record ->
-            Triple(
-                record.get(m.ID).toString(),
-                record.get(m.NAME) ?: "",
-                record.get(m.ROLE) ?: ""
-            )
-        }.map { (memberInfo, records) ->
-            val (memberId, memberName, familyRole) = memberInfo
-            val slots = records.map { record ->
-                TimeSlotDto(
-                    startTime = record.get(ts.START_TIME)?.format(timeFormatter) ?: "",
-                    endTime = record.get(ts.END_TIME)?.format(timeFormatter) ?: "",
-                    memo = record.get(ts.MEMO)
-                )
-            }
-            MemberAvailabilityTodayDto(
-                memberId = memberId,
-                memberName = memberName,
-                familyRole = familyRole,
-                slots = slots
             )
         }
     }

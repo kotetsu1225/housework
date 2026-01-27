@@ -22,15 +22,6 @@ export { loginApi, registerApi } from './auth'
 // Member API
 export { getMembers, getMember, createMember, updateMember } from './members'
 
-// MemberAvailability API
-export {
-  getMemberAvailabilities,
-  createMemberAvailability,
-  updateMemberAvailability,
-  deleteMemberAvailabilitySlots,
-  deleteMemberAvailability,
-} from './memberAvailabilities'
-
 // TaskDefinition API
 export {
   getTaskDefinitions,
@@ -60,7 +51,4 @@ export type {
   TodayTaskDto,
   MemberTaskDto,
   MemberTaskSummaryDto,
-  TimeSlotDto,
-  MemberAvailabilityTodayDto,
 } from './dashboard'
-

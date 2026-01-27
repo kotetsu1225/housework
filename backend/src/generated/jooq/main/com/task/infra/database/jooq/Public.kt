@@ -4,14 +4,12 @@
 package com.task.infra.database.jooq
 
 
-import com.task.infra.database.jooq.tables.MemberAvailabilities
 import com.task.infra.database.jooq.tables.Members
 import com.task.infra.database.jooq.tables.ScheduledNotifications
 import com.task.infra.database.jooq.tables.TaskDefinitions
 import com.task.infra.database.jooq.tables.TaskExecutions
 import com.task.infra.database.jooq.tables.TaskRecurrences
 import com.task.infra.database.jooq.tables.TaskSnapshots
-import com.task.infra.database.jooq.tables.TimeSlots
 
 import kotlin.collections.List
 
@@ -32,11 +30,6 @@ open class Public : SchemaImpl("public", DefaultCatalog.DEFAULT_CATALOG) {
          */
         val PUBLIC: Public = Public()
     }
-
-    /**
-     * メンバーの空き時間（物理削除方式）
-     */
-    val MEMBER_AVAILABILITIES: MemberAvailabilities get() = MemberAvailabilities.MEMBER_AVAILABILITIES
 
     /**
      * 家族メンバー
@@ -68,21 +61,14 @@ open class Public : SchemaImpl("public", DefaultCatalog.DEFAULT_CATALOG) {
      */
     val TASK_SNAPSHOTS: TaskSnapshots get() = TaskSnapshots.TASK_SNAPSHOTS
 
-    /**
-     * TimeSlot値オブジェクト（MemberAvailability集約の一部）
-     */
-    val TIME_SLOTS: TimeSlots get() = TimeSlots.TIME_SLOTS
-
     override fun getCatalog(): Catalog = DefaultCatalog.DEFAULT_CATALOG
 
     override fun getTables(): List<Table<*>> = listOf(
-        MemberAvailabilities.MEMBER_AVAILABILITIES,
         Members.MEMBERS,
         ScheduledNotifications.SCHEDULED_NOTIFICATIONS,
         TaskDefinitions.TASK_DEFINITIONS,
         TaskExecutions.TASK_EXECUTIONS,
         TaskRecurrences.TASK_RECURRENCES,
-        TaskSnapshots.TASK_SNAPSHOTS,
-        TimeSlots.TIME_SLOTS
+        TaskSnapshots.TASK_SNAPSHOTS
     )
 }

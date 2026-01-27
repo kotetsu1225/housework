@@ -58,31 +58,11 @@ export interface MemberTaskSummaryDto {
 }
 
 /**
- * 時間スロットDTO
- */
-export interface TimeSlotDto {
-  startTime: string // HH:mm
-  endTime: string
-  memo: string | null
-}
-
-/**
- * メンバーの本日の空き時間DTO
- */
-export interface MemberAvailabilityTodayDto {
-  memberId: string
-  memberName: string
-  familyRole: string
-  slots: TimeSlotDto[]
-}
-
-/**
  * ダッシュボードAPIレスポンス
  */
 export interface DashboardResponse {
   todayTasks: TodayTaskDto[]
   memberSummaries: MemberTaskSummaryDto[]
-  memberAvailabilities: MemberAvailabilityTodayDto[]
 }
 
 /**
@@ -91,7 +71,7 @@ export interface DashboardResponse {
  * GET /api/dashboard?date=YYYY-MM-DD
  *
  * @param date - 対象日（YYYY-MM-DD形式）、省略時は今日
- * @returns ダッシュボードデータ（今日のタスク、メンバーサマリー、空き時間）
+ * @returns ダッシュボードデータ（今日のタスク、メンバーサマリー）
  *
  * @example
  * ```typescript
@@ -106,4 +86,3 @@ export async function getDashboardData(date?: string): Promise<DashboardResponse
   const endpoint = date ? `/dashboard?date=${date}` : '/dashboard'
   return apiGet<DashboardResponse>(endpoint)
 }
-

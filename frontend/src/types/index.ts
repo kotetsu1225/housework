@@ -30,44 +30,6 @@ export interface User {
 }
 
 // ==========================================
-// MemberAvailability関連の型定義
-// ==========================================
-
-/**
- * 空き時間スロット（バックエンド構造に準拠）
- * @see backend/src/main/kotlin/com/task/domain/memberAvailability/MemberAvailability.kt
- */
-export interface TimeSlot {
-  startTime: string // HH:mm format
-  endTime: string // HH:mm format
-  memo?: string | null
-}
-
-/**
- * メンバー空き時間（バックエンド構造に準拠）
- * 1つの日付に対する空き時間スロットのコレクション
- */
-export interface MemberAvailability {
-  id: string
-  memberId: string
-  targetDate: string // YYYY-MM-DD format
-  slots: TimeSlot[]
-}
-
-/**
- * フラット化された時間スロット（UI表示用）
- * MemberAvailabilityをフラットなリストとして扱う場合に使用
- */
-export interface FlatTimeSlot {
-  availabilityId: string
-  memberId: string
-  targetDate: string // YYYY-MM-DD
-  startTime: string // HH:mm
-  endTime: string // HH:mm
-  memo?: string | null
-}
-
-// ==========================================
 // TaskDefinition関連の型定義
 // ==========================================
 

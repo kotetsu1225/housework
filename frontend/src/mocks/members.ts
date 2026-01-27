@@ -2,7 +2,7 @@
  * メンバー関連のモックデータ
  *
  * @note バックエンドにGETエンドポイントが追加されるまでの暫定データ
- * @see docs/BACKEND_ISSUES.md - 問題3: GETエンドポイントの欠如
+ * @see doc/backend-issues.md - 問題3: GETエンドポイントの欠如
  */
 
 import type { Member } from '../types'

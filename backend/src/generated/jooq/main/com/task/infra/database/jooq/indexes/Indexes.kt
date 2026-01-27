@@ -4,12 +4,10 @@
 package com.task.infra.database.jooq.indexes
 
 
-import com.task.infra.database.jooq.tables.MemberAvailabilities
 import com.task.infra.database.jooq.tables.Members
 import com.task.infra.database.jooq.tables.ScheduledNotifications
 import com.task.infra.database.jooq.tables.TaskDefinitions
 import com.task.infra.database.jooq.tables.TaskExecutions
-import com.task.infra.database.jooq.tables.TimeSlots
 
 import org.jooq.Index
 import org.jooq.impl.DSL
@@ -21,8 +19,6 @@ import org.jooq.impl.Internal
 // INDEX definitions
 // -------------------------------------------------------------------------
 
-val IDX_MEMBER_AVAILABILITIES_MEMBER_ID: Index = Internal.createIndex(DSL.name("idx_member_availabilities_member_id"), MemberAvailabilities.MEMBER_AVAILABILITIES, arrayOf(MemberAvailabilities.MEMBER_AVAILABILITIES.MEMBER_ID), false)
-val IDX_MEMBER_AVAILABILITIES_TARGET_DATE: Index = Internal.createIndex(DSL.name("idx_member_availabilities_target_date"), MemberAvailabilities.MEMBER_AVAILABILITIES, arrayOf(MemberAvailabilities.MEMBER_AVAILABILITIES.TARGET_DATE), false)
 val IDX_MEMBERS_NAME: Index = Internal.createIndex(DSL.name("idx_members_name"), Members.MEMBERS, arrayOf(Members.MEMBERS.NAME), true)
 val IDX_MEMBERS_ROLE: Index = Internal.createIndex(DSL.name("idx_members_role"), Members.MEMBERS, arrayOf(Members.MEMBERS.ROLE), false)
 val IDX_SCHEDULED_NOTIFICATIONS_MEMBER: Index = Internal.createIndex(DSL.name("idx_scheduled_notifications_member"), ScheduledNotifications.SCHEDULED_NOTIFICATIONS, arrayOf(ScheduledNotifications.SCHEDULED_NOTIFICATIONS.MEMBER_ID), false)
@@ -39,4 +35,3 @@ val IDX_TASK_EXECUTIONS_DATE_STATUS: Index = Internal.createIndex(DSL.name("idx_
 val IDX_TASK_EXECUTIONS_DEFINITION: Index = Internal.createIndex(DSL.name("idx_task_executions_definition"), TaskExecutions.TASK_EXECUTIONS, arrayOf(TaskExecutions.TASK_EXECUTIONS.TASK_DEFINITION_ID), false)
 val IDX_TASK_EXECUTIONS_SCHEDULED_DATE: Index = Internal.createIndex(DSL.name("idx_task_executions_scheduled_date"), TaskExecutions.TASK_EXECUTIONS, arrayOf(TaskExecutions.TASK_EXECUTIONS.SCHEDULED_DATE), false)
 val IDX_TASK_EXECUTIONS_STATUS: Index = Internal.createIndex(DSL.name("idx_task_executions_status"), TaskExecutions.TASK_EXECUTIONS, arrayOf(TaskExecutions.TASK_EXECUTIONS.STATUS), false)
-val IDX_TIME_SLOTS_AVAILABILITY_ID: Index = Internal.createIndex(DSL.name("idx_time_slots_availability_id"), TimeSlots.TIME_SLOTS, arrayOf(TimeSlots.TIME_SLOTS.MEMBER_AVAILABILITY_ID), false)

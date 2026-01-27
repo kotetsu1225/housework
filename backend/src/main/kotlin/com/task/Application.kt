@@ -6,7 +6,6 @@ import com.task.presentation.auth
 import com.task.presentation.configureJwtAuth
 import com.task.presentation.guiceInjectorKey
 import com.task.presentation.members
-import com.task.presentation.memberAvailabilities
 import com.task.presentation.taskDefinitions
 import com.task.presentation.taskExecutions
 import com.task.presentation.taskGenerations
@@ -113,7 +112,6 @@ fun Application.module() {
         authenticate("jwt") {
             health()
             members()
-            memberAvailabilities()
             taskDefinitions()
             taskExecutions()
             taskGenerations()

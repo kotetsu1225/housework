@@ -5,7 +5,7 @@ import java.time.LocalDate
 /**
  * ダッシュボード画面用QueryService
  *
- * 複数集約（TaskExecution, TaskDefinition, Member, MemberAvailability）を
+ * 複数集約（TaskExecution, TaskDefinition, Member）を
  * JOINして取得する参照専用サービス
  *
  * CQRSパターン: 参照系モデルとして、画面に最適化されたDTOを返す
@@ -18,8 +18,7 @@ interface DashboardQueryService {
 
     data class Output(
         val todayTasks: List<TodayTaskDto>,
-        val memberSummaries: List<MemberTaskSummaryDto>,
-        val memberAvailabilities: List<MemberAvailabilityTodayDto>
+        val memberSummaries: List<MemberTaskSummaryDto>
     )
 
     fun fetchDashboardData(input: Input): Output
@@ -64,24 +63,5 @@ data class MemberTaskDto(
     val taskExecutionId: String,
     val taskName: String,
     val status: String
-)
-
-/**
- * メンバーの本日の空き時間DTO
- */
-data class MemberAvailabilityTodayDto(
-    val memberId: String,
-    val memberName: String,
-    val familyRole: String,
-    val slots: List<TimeSlotDto>
-)
-
-/**
- * 時間スロットDTO
- */
-data class TimeSlotDto(
-    val startTime: String,  // HH:mm
-    val endTime: String,
-    val memo: String?
 )
 

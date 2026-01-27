@@ -2,7 +2,7 @@
  * タスク実行管理カスタムフック
  *
  * タスク実行の取得・状態遷移・担当者割り当て機能を提供
- * @see docs/TASK_EXECUTION_API.md
+ * @see doc/task-execution-api.md
  */
 
 import { useState, useCallback } from 'react'
@@ -335,7 +335,7 @@ export function useTaskExecution(
    *
    * @note バックエンドは生成されたTaskExecutionのIDのみを返します。
    *       生成後にタスク一覧を最新化したい場合は、別途fetchTaskExecutionsを呼び出してください。
-   * @see docs/BACKEND_ISSUES.md - 4. APIエンドポイントの命名不整合
+   * @see doc/backend-issues.md - 4. APIエンドポイントの命名不整合
    */
   const generateTasks = useCallback(
     async (targetDate: string): Promise<boolean> => {

@@ -1,12 +1,11 @@
 import { NavLink } from 'react-router-dom'
 import { clsx } from 'clsx'
-import { Home, ListTodo, Users, Clock } from 'lucide-react'
+import { Home, ListTodo, Users } from 'lucide-react'
 
 const navItems = [
   { to: '/', icon: Home, label: 'ホーム' },
   { to: '/tasks', icon: ListTodo, label: 'タスク' },
   { to: '/members', icon: Users, label: 'メンバー' },
-  { to: '/availability', icon: Clock, label: '空き時間' },
 ]
 
 /**

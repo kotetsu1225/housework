@@ -4,7 +4,6 @@
  * CQRSパターン: ダッシュボード画面に必要なデータを一括取得
  * - 今日のタスク一覧
  * - メンバーごとのタスクサマリー
- * - メンバーの空き時間
  */
 
 import { useState, useCallback, useEffect } from 'react'
@@ -14,7 +13,6 @@ import type {
   DashboardResponse,
   TodayTaskDto,
   MemberTaskSummaryDto,
-  MemberAvailabilityTodayDto,
 } from '../api/dashboard'
 
 /**
@@ -25,8 +23,6 @@ interface UseDashboardState {
   todayTasks: TodayTaskDto[]
   /** メンバーごとのタスクサマリー */
   memberSummaries: MemberTaskSummaryDto[]
-  /** メンバーの空き時間 */
-  memberAvailabilities: MemberAvailabilityTodayDto[]
   /** ローディング状態 */
   loading: boolean
   /** エラーメッセージ */
@@ -79,7 +75,6 @@ type UseDashboardReturn = UseDashboardState & UseDashboardActions
  *   const {
  *     todayTasks,
  *     memberSummaries,
- *     memberAvailabilities,
  *     loading,
  *     error,
  *     startTask,
@@ -94,7 +89,6 @@ type UseDashboardReturn = UseDashboardState & UseDashboardActions
  *     <>
  *       <TaskList tasks={todayTasks} onStart={startTask} />
  *       <MemberProgress summaries={memberSummaries} />
- *       <MemberAvailability availabilities={memberAvailabilities} />
  *     </>
  *   )
  * }
@@ -104,7 +98,6 @@ export function useDashboard(date?: string): UseDashboardReturn {
   const [state, setState] = useState<UseDashboardState>({
     todayTasks: [],
     memberSummaries: [],
-    memberAvailabilities: [],
     loading: true,
     error: null,
   })
@@ -120,7 +113,6 @@ export function useDashboard(date?: string): UseDashboardReturn {
       setState({
         todayTasks: data.todayTasks,
         memberSummaries: data.memberSummaries,
-        memberAvailabilities: data.memberAvailabilities,
         loading: false,
         error: null,
       })
@@ -228,4 +220,3 @@ export function useDashboard(date?: string): UseDashboardReturn {
 }
 
 export default useDashboard
-

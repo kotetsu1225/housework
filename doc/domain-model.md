@@ -45,6 +45,7 @@ classDiagram
             +TaskSchedule schedule
             +Int version
             +Boolean isDeleted
+            +Int point
         }
 
         class TaskDefinitionId { <<Value Object>> +UUID value }
@@ -125,6 +126,7 @@ classDiagram
             +TaskDefinitionDescription frozenDescription
             +ScheduledTimeRange frozenScheduledTimeRange
             +Int definitionVersion
+            +Int frozenPoint
             +Instant capturedAt
         }
     }

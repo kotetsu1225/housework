@@ -24,6 +24,7 @@ erDiagram
         DATE one_time_deadline
         INTEGER version
         BOOLEAN is_deleted
+        INTEGER point
         TIMESTAMPTZ created_at
         TIMESTAMPTZ updated_at
     }
@@ -55,6 +56,7 @@ erDiagram
         UUID task_execution_id PK, FK
         UUID member_id PK, FK
         TIMESTAMPTZ joined_at
+        INTEGER earned_point
     }
 
     TASK_SNAPSHOTS {
@@ -64,6 +66,7 @@ erDiagram
         TIMESTAMPTZ scheduled_start_time
         TIMESTAMPTZ scheduled_end_time
         INTEGER definition_version
+        INTEGER frozen_point
         TIMESTAMPTZ created_at
     }
 

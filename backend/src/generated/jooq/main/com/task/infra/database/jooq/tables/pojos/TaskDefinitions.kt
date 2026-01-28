@@ -27,7 +27,8 @@ data class TaskDefinitions(
     val createdAt: OffsetDateTime? = null,
     val updatedAt: OffsetDateTime? = null,
     val scheduledStartTime: OffsetDateTime,
-    val scheduledEndTime: OffsetDateTime
+    val scheduledEndTime: OffsetDateTime,
+    val point: Int? = null
 ): Serializable {
 
     override fun equals(other: Any?): Boolean {
@@ -96,6 +97,12 @@ data class TaskDefinitions(
             return false
         if (this.scheduledEndTime != o.scheduledEndTime)
             return false
+        if (this.point == null) {
+            if (o.point != null)
+                return false
+        }
+        else if (this.point != o.point)
+            return false
         return true
     }
 
@@ -115,6 +122,7 @@ data class TaskDefinitions(
         result = prime * result + (if (this.updatedAt == null) 0 else this.updatedAt.hashCode())
         result = prime * result + this.scheduledStartTime.hashCode()
         result = prime * result + this.scheduledEndTime.hashCode()
+        result = prime * result + (if (this.point == null) 0 else this.point.hashCode())
         return result
     }
 
@@ -134,6 +142,7 @@ data class TaskDefinitions(
         sb.append(", ").append(updatedAt)
         sb.append(", ").append(scheduledStartTime)
         sb.append(", ").append(scheduledEndTime)
+        sb.append(", ").append(point)
 
         sb.append(")")
         return sb.toString()

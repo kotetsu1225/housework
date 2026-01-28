@@ -11,8 +11,8 @@ import java.util.UUID
 
 import org.jooq.Field
 import org.jooq.Record2
-import org.jooq.Record3
-import org.jooq.Row3
+import org.jooq.Record4
+import org.jooq.Row4
 import org.jooq.impl.UpdatableRecordImpl
 
 
@@ -20,7 +20,7 @@ import org.jooq.impl.UpdatableRecordImpl
  * タスク実行の参加者
  */
 @Suppress("UNCHECKED_CAST")
-open class TaskExecutionParticipantsRecord private constructor() : UpdatableRecordImpl<TaskExecutionParticipantsRecord>(TaskExecutionParticipants.TASK_EXECUTION_PARTICIPANTS), Record3<UUID?, UUID?, OffsetDateTime?> {
+open class TaskExecutionParticipantsRecord private constructor() : UpdatableRecordImpl<TaskExecutionParticipantsRecord>(TaskExecutionParticipants.TASK_EXECUTION_PARTICIPANTS), Record4<UUID?, UUID?, OffsetDateTime?, Int?> {
 
     open var taskExecutionId: UUID
         set(value): Unit = set(0, value)
@@ -34,6 +34,10 @@ open class TaskExecutionParticipantsRecord private constructor() : UpdatableReco
         set(value): Unit = set(2, value)
         get(): OffsetDateTime? = get(2) as OffsetDateTime?
 
+    open var earnedPoint: Int?
+        set(value): Unit = set(3, value)
+        get(): Int? = get(3) as Int?
+
     // -------------------------------------------------------------------------
     // Primary key information
     // -------------------------------------------------------------------------
@@ -41,20 +45,23 @@ open class TaskExecutionParticipantsRecord private constructor() : UpdatableReco
     override fun key(): Record2<UUID?, UUID?> = super.key() as Record2<UUID?, UUID?>
 
     // -------------------------------------------------------------------------
-    // Record3 type implementation
+    // Record4 type implementation
     // -------------------------------------------------------------------------
 
-    override fun fieldsRow(): Row3<UUID?, UUID?, OffsetDateTime?> = super.fieldsRow() as Row3<UUID?, UUID?, OffsetDateTime?>
-    override fun valuesRow(): Row3<UUID?, UUID?, OffsetDateTime?> = super.valuesRow() as Row3<UUID?, UUID?, OffsetDateTime?>
+    override fun fieldsRow(): Row4<UUID?, UUID?, OffsetDateTime?, Int?> = super.fieldsRow() as Row4<UUID?, UUID?, OffsetDateTime?, Int?>
+    override fun valuesRow(): Row4<UUID?, UUID?, OffsetDateTime?, Int?> = super.valuesRow() as Row4<UUID?, UUID?, OffsetDateTime?, Int?>
     override fun field1(): Field<UUID?> = TaskExecutionParticipants.TASK_EXECUTION_PARTICIPANTS.TASK_EXECUTION_ID
     override fun field2(): Field<UUID?> = TaskExecutionParticipants.TASK_EXECUTION_PARTICIPANTS.MEMBER_ID
     override fun field3(): Field<OffsetDateTime?> = TaskExecutionParticipants.TASK_EXECUTION_PARTICIPANTS.JOINED_AT
+    override fun field4(): Field<Int?> = TaskExecutionParticipants.TASK_EXECUTION_PARTICIPANTS.EARNED_POINT
     override fun component1(): UUID = taskExecutionId
     override fun component2(): UUID = memberId
     override fun component3(): OffsetDateTime? = joinedAt
+    override fun component4(): Int? = earnedPoint
     override fun value1(): UUID = taskExecutionId
     override fun value2(): UUID = memberId
     override fun value3(): OffsetDateTime? = joinedAt
+    override fun value4(): Int? = earnedPoint
 
     override fun value1(value: UUID?): TaskExecutionParticipantsRecord {
         set(0, value)
@@ -71,20 +78,27 @@ open class TaskExecutionParticipantsRecord private constructor() : UpdatableReco
         return this
     }
 
-    override fun values(value1: UUID?, value2: UUID?, value3: OffsetDateTime?): TaskExecutionParticipantsRecord {
+    override fun value4(value: Int?): TaskExecutionParticipantsRecord {
+        set(3, value)
+        return this
+    }
+
+    override fun values(value1: UUID?, value2: UUID?, value3: OffsetDateTime?, value4: Int?): TaskExecutionParticipantsRecord {
         this.value1(value1)
         this.value2(value2)
         this.value3(value3)
+        this.value4(value4)
         return this
     }
 
     /**
      * Create a detached, initialised TaskExecutionParticipantsRecord
      */
-    constructor(taskExecutionId: UUID, memberId: UUID, joinedAt: OffsetDateTime? = null): this() {
+    constructor(taskExecutionId: UUID, memberId: UUID, joinedAt: OffsetDateTime? = null, earnedPoint: Int? = null): this() {
         this.taskExecutionId = taskExecutionId
         this.memberId = memberId
         this.joinedAt = joinedAt
+        this.earnedPoint = earnedPoint
         resetChangedOnNotNull()
     }
 
@@ -96,6 +110,7 @@ open class TaskExecutionParticipantsRecord private constructor() : UpdatableReco
             this.taskExecutionId = value.taskExecutionId
             this.memberId = value.memberId
             this.joinedAt = value.joinedAt
+            this.earnedPoint = value.earnedPoint
             resetChangedOnNotNull()
         }
     }

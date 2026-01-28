@@ -20,7 +20,8 @@ data class TaskSnapshots(
     val definitionVersion: Int,
     val createdAt: OffsetDateTime? = null,
     val scheduledStartTime: OffsetDateTime,
-    val scheduledEndTime: OffsetDateTime
+    val scheduledEndTime: OffsetDateTime,
+    val frozenPoint: Int? = null
 ): Serializable {
 
     override fun equals(other: Any?): Boolean {
@@ -53,6 +54,12 @@ data class TaskSnapshots(
             return false
         if (this.scheduledEndTime != o.scheduledEndTime)
             return false
+        if (this.frozenPoint == null) {
+            if (o.frozenPoint != null)
+                return false
+        }
+        else if (this.frozenPoint != o.frozenPoint)
+            return false
         return true
     }
 
@@ -66,6 +73,7 @@ data class TaskSnapshots(
         result = prime * result + (if (this.createdAt == null) 0 else this.createdAt.hashCode())
         result = prime * result + this.scheduledStartTime.hashCode()
         result = prime * result + this.scheduledEndTime.hashCode()
+        result = prime * result + (if (this.frozenPoint == null) 0 else this.frozenPoint.hashCode())
         return result
     }
 
@@ -79,6 +87,7 @@ data class TaskSnapshots(
         sb.append(", ").append(createdAt)
         sb.append(", ").append(scheduledStartTime)
         sb.append(", ").append(scheduledEndTime)
+        sb.append(", ").append(frozenPoint)
 
         sb.append(")")
         return sb.toString()

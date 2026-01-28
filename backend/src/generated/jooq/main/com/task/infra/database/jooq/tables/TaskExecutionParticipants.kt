@@ -24,7 +24,7 @@ import org.jooq.Index
 import org.jooq.Name
 import org.jooq.Record
 import org.jooq.Records
-import org.jooq.Row3
+import org.jooq.Row4
 import org.jooq.Schema
 import org.jooq.SelectField
 import org.jooq.Table
@@ -89,6 +89,12 @@ open class TaskExecutionParticipants(
      * 参加日時
      */
     val JOINED_AT: TableField<TaskExecutionParticipantsRecord, OffsetDateTime?> = createField(DSL.name("joined_at"), SQLDataType.TIMESTAMPWITHTIMEZONE(6).nullable(false).defaultValue(DSL.field(DSL.raw("CURRENT_TIMESTAMP"), SQLDataType.TIMESTAMPWITHTIMEZONE)), this, "参加日時")
+
+    /**
+     * The column <code>public.task_execution_participants.earned_point</code>.
+     * 獲得したポイント（NULL = 未完了、NOT NULL = 完了時の獲得ポイント）
+     */
+    val EARNED_POINT: TableField<TaskExecutionParticipantsRecord, Int?> = createField(DSL.name("earned_point"), SQLDataType.INTEGER, this, "獲得したポイント（NULL = 未完了、NOT NULL = 完了時の獲得ポイント）")
 
     private constructor(alias: Name, aliased: Table<TaskExecutionParticipantsRecord>?): this(alias, null, null, aliased, null)
     private constructor(alias: Name, aliased: Table<TaskExecutionParticipantsRecord>?, parameters: Array<Field<*>?>?): this(alias, null, null, aliased, parameters)
@@ -165,18 +171,18 @@ open class TaskExecutionParticipants(
     override fun rename(name: Table<*>): TaskExecutionParticipants = TaskExecutionParticipants(name.getQualifiedName(), null)
 
     // -------------------------------------------------------------------------
-    // Row3 type methods
+    // Row4 type methods
     // -------------------------------------------------------------------------
-    override fun fieldsRow(): Row3<UUID?, UUID?, OffsetDateTime?> = super.fieldsRow() as Row3<UUID?, UUID?, OffsetDateTime?>
+    override fun fieldsRow(): Row4<UUID?, UUID?, OffsetDateTime?, Int?> = super.fieldsRow() as Row4<UUID?, UUID?, OffsetDateTime?, Int?>
 
     /**
      * Convenience mapping calling {@link SelectField#convertFrom(Function)}.
      */
-    fun <U> mapping(from: (UUID?, UUID?, OffsetDateTime?) -> U): SelectField<U> = convertFrom(Records.mapping(from))
+    fun <U> mapping(from: (UUID?, UUID?, OffsetDateTime?, Int?) -> U): SelectField<U> = convertFrom(Records.mapping(from))
 
     /**
      * Convenience mapping calling {@link SelectField#convertFrom(Class,
      * Function)}.
      */
-    fun <U> mapping(toType: Class<U>, from: (UUID?, UUID?, OffsetDateTime?) -> U): SelectField<U> = convertFrom(toType, Records.mapping(from))
+    fun <U> mapping(toType: Class<U>, from: (UUID?, UUID?, OffsetDateTime?, Int?) -> U): SelectField<U> = convertFrom(toType, Records.mapping(from))
 }

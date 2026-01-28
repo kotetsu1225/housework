@@ -30,14 +30,28 @@ class DashboardQueryServiceImpl @Inject constructor(
 
     private val dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
 
-    private fun assigneeMemberIdField(): Field<UUID?> {
+    private data class AssigneeRow(
+        val memberId: UUID?,
+        val memberName: String?
+    )
+
+    private fun assigneeMembersField(): Field<List<AssigneeRow>> {
         val tep = TASK_EXECUTION_PARTICIPANTS
-        return DSL.select(tep.MEMBER_ID)
-            .from(tep)
-            .where(tep.TASK_EXECUTION_ID.eq(TASK_EXECUTIONS.ID))
-            .orderBy(tep.JOINED_AT.asc())
-            .limit(1)
-            .asField("assignee_member_id")
+        val m = MEMBERS
+        return DSL.multiset(
+            DSL.select(tep.MEMBER_ID, m.NAME)
+                .from(tep)
+                .join(m).on(tep.MEMBER_ID.eq(m.ID))
+                .where(tep.TASK_EXECUTION_ID.eq(TASK_EXECUTIONS.ID))
+                .orderBy(tep.JOINED_AT.asc())
+        ).convertFrom { rows ->
+            rows.map { row ->
+                AssigneeRow(
+                    memberId = row.get(tep.MEMBER_ID),
+                    memberName = row.get(m.NAME)
+                )
+            }
+        }
     }
 
     override fun fetchDashboardData(input: DashboardQueryService.Input): DashboardQueryService.Output {
@@ -73,8 +87,7 @@ class DashboardQueryServiceImpl @Inject constructor(
         val te = TASK_EXECUTIONS
         val td = TASK_DEFINITIONS
         val ts = TASK_SNAPSHOTS
-        val m = MEMBERS.`as`("assignee")
-        val assigneeMemberId = assigneeMemberIdField()
+        val assignees = assigneeMembersField()
 
         return dsl.select(
             te.ID,
@@ -88,14 +101,12 @@ class DashboardQueryServiceImpl @Inject constructor(
             td.SCHEDULE_TYPE,
             te.STATUS,
             td.OWNER_MEMBER_ID,
-            assigneeMemberId,
-            m.NAME.`as`("assignee_name"),
+            assignees,
             te.SCHEDULED_DATE
         )
             .from(te)
             .join(td).on(te.TASK_DEFINITION_ID.eq(td.ID))
             .leftJoin(ts).on(ts.TASK_EXECUTION_ID.eq(te.ID))  // スナップショットを LEFT JOIN
-            .leftJoin(m).on(assigneeMemberId.eq(m.ID))
             .where(te.SCHEDULED_DATE.eq(targetDate))
             .and(td.IS_DELETED.eq(false))
             .and(te.STATUS.ne("CANCELLED"))
@@ -108,6 +119,7 @@ class DashboardQueryServiceImpl @Inject constructor(
                 td.NAME.asc()
             )
             .fetch { record ->
+                val primaryAssignee = record.get(assignees)?.firstOrNull()
                 TodayTaskDto(
                     taskExecutionId = record.get(te.ID).toString(),
                     taskDefinitionId = record.get(te.TASK_DEFINITION_ID).toString(),
@@ -119,8 +131,8 @@ class DashboardQueryServiceImpl @Inject constructor(
                     scheduleType = record.get(td.SCHEDULE_TYPE) ?: "RECURRING",
                     status = record.get(te.STATUS) ?: "NOT_STARTED",
                     ownerMemberId = record.get(td.OWNER_MEMBER_ID)?.toString(),
-                    assigneeMemberId = record.get(assigneeMemberId)?.toString(),
-                    assigneeMemberName = record.get("assignee_name", String::class.java),
+                    assigneeMemberId = primaryAssignee?.memberId?.toString(),
+                    assigneeMemberName = primaryAssignee?.memberName,
                     scheduledDate = record.get(te.SCHEDULED_DATE)?.format(dateFormatter) ?: ""
                 )
             }
@@ -156,8 +168,7 @@ class DashboardQueryServiceImpl @Inject constructor(
         val te = TASK_EXECUTIONS
         val td = TASK_DEFINITIONS
         val ts = TASK_SNAPSHOTS
-        val m = MEMBERS.`as`("assignee")
-        val assigneeMemberId = assigneeMemberIdField()
+        val assignees = assigneeMembersField()
 
         return dsl.select(
             te.ID,
@@ -170,19 +181,18 @@ class DashboardQueryServiceImpl @Inject constructor(
             td.SCHEDULE_TYPE,
             te.STATUS,
             td.OWNER_MEMBER_ID,
-            assigneeMemberId,
-            m.NAME.`as`("assignee_name"),
+            assignees,
             te.SCHEDULED_DATE
         )
             .from(te)
             .join(td).on(te.TASK_DEFINITION_ID.eq(td.ID))
             .leftJoin(ts).on(ts.TASK_EXECUTION_ID.eq(te.ID))
-            .leftJoin(m).on(assigneeMemberId.eq(m.ID))
             .where(te.SCHEDULED_DATE.eq(targetDate))
             .and(td.IS_DELETED.eq(false))
             .and(te.STATUS.ne("CANCELLED"))
             .orderBy(td.NAME.asc())
             .fetch { record ->
+                val primaryAssignee = record.get(assignees)?.firstOrNull()
                 TodayTaskDto(
                     taskExecutionId = record.get(te.ID).toString(),
                     taskDefinitionId = record.get(te.TASK_DEFINITION_ID).toString(),
@@ -194,8 +204,8 @@ class DashboardQueryServiceImpl @Inject constructor(
                     scheduleType = record.get(td.SCHEDULE_TYPE) ?: "RECURRING",
                     status = record.get(te.STATUS) ?: "NOT_STARTED",
                     ownerMemberId = record.get(td.OWNER_MEMBER_ID)?.toString(),
-                    assigneeMemberId = record.get(assigneeMemberId)?.toString(),
-                    assigneeMemberName = record.get("assignee_name", String::class.java),
+                    assigneeMemberId = primaryAssignee?.memberId?.toString(),
+                    assigneeMemberName = primaryAssignee?.memberName,
                     scheduledDate = record.get(te.SCHEDULED_DATE)?.format(dateFormatter) ?: ""
                 )
             }

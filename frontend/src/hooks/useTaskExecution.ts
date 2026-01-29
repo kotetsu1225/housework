@@ -51,18 +51,18 @@ interface UseTaskExecutionActions {
   /**
    * タスクを開始（NOT_STARTED -> IN_PROGRESS）
    * @param taskExecutionId - タスク実行ID
-   * @param memberId - 実行者のメンバーID
+   * @param memberIds - 実行者のメンバーID配列
    * @returns 成功したかどうか
    */
-  startTask: (taskExecutionId: string, memberId: string) => Promise<boolean>
+  startTask: (taskExecutionId: string, memberIds: string[]) => Promise<boolean>
 
   /**
    * タスクを完了（IN_PROGRESS -> COMPLETED）
    * @param taskExecutionId - タスク実行ID
-   * @param memberId - 完了者のメンバーID
    * @returns 成功したかどうか
+   * @note 完了者はバックエンドで現在の担当者から推論されます
    */
-  completeTask: (taskExecutionId: string, memberId: string) => Promise<boolean>
+  completeTask: (taskExecutionId: string) => Promise<boolean>
 
   /**
    * タスクをキャンセル（NOT_STARTED/IN_PROGRESS -> CANCELLED）
@@ -74,10 +74,10 @@ interface UseTaskExecutionActions {
   /**
    * タスクに担当者を割り当て
    * @param taskExecutionId - タスク実行ID
-   * @param memberId - 担当者のメンバーID
+   * @param memberIds - 担当者のメンバーID配列
    * @returns 成功したかどうか
    */
-  assignTask: (taskExecutionId: string, memberId: string) => Promise<boolean>
+  assignTask: (taskExecutionId: string, memberIds: string[]) => Promise<boolean>
 
   /**
    * 指定日のタスク実行を一括生成
@@ -109,7 +109,7 @@ function responseToTaskExecution(response: TaskExecutionResponse): TaskExecution
   return {
     id: response.id,
     taskDefinitionId: response.taskDefinitionId,
-    assigneeMemberId: response.assigneeMemberId ?? undefined,
+    assigneeMemberIds: response.assigneeMemberIds,
     scheduledDate: response.scheduledDate,
     status: response.status as ExecutionStatus,
     taskSnapshot: response.taskSnapshot
@@ -119,6 +119,7 @@ function responseToTaskExecution(response: TaskExecutionResponse): TaskExecution
           scheduledStartTime: response.taskSnapshot.scheduledStartTime,
           scheduledEndTime: response.taskSnapshot.scheduledEndTime,
           definitionVersion: response.taskSnapshot.definitionVersion,
+          frozenPoint: response.taskSnapshot.frozenPoint,
           capturedAt: response.taskSnapshot.capturedAt,
         }
       : {
@@ -129,11 +130,11 @@ function responseToTaskExecution(response: TaskExecutionResponse): TaskExecution
           scheduledStartTime: '',
           scheduledEndTime: '',
           definitionVersion: 0,
+          frozenPoint: 0,
           capturedAt: '',
         },
     startedAt: response.startedAt ?? undefined,
     completedAt: response.completedAt ?? undefined,
-    completedByMemberId: response.completedByMemberId ?? undefined,
     createdAt: response.createdAt,
     updatedAt: response.updatedAt,
   }
@@ -246,12 +247,12 @@ export function useTaskExecution(
    * タスクを開始
    */
   const startTask = useCallback(
-    async (taskExecutionId: string, memberId: string): Promise<boolean> => {
+    async (taskExecutionId: string, memberIds: string[]): Promise<boolean> => {
       setLoading(true)
       setError(null)
 
       try {
-        const response = await startTaskExecution(taskExecutionId, { memberId })
+        const response = await startTaskExecution(taskExecutionId, { memberIds })
         updateLocalState(response)
         return true
       } catch (err) {
@@ -268,12 +269,12 @@ export function useTaskExecution(
    * タスクを完了
    */
   const completeTask = useCallback(
-    async (taskExecutionId: string, memberId: string): Promise<boolean> => {
+    async (taskExecutionId: string): Promise<boolean> => {
       setLoading(true)
       setError(null)
 
       try {
-        const response = await completeTaskExecution(taskExecutionId, { memberId })
+        const response = await completeTaskExecution(taskExecutionId, {})
         updateLocalState(response)
         return true
       } catch (err) {
@@ -312,12 +313,12 @@ export function useTaskExecution(
    * タスクに担当者を割り当て
    */
   const assignTask = useCallback(
-    async (taskExecutionId: string, memberId: string): Promise<boolean> => {
+    async (taskExecutionId: string, memberIds: string[]): Promise<boolean> => {
       setLoading(true)
       setError(null)
 
       try {
-        const response = await assignTaskExecution(taskExecutionId, { memberId })
+        const response = await assignTaskExecution(taskExecutionId, { memberIds })
         updateLocalState(response)
         return true
       } catch (err) {

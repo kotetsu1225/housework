@@ -178,6 +178,7 @@ export interface CreateTaskDefinitionRequest {
   scope: 'FAMILY' | 'PERSONAL'
   ownerMemberId?: string | null
   schedule: ScheduleDto
+  point: number // ADDED: points earned on completion
 }
 
 /**
@@ -192,6 +193,7 @@ export interface CreateTaskDefinitionResponse {
   ownerMemberId?: string | null
   schedule: ScheduleDto
   version: number
+  point: number // ADDED
 }
 
 /**
@@ -205,6 +207,7 @@ export interface UpdateTaskDefinitionRequest {
   scope?: 'FAMILY' | 'PERSONAL' | null
   ownerMemberId?: string | null
   schedule?: ScheduleDto | null
+  point?: number | null // ADDED: null means "don't change"
 }
 
 /**
@@ -219,6 +222,7 @@ export interface UpdateTaskDefinitionResponse {
   ownerMemberId?: string | null
   schedule: ScheduleDto
   version: number
+  point: number // ADDED
 }
 
 /**
@@ -234,6 +238,7 @@ export interface DeleteTaskDefinitionResponse {
   ownerMemberId?: string | null
   schedule: ScheduleDto
   version: number
+  point: number // ADDED
 }
 
 /**
@@ -255,6 +260,7 @@ export interface TaskDefinitionResponse {
   ownerMemberId?: string | null
   schedule: ScheduleDto
   version: number
+  point: number // ADDED
 }
 
 // ==========================================
@@ -279,13 +285,13 @@ export interface GetTaskExecutionsResponse {
 export interface TaskExecutionResponse {
   id: string
   taskDefinitionId: string
-  assigneeMemberId: string | null
+  assigneeMemberIds: string[] // CHANGED: was assigneeMemberId (singular)
   scheduledDate: string // YYYY-MM-DD format
   status: 'NOT_STARTED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED'
   taskSnapshot: TaskSnapshotResponse | null // NOT_STARTEDの場合はnull
   startedAt: string | null // ISO8601 format
   completedAt: string | null
-  completedByMemberId: string | null
+  // REMOVED: completedByMemberId
   createdAt: string
   updatedAt: string
 }
@@ -300,6 +306,7 @@ export interface TaskSnapshotResponse {
   scheduledStartTime: string
   scheduledEndTime: string
   definitionVersion: number
+  frozenPoint: number // ADDED: point value frozen at task start
   capturedAt: string
 }
 
@@ -308,15 +315,16 @@ export interface TaskSnapshotResponse {
  * POST /api/task-executions/{id}/start
  */
 export interface StartTaskExecutionRequest {
-  memberId: string
+  memberIds: string[] // CHANGED: was memberId (singular)
 }
 
 /**
  * TaskExecution完了リクエスト
  * POST /api/task-executions/{id}/complete
+ * @note Backend derives completedBy from current assignees
  */
 export interface CompleteTaskExecutionRequest {
-  memberId: string
+  // REMOVED: memberId field - backend infers from assignees
 }
 
 /**
@@ -324,7 +332,7 @@ export interface CompleteTaskExecutionRequest {
  * POST /api/task-executions/{id}/assign
  */
 export interface AssignTaskExecutionRequest {
-  memberId: string
+  memberIds: string[] // CHANGED: was memberId (singular)
 }
 
 /**

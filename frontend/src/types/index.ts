@@ -68,6 +68,7 @@ export interface TaskDefinition {
   recurrence?: RecurrencePattern
   version: number
   isDeleted: boolean
+  point: number // ADDED: points earned on completion
   createdAt: string
   updatedAt: string
 }
@@ -84,19 +85,20 @@ export interface TaskSnapshot {
   scheduledStartTime: string
   scheduledEndTime: string
   definitionVersion: number
+  frozenPoint: number // ADDED: point value frozen at task start
   capturedAt: string
 }
 
 export interface TaskExecution {
   id: string
   taskDefinitionId: string
-  assigneeMemberId?: string
+  assigneeMemberIds: string[] // CHANGED: was assigneeMemberId (singular)
   scheduledDate: string
   status: ExecutionStatus
   taskSnapshot: TaskSnapshot
   startedAt?: string
   completedAt?: string
-  completedByMemberId?: string
+  // REMOVED: completedByMemberId
   createdAt: string
   updatedAt: string
 }
@@ -106,8 +108,8 @@ export interface TaskExecution {
 // ==========================================
 
 export interface TaskExecutionWithDetails extends TaskExecution {
-  assignee?: Member
-  completedBy?: Member
+  assignees: Member[] // CHANGED: plural, supports multiple assignees
+  // REMOVED: completedBy (use assignees instead)
 }
 
 export interface DailyTaskSummary {

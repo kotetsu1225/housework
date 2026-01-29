@@ -26,7 +26,8 @@ interface GetTaskDefinitionsUseCase {
         val scope: TaskScope,
         val ownerMemberId: MemberId?,
         val schedule: TaskSchedule,
-        val version: Int
+        val version: Int,
+        val point: Int
     )
 
     fun execute(input: Input): Output

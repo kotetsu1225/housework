@@ -27,6 +27,7 @@ class UpdateTaskDefinitionUseCaseImpl @Inject constructor(
                 scope = input.scope,
                 ownerMemberId = input.ownerMemberId,
                 schedule = input.schedule,
+                point = input.point,
             )
 
             taskDefinitionRepository.update(updatedTaskDefinition, session)
@@ -40,6 +41,7 @@ class UpdateTaskDefinitionUseCaseImpl @Inject constructor(
                 ownerMemberId = updatedTaskDefinition.ownerMemberId,
                 schedule = updatedTaskDefinition.schedule,
                 version = updatedTaskDefinition.version,
+                point = updatedTaskDefinition.point,
             )
         }
     }

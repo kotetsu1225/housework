@@ -11,7 +11,6 @@ import java.time.Instant
 interface CompleteTaskExecutionUseCase {
     data class Input(
         val id: TaskExecutionId,
-        val completedMemberId: MemberId,
     )
 
     data class Output(
@@ -19,10 +18,9 @@ interface CompleteTaskExecutionUseCase {
         val taskDefinitionId: TaskDefinitionId,
         val scheduledDate: Instant,
         val taskSnapshot: TaskSnapshot,
-        val assigneeMemberId: MemberId,
+        val assigneeMemberIds: List<MemberId>,
         val startedAt: Instant,
         val completedAt: Instant,
-        val completedMemberId: MemberId,
     )
 
     fun execute(input: Input): Output

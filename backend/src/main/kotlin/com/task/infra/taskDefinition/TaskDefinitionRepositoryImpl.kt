@@ -262,7 +262,8 @@ class TaskDefinitionRepositoryImpl : TaskDefinitionRepository {
             ownerMemberId = definitionRecord.ownerMemberId?.let { MemberId(it) },
             schedule = schedule,
             version = definitionRecord.version!!,
-            isDeleted = definitionRecord.isDeleted!!
+            isDeleted = definitionRecord.isDeleted!!,
+            point = definitionRecord.point!!
         )
     }
 

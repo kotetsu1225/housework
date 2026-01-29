@@ -6,11 +6,11 @@ import com.task.domain.taskDefinition.TaskDefinitionId
 import com.task.domain.taskExecution.TaskExecutionId
 import java.time.Instant
 
-@ImplementedBy(AssignTaskExecutionUseCaseImpl::class)
-interface AssignTaskExecutionUseCase {
+@ImplementedBy(UpdateAssignTaskExecutionUseCaseImpl::class)
+interface UpdateAssignTaskExecutionUseCase {
     data class Input(
         val id: TaskExecutionId,
-        val newAssigneeMemberId: MemberId,
+        val newAssigneeMemberIds: List<MemberId>,
     )
 
     data class Output(
@@ -18,7 +18,7 @@ interface AssignTaskExecutionUseCase {
         val taskDefinitionId: TaskDefinitionId,
         val scheduledDate: Instant,
         val status: String,
-        val assigneeMemberId: MemberId?,
+        val assigneeMemberIds: List<MemberId>,
         val startedAt: Instant?,
         val completedAt: Instant?,
         val completedByMemberId: MemberId?,
@@ -31,7 +31,8 @@ interface AssignTaskExecutionUseCase {
         val scheduledStartTime: Instant,
         val scheduledEndTime: Instant,
         val definitionVersion: Int,
-        val capturedAt: Instant
+        val capturedAt: Instant,
+        val point: Int
     )
 
     fun execute(input: Input): Output

@@ -3,15 +3,11 @@ package com.task.usecase.taskExecution.cancel
 import com.google.inject.Inject
 import com.google.inject.Singleton
 import com.task.domain.event.DomainEventDispatcher
-import com.task.domain.taskDefinition.TaskDefinitionId
 import com.task.domain.taskDefinition.TaskDefinitionRepository
 import com.task.domain.taskExecution.TaskExecution
-import com.task.domain.taskExecution.TaskExecutionId
 import com.task.domain.taskExecution.TaskExecutionRepository
-import com.task.domain.taskExecution.TaskSnapshot
 import com.task.infra.database.Database
 import org.jooq.DSLContext
-import java.time.Instant
 
 @Singleton
 class CancelTaskExecutionUseCaseImpl @Inject constructor(

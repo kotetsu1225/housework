@@ -17,10 +17,9 @@ interface GetTaskExecutionUseCase {
         val taskDefinitionId: TaskDefinitionId,
         val scheduledDate: Instant,
         val status: String,
-        val assigneeMemberId: MemberId?,
+        val assigneeMemberIds: List<MemberId>,
         val startedAt: Instant?,
         val completedAt: Instant?,
-        val completedByMemberId: MemberId?,
         val snapshot: SnapshotOutput?
     )
 

@@ -11,13 +11,13 @@ import java.time.Instant
 interface StartTaskExecutionUseCase {
     data class Input(
         val id: TaskExecutionId,
-        val assigneeMemberId: MemberId,
+        val assigneeMemberIds: List<MemberId>,
     )
 
     data class Output(
         val id: TaskExecutionId,
         val taskDefinitionId: TaskDefinitionId,
-        val assigneeMemberId: MemberId,
+        val assigneeMemberIds: List<MemberId>,
         val taskSnapshot: TaskSnapshot,
         val scheduledDate: Instant,
         val startedAt: Instant

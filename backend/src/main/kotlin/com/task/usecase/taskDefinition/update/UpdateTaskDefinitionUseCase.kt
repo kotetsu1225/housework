@@ -15,6 +15,7 @@ interface UpdateTaskDefinitionUseCase {
         val scope: TaskScope? = null,
         val ownerMemberId: MemberId? = null,
         val schedule: TaskSchedule? = null,
+        val point: Int? = null,
     )
 
     data class Output(
@@ -26,6 +27,7 @@ interface UpdateTaskDefinitionUseCase {
         val ownerMemberId: MemberId?,
         val schedule: TaskSchedule,
         val version: Int,
+        val point: Int,
     )
 
     fun execute(input: Input): Output

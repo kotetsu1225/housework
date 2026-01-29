@@ -2,7 +2,7 @@ package com.task.presentation
 
 import com.task.domain.member.MemberId
 import com.task.domain.taskExecution.TaskExecutionId
-import com.task.usecase.taskExecution.assign.AssignTaskExecutionUseCase
+import com.task.usecase.taskExecution.assign.UpdateAssignTaskExecutionUseCase
 import com.task.usecase.taskExecution.cancel.CancelTaskExecutionUseCase
 import com.task.usecase.taskExecution.complete.CompleteTaskExecutionUseCase
 import com.task.usecase.taskExecution.get.GetTaskExecutionUseCase
@@ -85,13 +85,12 @@ class TaskExecutions {
 data class TaskExecutionDto(
     val id: String,
     val taskDefinitionId: String,
-    val assigneeMemberId: String?,
+    val assigneeMemberIds: List<String>,
     val scheduledDate: String,
     val status: String,
     val taskSnapshot: TaskSnapshotDto?,
     val startedAt: String?,
-    val completedAt: String?,
-    val completedByMemberId: String?
+    val completedAt: String?
 )
 
 @Serializable
@@ -121,7 +120,7 @@ fun Route.taskExecutions() {
         val filter = GetTaskExecutionsUseCase.FilterSpec(
             scheduledDate = resource.scheduledDate?.let { LocalDate.parse(it) },
             status = resource.status,
-            assigneeMemberId = resource.assigneeMemberId?.let { MemberId(UUID.fromString(it)) }
+            assigneeMemberIds = resource.assigneeMemberId?.let { listOf(MemberId(UUID.fromString(it))) }
         )
 
         val output = instance<GetTaskExecutionsUseCase>().execute(
@@ -136,7 +135,7 @@ fun Route.taskExecutions() {
             TaskExecutionDto(
                 id = item.id.value.toString(),
                 taskDefinitionId = item.taskDefinitionId.value.toString(),
-                assigneeMemberId = item.assigneeMemberId?.value?.toString(),
+                assigneeMemberIds = item.assigneeMemberIds.map { it.value.toString() },
                 scheduledDate = dateFormatter.format(item.scheduledDate),
                 status = item.status,
                 taskSnapshot = item.snapshot?.let { snapshot ->
@@ -150,8 +149,7 @@ fun Route.taskExecutions() {
                     )
                 },
                 startedAt = item.startedAt?.let { instantFormatter.format(it) },
-                completedAt = item.completedAt?.let { instantFormatter.format(it) },
-                completedByMemberId = item.completedByMemberId?.value?.toString()
+                completedAt = item.completedAt?.let { instantFormatter.format(it) }
             )
         }
 
@@ -182,7 +180,7 @@ fun Route.taskExecutions() {
             TaskExecutionDto(
                 id = output.id.value.toString(),
                 taskDefinitionId = output.taskDefinitionId.value.toString(),
-                assigneeMemberId = output.assigneeMemberId?.value?.toString(),
+                assigneeMemberIds = output.assigneeMemberIds.map { it.value.toString() },
                 scheduledDate = dateFormatter.format(output.scheduledDate),
                 status = output.status,
                 taskSnapshot = output.snapshot?.let { snapshot ->
@@ -196,8 +194,7 @@ fun Route.taskExecutions() {
                     )
                 },
                 startedAt = output.startedAt?.let { instantFormatter.format(it) },
-                completedAt = output.completedAt?.let { instantFormatter.format(it) },
-                completedByMemberId = output.completedByMemberId?.value?.toString()
+                completedAt = output.completedAt?.let { instantFormatter.format(it) }
             )
         )
     }
@@ -208,7 +205,7 @@ fun Route.taskExecutions() {
         val output = instance<StartTaskExecutionUseCase>().execute(
             StartTaskExecutionUseCase.Input(
                 id = TaskExecutionId.from(resource.taskExecutionId),
-                assigneeMemberId = MemberId(UUID.fromString(request.memberId))
+                assigneeMemberIds = listOf(MemberId(UUID.fromString(request.memberId)))
             )
         )
 
@@ -217,7 +214,7 @@ fun Route.taskExecutions() {
             TaskExecutionDto(
                 id = output.id.value.toString(),
                 taskDefinitionId = output.taskDefinitionId.value.toString(),
-                assigneeMemberId = output.assigneeMemberId.value.toString(),
+                assigneeMemberIds = output.assigneeMemberIds.map { it.value.toString() },
                 scheduledDate = dateFormatter.format(output.scheduledDate),
                 status = "IN_PROGRESS",
                 taskSnapshot = TaskSnapshotDto(
@@ -229,19 +226,15 @@ fun Route.taskExecutions() {
                     capturedAt = instantFormatter.format(output.taskSnapshot.capturedAt)
                 ),
                 startedAt = instantFormatter.format(output.startedAt),
-                completedAt = null,
-                completedByMemberId = null
+                completedAt = null
             )
         )
     }
 
     post<TaskExecutions.Complete> { resource ->
-        val request = call.receive<TaskExecutions.Complete.Request>()
-
         val output = instance<CompleteTaskExecutionUseCase>().execute(
             CompleteTaskExecutionUseCase.Input(
-                id = TaskExecutionId.from(resource.taskExecutionId),
-                completedMemberId = MemberId(UUID.fromString(request.memberId))
+                id = TaskExecutionId.from(resource.taskExecutionId)
             )
         )
 
@@ -250,7 +243,7 @@ fun Route.taskExecutions() {
             TaskExecutionDto(
                 id = output.id.value.toString(),
                 taskDefinitionId = output.taskDefinitionId.value.toString(),
-                assigneeMemberId = output.assigneeMemberId.value.toString(),
+                assigneeMemberIds = output.assigneeMemberIds.map { it.value.toString() },
                 scheduledDate = dateFormatter.format(output.scheduledDate),
                 status = "COMPLETED",
                 taskSnapshot = TaskSnapshotDto(
@@ -262,8 +255,7 @@ fun Route.taskExecutions() {
                     capturedAt = instantFormatter.format(output.taskSnapshot.capturedAt)
                 ),
                 startedAt = instantFormatter.format(output.startedAt),
-                completedAt = instantFormatter.format(output.completedAt),
-                completedByMemberId = output.completedMemberId.value.toString()
+                completedAt = instantFormatter.format(output.completedAt)
             )
         )
     }
@@ -289,10 +281,10 @@ fun Route.taskExecutions() {
     post<TaskExecutions.Assign> { resource ->
         val request = call.receive<TaskExecutions.Assign.Request>()
 
-        val output = instance<AssignTaskExecutionUseCase>().execute(
-            AssignTaskExecutionUseCase.Input(
+        val output = instance<UpdateAssignTaskExecutionUseCase>().execute(
+            UpdateAssignTaskExecutionUseCase.Input(
                 id = TaskExecutionId.from(resource.taskExecutionId),
-                newAssigneeMemberId = MemberId(UUID.fromString(request.memberId))
+                newAssigneeMemberIds = listOf(MemberId(UUID.fromString(request.memberId)))
             )
         )
 
@@ -301,7 +293,7 @@ fun Route.taskExecutions() {
             TaskExecutionDto(
                 id = output.id.value.toString(),
                 taskDefinitionId = output.taskDefinitionId.value.toString(),
-                assigneeMemberId = output.assigneeMemberId?.value?.toString(),
+                assigneeMemberIds = output.assigneeMemberIds.map { it.value.toString() },
                 scheduledDate = dateFormatter.format(output.scheduledDate),
                 status = output.status,
                 taskSnapshot = output.snapshot?.let { snapshot ->
@@ -315,8 +307,7 @@ fun Route.taskExecutions() {
                     )
                 },
                 startedAt = output.startedAt?.let { instantFormatter.format(it) },
-                completedAt = output.completedAt?.let { instantFormatter.format(it) },
-                completedByMemberId = output.completedByMemberId?.value?.toString()
+                completedAt = output.completedAt?.let { instantFormatter.format(it) }
             )
         )
     }

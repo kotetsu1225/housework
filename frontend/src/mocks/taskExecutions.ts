@@ -22,7 +22,7 @@ export const MOCK_TASK_EXECUTIONS: TaskExecution[] = [
   {
     id: 'exec-1',
     taskDefinitionId: 'def-1',
-    assigneeMemberId: '2',
+    assigneeMemberIds: ['2'],
     scheduledDate: TODAY,
     status: 'COMPLETED',
     taskSnapshot: {
@@ -31,18 +31,18 @@ export const MOCK_TASK_EXECUTIONS: TaskExecution[] = [
       scheduledStartTime: '2025-01-01T20:00:00Z',
       scheduledEndTime: '2025-01-01T20:15:00Z',
       definitionVersion: 1,
+      frozenPoint: 10,
       capturedAt: new Date().toISOString(),
     },
     startedAt: new Date(Date.now() - 3600000).toISOString(), // 1時間前
     completedAt: new Date(Date.now() - 2700000).toISOString(), // 45分前
-    completedByMemberId: '2',
     createdAt: new Date(Date.now() - 86400000).toISOString(), // 1日前
     updatedAt: new Date(Date.now() - 2700000).toISOString(),
   },
   {
     id: 'exec-2',
     taskDefinitionId: 'def-2',
-    assigneeMemberId: '3',
+    assigneeMemberIds: ['3'],
     scheduledDate: TODAY,
     status: 'IN_PROGRESS',
     taskSnapshot: {
@@ -51,6 +51,7 @@ export const MOCK_TASK_EXECUTIONS: TaskExecution[] = [
       scheduledStartTime: '2025-01-01T08:00:00Z',
       scheduledEndTime: '2025-01-01T08:20:00Z',
       definitionVersion: 1,
+      frozenPoint: 5,
       capturedAt: new Date().toISOString(),
     },
     startedAt: new Date(Date.now() - 1800000).toISOString(), // 30分前
@@ -60,6 +61,7 @@ export const MOCK_TASK_EXECUTIONS: TaskExecution[] = [
   {
     id: 'exec-3',
     taskDefinitionId: 'def-3',
+    assigneeMemberIds: [],
     scheduledDate: TODAY,
     status: 'NOT_STARTED',
     taskSnapshot: {
@@ -68,6 +70,7 @@ export const MOCK_TASK_EXECUTIONS: TaskExecution[] = [
       scheduledStartTime: '2025-01-01T17:30:00Z',
       scheduledEndTime: '2025-01-01T18:15:00Z',
       definitionVersion: 1,
+      frozenPoint: 0,
       capturedAt: '',
     },
     createdAt: new Date(Date.now() - 86400000).toISOString(),
@@ -76,7 +79,7 @@ export const MOCK_TASK_EXECUTIONS: TaskExecution[] = [
   {
     id: 'exec-4',
     taskDefinitionId: 'def-4',
-    assigneeMemberId: '2',
+    assigneeMemberIds: ['2', '3'],
     scheduledDate: TODAY,
     status: 'NOT_STARTED',
     taskSnapshot: {
@@ -85,6 +88,7 @@ export const MOCK_TASK_EXECUTIONS: TaskExecution[] = [
       scheduledStartTime: '2025-01-01T07:45:00Z',
       scheduledEndTime: '2025-01-01T07:50:00Z',
       definitionVersion: 1,
+      frozenPoint: 0,
       capturedAt: '',
     },
     createdAt: new Date(Date.now() - 86400000).toISOString(),
@@ -93,7 +97,7 @@ export const MOCK_TASK_EXECUTIONS: TaskExecution[] = [
   {
     id: 'exec-5',
     taskDefinitionId: 'def-5',
-    assigneeMemberId: '4',
+    assigneeMemberIds: ['4'],
     scheduledDate: TODAY,
     status: 'CANCELLED',
     taskSnapshot: {
@@ -102,6 +106,7 @@ export const MOCK_TASK_EXECUTIONS: TaskExecution[] = [
       scheduledStartTime: '2025-01-01T16:00:00Z',
       scheduledEndTime: '2025-01-01T17:00:00Z',
       definitionVersion: 1,
+      frozenPoint: 8,
       capturedAt: new Date().toISOString(),
     },
     startedAt: new Date(Date.now() - 7200000).toISOString(), // 2時間前
@@ -135,7 +140,7 @@ export function getMockTaskExecutionsByStatus(status: ExecutionStatus): TaskExec
  * 指定メンバーのタスク実行を取得
  */
 export function getMockTaskExecutionsByMember(memberId: string): TaskExecution[] {
-  return MOCK_TASK_EXECUTIONS.filter((exec) => exec.assigneeMemberId === memberId)
+  return MOCK_TASK_EXECUTIONS.filter((exec) => exec.assigneeMemberIds.includes(memberId))
 }
 
 /**

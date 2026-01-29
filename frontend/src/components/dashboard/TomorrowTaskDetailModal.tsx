@@ -49,7 +49,9 @@ export function TomorrowTaskDetailModal({
 }: TomorrowTaskDetailModalProps) {
   if (!task) return null
 
-  const assignee = members.find((m) => m.id === task.assigneeMemberId)
+  const assignees = task.assigneeMemberIds
+    .map((id) => members.find((m) => m.id === id))
+    .filter(Boolean) as Member[]
 
   return (
     <Modal
@@ -133,21 +135,19 @@ export function TomorrowTaskDetailModal({
             <User className="w-4 h-4 mt-0.5 text-coral-400" />
             <div className="flex-1">
               <p className="text-sm text-white/60">担当者</p>
-              {task.assigneeMemberName ? (
-                <div className="mt-1 flex items-center gap-2">
-                  {assignee ? (
-                    <Avatar
-                      name={assignee.name}
-                      size="sm"
-                      role={assignee.role}
-                      variant={isParentRole(assignee.role) ? 'parent' : 'child'}
-                    />
-                  ) : (
-                    <span className="w-6 h-6 rounded-full bg-coral-500/20 flex items-center justify-center text-[10px]">
-                      ?
-                    </span>
-                  )}
-                  <span className="font-medium text-white">{task.assigneeMemberName}</span>
+              {task.assigneeMemberNames.length > 0 ? (
+                <div className="mt-1 flex flex-wrap items-center gap-2">
+                  {assignees.map((assignee) => (
+                    <div key={assignee.id} className="flex items-center gap-2">
+                      <Avatar
+                        name={assignee.name}
+                        size="sm"
+                        role={assignee.role}
+                        variant={isParentRole(assignee.role) ? 'parent' : 'child'}
+                      />
+                      <span className="font-medium text-white">{assignee.name}</span>
+                    </div>
+                  ))}
                 </div>
               ) : (
                 <p className="font-medium text-white/50">未割り当て</p>

@@ -203,6 +203,7 @@ export function Tasks() {
     startDate: new Date().toISOString().split('T')[0],
     endDate: '',
     deadline: new Date().toISOString().split('T')[0],
+    point: 0,
   })
 
   // 新規作成フォーム
@@ -336,6 +337,7 @@ export function Tasks() {
       scope: newTask.scope,
       ownerMemberId: newTask.scope === 'PERSONAL' ? (user?.id ?? null) : null,
       schedule,
+      point: newTask.point,
     }
 
     const success = await addTaskDefinition(request)
@@ -403,6 +405,7 @@ export function Tasks() {
       startDate: task.recurrence?.startDate ?? new Date().toISOString().split('T')[0],
       endDate: task.recurrence?.endDate ?? '',
       deadline: task.oneTimeDeadline ?? new Date().toISOString().split('T')[0],
+      point: task.point,
     })
     setShowEditModal(true)
   }
@@ -451,6 +454,7 @@ export function Tasks() {
       scope: editTask.scope,
       ownerMemberId: editTask.scope === 'PERSONAL' ? (user?.id ?? null) : null,
       schedule,
+      point: editTask.point !== taskToEdit.point ? editTask.point : null,
     }
 
     const success = await editTaskDefinition(taskToEdit.id, request)
@@ -623,6 +627,17 @@ export function Tasks() {
               placeholder="例: 浴槽と床を洗う"
               value={newTask.description}
               onChange={(e) => setNewTask({ ...newTask, description: e.target.value })}
+            />
+
+            <Input
+              label="ポイント"
+              type="number"
+              min="0"
+              placeholder="完了時の獲得ポイント"
+              value={newTask.point}
+              onChange={(e) =>
+                setNewTask({ ...newTask, point: parseInt(e.target.value) || 0 })
+              }
             />
 
             <div className="grid grid-cols-2 gap-4">
@@ -882,6 +897,17 @@ export function Tasks() {
               placeholder="例: 浴槽と床を洗う"
               value={editTask.description}
               onChange={(e) => setEditTask({ ...editTask, description: e.target.value })}
+            />
+
+            <Input
+              label="ポイント"
+              type="number"
+              min="0"
+              placeholder="完了時の獲得ポイント"
+              value={editTask.point}
+              onChange={(e) =>
+                setEditTask({ ...editTask, point: parseInt(e.target.value) || 0 })
+              }
             />
 
             <div className="grid grid-cols-2 gap-4">

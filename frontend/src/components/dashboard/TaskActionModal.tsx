@@ -26,11 +26,11 @@ export interface TaskActionModalProps {
   /** 現在のログインユーザーID */
   currentMemberId?: string
   /** タスク開始時のコールバック */
-  onStart: (taskExecutionId: string, memberId: string) => Promise<boolean>
+  onStart: (taskExecutionId: string, memberIds: string[]) => Promise<boolean>
   /** タスク完了時のコールバック */
-  onComplete: (taskExecutionId: string, completedByMemberId: string) => Promise<boolean>
+  onComplete: (taskExecutionId: string) => Promise<boolean>
   /** 担当者割り当て時のコールバック */
-  onAssign: (taskExecutionId: string, assigneeMemberId: string) => Promise<boolean>
+  onAssign: (taskExecutionId: string, memberIds: string[]) => Promise<boolean>
 }
 
 /**
@@ -67,12 +67,12 @@ export function TaskActionModal({
   onAssign,
 }: TaskActionModalProps) {
   const [loading, setLoading] = useState(false)
-  const [selectedAssignee, setSelectedAssignee] = useState<string | null>(null)
+  const [selectedAssignees, setSelectedAssignees] = useState<string[]>([])
 
-  // タスクが変わったら選択状態をリセット
+  // タスクが変わったら選択状態を現在の担当者で初期化
   useEffect(() => {
-    setSelectedAssignee(null)
-  }, [task?.taskExecutionId])
+    setSelectedAssignees(task?.assigneeMemberIds ?? [])
+  }, [task?.taskExecutionId, task?.assigneeMemberIds])
 
   if (!task) return null
 
@@ -84,25 +84,28 @@ export function TaskActionModal({
   const scopeIcon = task.scope === 'FAMILY' ? <Users className="w-4 h-4" /> : <User className="w-4 h-4" />
 
   /**
-   * 実行に使用するメンバーIDを決定
-   * 1. 画面上で選択したメンバー
-   * 2. すでに割り当てられているメンバー
+   * 実行に使用するメンバーIDsを決定
+   * 1. 画面上で選択したメンバーs
+   * 2. すでに割り当てられているメンバーs
    * 3. 現在のログインユーザー
    */
-  const getEffectiveMemberId = () => {
-    return selectedAssignee || task.assigneeMemberId || currentMemberId
+  const getEffectiveMemberIds = (): string[] => {
+    if (selectedAssignees.length > 0) return selectedAssignees
+    if (task.assigneeMemberIds.length > 0) return task.assigneeMemberIds
+    if (currentMemberId) return [currentMemberId]
+    return []
   }
 
   /**
    * タスク開始処理
    */
   const handleStart = async () => {
-    const memberId = getEffectiveMemberId()
-    if (!memberId) return
+    const memberIds = getEffectiveMemberIds()
+    if (memberIds.length === 0) return
 
     setLoading(true)
     try {
-      const success = await onStart(task.taskExecutionId, memberId)
+      const success = await onStart(task.taskExecutionId, memberIds)
       if (success) {
         onClose()
       }
@@ -115,12 +118,9 @@ export function TaskActionModal({
    * タスク完了処理
    */
   const handleComplete = async () => {
-    const memberId = getEffectiveMemberId()
-    if (!memberId) return
-
     setLoading(true)
     try {
-      const success = await onComplete(task.taskExecutionId, memberId)
+      const success = await onComplete(task.taskExecutionId)
       if (success) {
         onClose()
       }
@@ -130,14 +130,19 @@ export function TaskActionModal({
   }
 
   /**
-   * 担当者割り当て処理
+   * 担当者割り当て処理（トグル形式で複数選択）
    */
   const handleAssign = async (memberId: string) => {
     setLoading(true)
     try {
-      const success = await onAssign(task.taskExecutionId, memberId)
+      // トグル: 既に選択されていたら削除、そうでなければ追加
+      const newSelection = selectedAssignees.includes(memberId)
+        ? selectedAssignees.filter((id) => id !== memberId)
+        : [...selectedAssignees, memberId]
+
+      const success = await onAssign(task.taskExecutionId, newSelection)
       if (success) {
-        setSelectedAssignee(memberId)
+        setSelectedAssignees(newSelection)
       }
     } finally {
       setLoading(false)
@@ -237,13 +242,11 @@ export function TaskActionModal({
         {(isNotStarted || isInProgress) && members.length > 0 && (
           <div className="space-y-3">
             <p className="text-sm text-white/70 font-medium">
-              担当者を選択
+              担当者を選択（複数可）
             </p>
             <div className="flex flex-wrap gap-2">
               {members.map((member) => {
-                const isSelected =
-                  selectedAssignee === member.id ||
-                  (!selectedAssignee && task.assigneeMemberId === member.id)
+                const isSelected = selectedAssignees.includes(member.id)
                 const isCurrent = member.id === currentMemberId
 
                 return (
@@ -278,25 +281,35 @@ export function TaskActionModal({
         )}
 
         {/* 現在の担当者（完了の場合のみ表示。進行中は上の選択UIで表示されるため） */}
-        {isCompleted && task.assigneeMemberName && (
+        {isCompleted && task.assigneeMemberNames.length > 0 && (
           <div className="flex items-center gap-2 text-sm text-white/70">
             <span>担当:</span>
-            <div className="flex items-center gap-2 bg-dark-800/50 px-3 py-1.5 rounded-full">
-              {(() => {
-                const assignee = members.find(m => m.id === task.assigneeMemberId)
-                if (assignee) {
-                  return (
-                    <Avatar
-                      name={assignee.name}
-                      size="sm"
-                      role={assignee.role}
-                      variant={isParentRole(assignee.role) ? 'parent' : 'child'}
-                    />
-                  )
-                }
-                return <span className="w-6 h-6 rounded-full bg-coral-500/20 flex items-center justify-center text-[10px]">?</span>
-              })()}
-              <span className="text-white font-medium">{task.assigneeMemberName}</span>
+            <div className="flex flex-wrap items-center gap-2">
+              {task.assigneeMemberIds.map((memberId, idx) => {
+                const assignee = members.find((m) => m.id === memberId)
+                const name = task.assigneeMemberNames[idx] ?? '不明'
+
+                return (
+                  <div
+                    key={memberId}
+                    className="flex items-center gap-2 bg-dark-800/50 px-3 py-1.5 rounded-full"
+                  >
+                    {assignee ? (
+                      <Avatar
+                        name={assignee.name}
+                        size="sm"
+                        role={assignee.role}
+                        variant={isParentRole(assignee.role) ? 'parent' : 'child'}
+                      />
+                    ) : (
+                      <span className="w-6 h-6 rounded-full bg-coral-500/20 flex items-center justify-center text-[10px]">
+                        ?
+                      </span>
+                    )}
+                    <span className="text-white font-medium">{name}</span>
+                  </div>
+                )
+              })}
             </div>
           </div>
         )}

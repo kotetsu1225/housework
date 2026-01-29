@@ -4,6 +4,7 @@ import com.task.domain.AggregateRoot
 import com.task.domain.member.MemberId
 import com.task.domain.taskDefinition.event.TaskDefinitionCreated
 import com.task.domain.taskDefinition.event.TaskDefinitionDeleted
+import java.awt.Point
 import java.time.Instant
 import java.util.UUID
 
@@ -17,6 +18,7 @@ class TaskDefinition private constructor(
     val schedule: TaskSchedule,
     val version: Int,
     val isDeleted: Boolean,
+    val point: Int
 ) : AggregateRoot() {
     init {
 
@@ -35,6 +37,7 @@ class TaskDefinition private constructor(
         scope: TaskScope?,
         ownerMemberId: MemberId?,
         schedule: TaskSchedule?,
+        point: Int?,
     ): TaskDefinition {
         return TaskDefinition(
             id = id,
@@ -45,7 +48,8 @@ class TaskDefinition private constructor(
             ownerMemberId = ownerMemberId ?: this.ownerMemberId,
             schedule = schedule ?: this.schedule,
             version = this.version + 1,
-            isDeleted = false
+            isDeleted = false,
+            point = point ?: this.point,
         )
     }
 
@@ -59,7 +63,8 @@ class TaskDefinition private constructor(
             ownerMemberId = this.ownerMemberId,
             schedule = this.schedule,
             version = this.version,
-            isDeleted = true
+            isDeleted = true,
+            point = this.point
         )
 
         taskDefinition.addDomainEvent(
@@ -86,6 +91,7 @@ class TaskDefinition private constructor(
             scope: TaskScope,
             ownerMemberId: MemberId?,
             schedule: TaskSchedule,
+            point: Int,
         ): TaskDefinition {
             val taskDefinition = TaskDefinition(
                 id = TaskDefinitionId.generate(),
@@ -97,6 +103,7 @@ class TaskDefinition private constructor(
                 schedule = schedule,
                 version = 1,
                 isDeleted = false,
+                point = point
             )
 
             // ここでドメインイベントを蓄積のみ行う
@@ -125,6 +132,7 @@ class TaskDefinition private constructor(
             schedule: TaskSchedule,
             version: Int,
             isDeleted: Boolean,
+            point: Int,
         ): TaskDefinition {
             return TaskDefinition(
                 id = id,
@@ -136,6 +144,7 @@ class TaskDefinition private constructor(
                 schedule = schedule,
                 version = version,
                 isDeleted = isDeleted,
+                point = point
             )
         }
     }

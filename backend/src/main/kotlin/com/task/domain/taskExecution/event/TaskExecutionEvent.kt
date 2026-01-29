@@ -11,22 +11,16 @@ sealed interface TaskExecutionEvent: DomainEvent {
     val taskName: TaskDefinitionName
 }
 
-data class TaskExecutionCreated(
-    override val taskExecutionId: TaskExecutionId,
-    override val taskName: TaskDefinitionName,
-    override val occurredAt: Instant
-) : TaskExecutionEvent
-
 data class TaskExecutionStarted(
     override val taskExecutionId: TaskExecutionId,
-    val assigneeMemberIds: List<MemberId>,
+    val assigneeMemberId: MemberId,
     override val taskName: TaskDefinitionName,
     override val occurredAt: Instant
 ) : TaskExecutionEvent
 
 data class TaskExecutionCompleted(
     override val taskExecutionId: TaskExecutionId,
-    val assigneeMemberIds: List<MemberId>,
+    val completedByMemberId: MemberId,
     override val taskName: TaskDefinitionName,
     override val occurredAt: Instant
 ) : TaskExecutionEvent
@@ -34,5 +28,13 @@ data class TaskExecutionCompleted(
 data class TaskExecutionCancelled(
     override val taskExecutionId: TaskExecutionId,
     override val taskName: TaskDefinitionName,
+    override val occurredAt: Instant
+) : TaskExecutionEvent
+
+data class TaskExecutionCreated(
+    override val taskExecutionId: TaskExecutionId,
+    override val taskName: TaskDefinitionName,
+    val assigneeMemberId: MemberId?,
+    val scheduledStartTime: Instant,
     override val occurredAt: Instant
 ) : TaskExecutionEvent

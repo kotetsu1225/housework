@@ -50,8 +50,7 @@ class TaskDefinitions {
             val scope: String,
             val ownerMemberId: String?,
             val schedule: ScheduleDto,
-            val version: Int,
-            val point: Int
+            val version: Int
         )
     }
 
@@ -69,8 +68,7 @@ class TaskDefinitions {
             val scope: String,
             val ownerMemberId: String?,
             val schedule: ScheduleDto,
-            val version: Int,
-            val point: Int
+            val version: Int
         )
     }
 
@@ -86,7 +84,6 @@ class TaskDefinitions {
             val scope: String,
             val ownerMemberId: String? = null,
             val schedule: ScheduleDto,
-            val point: Int
         )
 
         @Serializable
@@ -99,7 +96,6 @@ class TaskDefinitions {
             val ownerMemberId: String?,
             val schedule: ScheduleDto,
             val version: Int,
-            val point: Int
         )
     }
 
@@ -116,7 +112,6 @@ class TaskDefinitions {
             val scope: String? = null,
             val ownerMemberId: String? = null,
             val schedule: ScheduleDto? = null,
-            val point: Int? = null
         )
 
         @Serializable
@@ -129,7 +124,6 @@ class TaskDefinitions {
             val ownerMemberId: String?,
             val schedule: ScheduleDto,
             val version: Int,
-            val point: Int
         )
     }
 
@@ -217,8 +211,7 @@ fun Route.taskDefinitions() {
                         scope = taskDef.scope.value,
                         ownerMemberId = taskDef.ownerMemberId?.value?.toString(),
                         schedule = taskDef.schedule.toDto(),
-                        version = taskDef.version,
-                        point = taskDef.point
+                        version = taskDef.version
                     )
                 },
                 total = output.total,
@@ -249,8 +242,7 @@ fun Route.taskDefinitions() {
                 scope = output.scope.value,
                 ownerMemberId = output.ownerMemberId?.value?.toString(),
                 schedule = output.schedule.toDto(),
-                version = output.version,
-                point = output.point
+                version = output.version
             )
         )
     }
@@ -266,7 +258,6 @@ fun Route.taskDefinitions() {
                 scope = TaskScope.get(request.scope),
                 ownerMemberId = request.ownerMemberId?.let { MemberId(UUID.fromString(it)) },
                 schedule = request.schedule.toDomain(),
-                point = request.point
             )
         )
 
@@ -281,7 +272,6 @@ fun Route.taskDefinitions() {
                 ownerMemberId = output.ownerMemberId?.value?.toString(),
                 schedule = output.schedule.toDto(),
                 version = output.version,
-                point = output.point
             )
         )
     }
@@ -302,7 +292,6 @@ fun Route.taskDefinitions() {
                 scope = request.scope?.let { TaskScope.get(it) },
                 ownerMemberId = request.ownerMemberId?.let { MemberId(UUID.fromString(it)) },
                 schedule = request.schedule?.toDomain(),
-                point = request.point
             )
         )
 
@@ -317,7 +306,6 @@ fun Route.taskDefinitions() {
                 ownerMemberId = output.ownerMemberId?.value?.toString(),
                 schedule = output.schedule.toDto(),
                 version = output.version,
-                point = output.point
             )
         )
     }

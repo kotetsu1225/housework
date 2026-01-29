@@ -13,7 +13,6 @@ interface CreateTaskDefinitionUseCase {
         val scope: TaskScope,
         val ownerMemberId: MemberId?,
         val schedule: TaskSchedule,
-        val point: Int,
     )
 
     data class Output(
@@ -25,7 +24,6 @@ interface CreateTaskDefinitionUseCase {
         val ownerMemberId: MemberId?,
         val schedule: TaskSchedule,
         val version: Int,
-        val point: Int,
     )
 
     fun execute(input: Input): Output

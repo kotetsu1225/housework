@@ -17,7 +17,7 @@ interface CreateTaskExecutionUseCase {
     data class Output(
         val id: TaskExecutionId,
         val taskDefinitionId: TaskDefinitionId,
-        val assigneeMemberIds: List<MemberId>,
+        val assigneeMemberId: MemberId?,
         val scheduledDate: Instant,
     )
 

@@ -25,8 +25,7 @@ class GetTaskDefinitionUseCaseImpl @Inject constructor(
                 scope = it.scope,
                 ownerMemberId = it.ownerMemberId,
                 schedule = it.schedule,
-                version = it.version,
-                point = it.point
+                version = it.version
             )
         }
     }

@@ -23,7 +23,6 @@ class CreateTaskDefinitionUseCaseImpl @Inject constructor(
                 scope = input.scope,
                 ownerMemberId = input.ownerMemberId,
                 schedule = input.schedule,
-                point = input.point
             )
 
             val taskDefinition = taskDefinitionRepository.create(newTaskDefinition, session)
@@ -41,7 +40,6 @@ class CreateTaskDefinitionUseCaseImpl @Inject constructor(
                 ownerMemberId = taskDefinition.ownerMemberId,
                 schedule = taskDefinition.schedule,
                 version = taskDefinition.version,
-                point = taskDefinition.point
             )
         }
     }

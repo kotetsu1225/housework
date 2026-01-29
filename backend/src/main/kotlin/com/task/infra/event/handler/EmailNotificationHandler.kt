@@ -33,19 +33,29 @@ class EmailNotificationHandler @Inject constructor(
 
         // 全メンバー取得
         val allMembers = memberRepository.findAll(session)
-        val memberNameById = allMembers.associateBy({ it.id }, { it.name.value })
 
         // メール作成処理
         val mails = when (event) {
             is TaskExecutionCreated -> {
-                // タスク作成時は通知不要
-                emptyList()
+                // 作成時は担当者以外全員に通知（担当者がいれば）
+                val senderId = event.assigneeMemberId // 作成者IDがイベントにないため、暫定的に担当者を除外
+                val targetMembers = allMembers.filter { it.id != senderId }
+                
+                targetMembers.map { member ->
+                    Mail(
+                        to = member.email,
+                        subject = "【タスク追加】${event.taskName.value}",
+                        body = """
+                            新しいタスクが追加されました。
+                            タスク: ${event.taskName.value}
+                            日時: ${timeFormatter.format(event.occurredAt)}
+                        """.trimIndent()
+                    )
+                }
             }
             is TaskExecutionStarted -> {
                 // 開始した人（担当者）以外に通知
-                val targetMembers = allMembers.filter { it.id !in event.assigneeMemberIds }
-                val starterNames = event.assigneeMemberIds.mapNotNull { memberNameById[it] }
-                val starterText = if (starterNames.isNotEmpty()) starterNames.joinToString("、") else "不明"
+                val targetMembers = allMembers.filter { it.id != event.assigneeMemberId }
 
                 targetMembers.map { member ->
                     Mail(
@@ -54,25 +64,21 @@ class EmailNotificationHandler @Inject constructor(
                         body = """
                             タスクが開始されました。
                             タスク: ${event.taskName.value}
-                            開始した人: $starterText
                             日時: ${timeFormatter.format(event.occurredAt)}
                         """.trimIndent()
                     )
                 }
             }
             is TaskExecutionCompleted -> {
-                // 完了した人（担当者）以外に通知
-                val targetMembers = allMembers.filter { it.id !in event.assigneeMemberIds }
-                val completerNames = event.assigneeMemberIds.mapNotNull { memberNameById[it] }
-                val completerText = if (completerNames.isNotEmpty()) completerNames.joinToString("、") else "不明"
+                // 完了した人以外に通知
+                val targetMembers = allMembers.filter { it.id != event.completedByMemberId }
 
                 targetMembers.map { member ->
                     Mail(
                         to = member.email,
-                        subject = "【完了！】${event.taskName.value}",
+                        subject = "【完了！】${event.taskName.value}", // TaskNameがイベントにないため修正が必要
                         body = """
                             タスクが完了しました！
-                            完了した人: $completerText
                             日時: ${timeFormatter.format(event.occurredAt)}
                         """.trimIndent()
                     )

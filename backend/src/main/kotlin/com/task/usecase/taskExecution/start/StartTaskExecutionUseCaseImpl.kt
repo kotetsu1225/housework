@@ -26,7 +26,7 @@ class StartTaskExecutionUseCaseImpl @Inject constructor(
             val stateChange = when (taskExecution) {
                 is TaskExecution.NotStarted -> {
                     taskExecution.start(
-                        assigneeMemberIds = input.assigneeMemberIds,
+                        assigneeMemberId = input.assigneeMemberId,
                         taskDefinition = taskDefinition
                     )
                 }
@@ -49,7 +49,7 @@ class StartTaskExecutionUseCaseImpl @Inject constructor(
             StartTaskExecutionUseCase.Output(
                 id = startedExecution.id,
                 taskDefinitionId = startedExecution.taskDefinitionId,
-                assigneeMemberIds = startedExecution.assigneeMemberIds,
+                assigneeMemberId = startedExecution.assigneeMemberId,
                 taskSnapshot = startedExecution.taskSnapshot,
                 scheduledDate = startedExecution.scheduledDate,
                 startedAt = startedExecution.startedAt

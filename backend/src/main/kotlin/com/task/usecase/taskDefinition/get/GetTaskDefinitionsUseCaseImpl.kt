@@ -38,8 +38,7 @@ class GetTaskDefinitionsUseCaseImpl @Inject constructor(
                         scope = taskDefinition.scope,
                         ownerMemberId = taskDefinition.ownerMemberId,
                         schedule = taskDefinition.schedule,
-                        version = taskDefinition.version,
-                        point = taskDefinition.point
+                        version = taskDefinition.version
                     )
                 },
                 total = total,

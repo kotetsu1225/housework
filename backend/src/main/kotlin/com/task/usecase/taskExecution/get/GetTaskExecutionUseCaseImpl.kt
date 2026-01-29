@@ -28,9 +28,10 @@ class GetTaskExecutionUseCaseImpl @Inject constructor(
                 taskDefinitionId = taskExecution.taskDefinitionId,
                 scheduledDate = taskExecution.scheduledDate,
                 status = "NOT_STARTED",
-                assigneeMemberIds = taskExecution.assigneeMemberIds,
+                assigneeMemberId = taskExecution.assigneeMemberId,
                 startedAt = null,
                 completedAt = null,
+                completedByMemberId = null,
                 snapshot = null
             )
 
@@ -39,9 +40,10 @@ class GetTaskExecutionUseCaseImpl @Inject constructor(
                 taskDefinitionId = taskExecution.taskDefinitionId,
                 scheduledDate = taskExecution.scheduledDate,
                 status = "IN_PROGRESS",
-                assigneeMemberIds = taskExecution.assigneeMemberIds,
+                assigneeMemberId = taskExecution.assigneeMemberId,
                 startedAt = taskExecution.startedAt,
                 completedAt = null,
+                completedByMemberId = null,
                 snapshot = toSnapshotOutput(taskExecution.taskSnapshot)
             )
 
@@ -50,9 +52,10 @@ class GetTaskExecutionUseCaseImpl @Inject constructor(
                 taskDefinitionId = taskExecution.taskDefinitionId,
                 scheduledDate = taskExecution.scheduledDate,
                 status = "COMPLETED",
-                assigneeMemberIds = taskExecution.assigneeMemberIds,
+                assigneeMemberId = taskExecution.assigneeMemberId,
                 startedAt = taskExecution.startedAt,
                 completedAt = taskExecution.completedAt,
+                completedByMemberId = taskExecution.completedByMemberId,
                 snapshot = toSnapshotOutput(taskExecution.taskSnapshot)
             )
 
@@ -61,9 +64,10 @@ class GetTaskExecutionUseCaseImpl @Inject constructor(
                 taskDefinitionId = taskExecution.taskDefinitionId,
                 scheduledDate = taskExecution.scheduledDate,
                 status = "CANCELLED",
-                assigneeMemberIds = taskExecution.assigneeMemberIds,
+                assigneeMemberId = taskExecution.assigneeMemberId,
                 startedAt = taskExecution.startedAt,
                 completedAt = null,
+                completedByMemberId = null,
                 snapshot = taskExecution.taskSnapshot?.let { toSnapshotOutput(it) }
             )
         }

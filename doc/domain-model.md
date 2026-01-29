@@ -111,7 +111,6 @@ classDiagram
             +TaskSnapshot taskSnapshot
             +Instant startedAt
             +Instant completedAt
-            +Int earnedPoint
         }
 
         class Cancelled {

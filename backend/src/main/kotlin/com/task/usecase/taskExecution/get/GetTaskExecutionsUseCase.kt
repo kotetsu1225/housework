@@ -13,13 +13,13 @@ interface GetTaskExecutionsUseCase {
     data class FilterSpec(
         val scheduledDate: LocalDate? = null,
         val status: String? = null,
-        val assigneeMemberIds: List<MemberId>? = null
+        val assigneeMemberId: MemberId? = null
     ) {
         companion object {
             fun empty() = FilterSpec()
         }
 
-        fun isEmpty(): Boolean = scheduledDate == null && status == null && assigneeMemberIds == null
+        fun isEmpty(): Boolean = scheduledDate == null && status == null && assigneeMemberId == null
     }
 
     data class Input(
@@ -38,9 +38,10 @@ interface GetTaskExecutionsUseCase {
         val taskDefinitionId: TaskDefinitionId,
         val scheduledDate: Instant,
         val status: String,
-        val assigneeMemberIds: List<MemberId>,
+        val assigneeMemberId: MemberId?,
         val startedAt: Instant?,
         val completedAt: Instant?,
+        val completedByMemberId: MemberId?,
         val snapshot: SnapshotOutput?
     )
 

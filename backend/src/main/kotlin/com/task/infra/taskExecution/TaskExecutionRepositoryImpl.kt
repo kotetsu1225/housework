@@ -22,13 +22,6 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.OffsetDateTime
 import com.task.domain.AppTimeZone
-import com.task.infra.database.jooq.tables.TaskExecutionParticipants
-import com.task.infra.database.jooq.tables.records.TaskExecutionParticipantsRecord
-import com.task.infra.database.jooq.tables.records.TaskExecutionsRecord
-import com.task.infra.database.jooq.tables.records.TaskSnapshotsRecord
-import com.task.infra.database.jooq.tables.references.TASK_EXECUTION_PARTICIPANTS
-import org.jooq.impl.DSL.multiset
-import org.jooq.impl.DSL.select
 import java.util.UUID
 import org.jooq.Field
 
@@ -46,6 +39,46 @@ class TaskExecutionRepositoryImpl : TaskExecutionRepository {
     private fun LocalDate.toDomainInstant(): Instant =
         this.atStartOfDay(AppTimeZone.ZONE).toInstant()
 
+    private fun assigneeMemberIdField(): Field<UUID?> {
+        val tep = TASK_EXECUTION_PARTICIPANTS
+        return DSL.select(tep.MEMBER_ID)
+            .from(tep)
+            .where(tep.TASK_EXECUTION_ID.eq(TASK_EXECUTIONS.ID))
+            .orderBy(tep.JOINED_AT.asc())
+            .limit(1)
+            .asField("assignee_member_id")
+    }
+
+    private fun completedByMemberIdField(): Field<UUID?> {
+        val tep = TASK_EXECUTION_PARTICIPANTS
+        return DSL.select(tep.MEMBER_ID)
+            .from(tep)
+            .where(tep.TASK_EXECUTION_ID.eq(TASK_EXECUTIONS.ID))
+            .orderBy(tep.JOINED_AT.desc())
+            .limit(1)
+            .asField("completed_by_member_id")
+    }
+
+    private fun taskExecutionSelectFields(
+        assigneeMemberId: Field<UUID?>,
+        completedByMemberId: Field<UUID?>
+    ): Array<Field<*>> {
+        return arrayOf(
+            *TASK_EXECUTIONS.fields(),
+            *TASK_SNAPSHOTS.fields(),
+            assigneeMemberId,
+            completedByMemberId
+        )
+    }
+
+    private fun upsertParticipant(taskExecutionId: UUID, memberId: UUID, joinedAt: OffsetDateTime, session: DSLContext) {
+        session.insertInto(TASK_EXECUTION_PARTICIPANTS)
+            .set(TASK_EXECUTION_PARTICIPANTS.TASK_EXECUTION_ID, taskExecutionId)
+            .set(TASK_EXECUTION_PARTICIPANTS.MEMBER_ID, memberId)
+            .set(TASK_EXECUTION_PARTICIPANTS.JOINED_AT, joinedAt)
+            .onConflictDoNothing()
+            .execute()
+    }
 
     override fun create(taskExecution: TaskExecution.NotStarted, session: DSLContext): TaskExecution.NotStarted {
         val now = OffsetDateTime.now()
@@ -59,8 +92,8 @@ class TaskExecutionRepositoryImpl : TaskExecutionRepository {
             .set(TASK_EXECUTIONS.UPDATED_AT, now)
             .execute()
 
-        taskExecution.assigneeMemberIds.let { assigneeIds ->
-            insertTaskExecutionAssignee(taskExecution.id,assigneeIds , session)
+        taskExecution.assigneeMemberId?.let { assigneeId ->
+            upsertParticipant(taskExecution.id.value, assigneeId.value, now, session)
         }
 
         return taskExecution
@@ -73,27 +106,27 @@ class TaskExecutionRepositoryImpl : TaskExecutionRepository {
             .set(TASK_EXECUTIONS.UPDATED_AT, now)
 
         when (taskExecution) {
-            is TaskExecution.NotStarted -> {
-                // NotStartedは基本的にcreate()で作成される
-                // update()に来るのは事前割り当て変更などの例外的ケースのみ
-                // STATUS は NOT_STARTED のまま（状態遷移はstart()で行う）
-                updateStep
-            }
+            is TaskExecution.NotStarted -> updateStep
+                .also {
+                    taskExecution.assigneeMemberId?.let { assigneeId ->
+                        upsertParticipant(taskExecution.id.value, assigneeId.value, now, session)
+                    }
+                }
 
-            is TaskExecution.InProgress -> {
-                insertSnapshot(taskExecution.id.value, taskExecution.taskSnapshot, session)
-                insertTaskExecutionAssignee(taskExecution.id, taskExecution.assigneeMemberIds, session)
-                updateStep
-                    .set(TASK_EXECUTIONS.STATUS, "IN_PROGRESS")
-                    .set(TASK_EXECUTIONS.STARTED_AT, taskExecution.startedAt.toOffsetDateTime())
-            }
+            is TaskExecution.InProgress -> updateStep
+                .set(TASK_EXECUTIONS.STATUS, "IN_PROGRESS")
+                .set(TASK_EXECUTIONS.STARTED_AT, taskExecution.startedAt.toOffsetDateTime())
+                .also {
+                    insertSnapshot(taskExecution.id.value, taskExecution.taskSnapshot, session)
+                    upsertParticipant(taskExecution.id.value, taskExecution.assigneeMemberId.value, taskExecution.startedAt.toOffsetDateTime(), session)
+                }
 
-            is TaskExecution.Completed ->  {
-                distributeProratedPoints(taskExecution, session)
-                updateStep
-                    .set(TASK_EXECUTIONS.STATUS, "COMPLETED")
-                    .set(TASK_EXECUTIONS.COMPLETED_AT, taskExecution.completedAt.toOffsetDateTime())
-            }
+            is TaskExecution.Completed -> updateStep
+                .set(TASK_EXECUTIONS.STATUS, "COMPLETED")
+                .set(TASK_EXECUTIONS.COMPLETED_AT, taskExecution.completedAt.toOffsetDateTime())
+                .also {
+                    upsertParticipant(taskExecution.id.value, taskExecution.completedByMemberId.value, taskExecution.completedAt.toOffsetDateTime(), session)
+                }
 
             is TaskExecution.Cancelled -> updateStep
                 .set(TASK_EXECUTIONS.STATUS, "CANCELLED")
@@ -115,69 +148,31 @@ class TaskExecutionRepositoryImpl : TaskExecutionRepository {
             .execute()
     }
 
-    private fun distributeProratedPoints(completedTaskExecution: TaskExecution.Completed, session: DSLContext) {
-        // ポイント計算はDomain層（InProgress.complete()）で実行済み
-        // Repository層はその値を永続化するだけ
-        val earnedPoint = completedTaskExecution.earnedPoint
-
-        session.update(TASK_EXECUTION_PARTICIPANTS)
-            .set(TASK_EXECUTION_PARTICIPANTS.EARNED_POINT, earnedPoint)
-            .where(TASK_EXECUTION_PARTICIPANTS.TASK_EXECUTION_ID.eq(completedTaskExecution.id.value))
-            .and(TASK_EXECUTION_PARTICIPANTS.MEMBER_ID.`in`(completedTaskExecution.assigneeMemberIds.map { it.value }))
-            .execute()
-    }
-
-    private fun insertTaskExecutionAssignee(
-        taskExecutionId: TaskExecutionId,
-        assigneeMemberIds: List<MemberId>,
-        session: DSLContext
-    ) {
-        val now = OffsetDateTime.now()
-        val records = assigneeMemberIds.map { memberId ->
-            session.newRecord(TASK_EXECUTION_PARTICIPANTS).apply {
-                this.taskExecutionId = taskExecutionId.value
-                this.memberId = memberId.value
-                this.joinedAt = now
-            }
-        }
-        session.batchInsert(records).execute()
-    }
-
     override fun findById(id: TaskExecutionId, session: DSLContext): TaskExecution? {
-        return session.select(
-            TASK_EXECUTIONS.asterisk(),
-            snapshotField,
-            participantsField
-        )
+        val assigneeMemberId = assigneeMemberIdField()
+        val completedByMemberId = completedByMemberIdField()
+        val record = session.select(*taskExecutionSelectFields(assigneeMemberId, completedByMemberId))
             .from(TASK_EXECUTIONS)
+            .leftJoin(TASK_SNAPSHOTS)
+            .on(TASK_EXECUTIONS.ID.eq(TASK_SNAPSHOTS.TASK_EXECUTION_ID))
             .where(TASK_EXECUTIONS.ID.eq(id.value))
-            .fetchOne { record ->
-                reconstructFromRecord(
-                    record.into(TaskExecutionsRecord::class.java),
-                    record.get(snapshotField),
-                    record.get(participantsField)
-                )
-            }
+            .fetchOne() ?: return null
 
+        return reconstructFromRecord(record)
     }
 
     override fun findAll(session: DSLContext, limit: Int, offset: Int): List<TaskExecution> {
-        return session.select(
-            TASK_EXECUTIONS.asterisk(),
-            snapshotField,
-            participantsField
-        )
+        val assigneeMemberId = assigneeMemberIdField()
+        val completedByMemberId = completedByMemberIdField()
+        return session.select(*taskExecutionSelectFields(assigneeMemberId, completedByMemberId))
             .from(TASK_EXECUTIONS)
+            .leftJoin(TASK_SNAPSHOTS)
+            .on(TASK_EXECUTIONS.ID.eq(TASK_SNAPSHOTS.TASK_EXECUTION_ID))
             .orderBy(TASK_EXECUTIONS.SCHEDULED_DATE.desc(), TASK_EXECUTIONS.CREATED_AT.desc())
             .limit(limit)
             .offset(offset)
-            .fetch { record ->
-                reconstructFromRecord(
-                    record.into(TaskExecutionsRecord::class.java),
-                    record.get(snapshotField),
-                    record.get(participantsField)
-                )
-            }
+            .fetch()
+            .map { reconstructFromRecord(it) }
     }
 
     override fun count(session: DSLContext): Int {
@@ -193,24 +188,19 @@ class TaskExecutionRepositoryImpl : TaskExecutionRepository {
         filter: GetTaskExecutionsUseCase.FilterSpec
     ): List<TaskExecution> {
         val condition = buildFilterCondition(filter)
+        val assigneeMemberId = assigneeMemberIdField()
+        val completedByMemberId = completedByMemberIdField()
 
-        return session.select(
-            TASK_EXECUTIONS.asterisk(),
-            snapshotField,
-            participantsField
-        )
+        return session.select(*taskExecutionSelectFields(assigneeMemberId, completedByMemberId))
             .from(TASK_EXECUTIONS)
+            .leftJoin(TASK_SNAPSHOTS)
+            .on(TASK_EXECUTIONS.ID.eq(TASK_SNAPSHOTS.TASK_EXECUTION_ID))
             .where(condition)
             .orderBy(TASK_EXECUTIONS.SCHEDULED_DATE.desc(), TASK_EXECUTIONS.CREATED_AT.desc())
             .limit(limit)
             .offset(offset)
-            .fetch { record ->
-                reconstructFromRecord(
-                    record.into(TaskExecutionsRecord::class.java),
-                    record.get(snapshotField),
-                    record.get(participantsField)
-                )
-            }
+            .fetch()
+            .map { reconstructFromRecord(it) }
     }
 
     override fun countWithFilter(session: DSLContext, filter: GetTaskExecutionsUseCase.FilterSpec): Int {
@@ -241,236 +231,132 @@ class TaskExecutionRepositoryImpl : TaskExecutionRepository {
             condition = condition.and(TASK_EXECUTIONS.STATUS.eq(status))
         }
 
-        filter.assigneeMemberIds?.let { memberIds ->
-            val idValues = memberIds.map { it.value }
-            val participantsExists = DSL.exists(
-                DSL.selectOne()
-                .from(TASK_EXECUTION_PARTICIPANTS)
-                    .where(TASK_EXECUTION_PARTICIPANTS.TASK_EXECUTION_ID.eq(TASK_EXECUTIONS.ID))
-                    .and(TASK_EXECUTION_PARTICIPANTS.MEMBER_ID.`in`(idValues))
+        filter.assigneeMemberId?.let { memberId ->
+            condition = condition.and(
+                DSL.exists(
+                    DSL.selectOne()
+                        .from(TASK_EXECUTION_PARTICIPANTS)
+                        .where(TASK_EXECUTION_PARTICIPANTS.TASK_EXECUTION_ID.eq(TASK_EXECUTIONS.ID))
+                        .and(TASK_EXECUTION_PARTICIPANTS.MEMBER_ID.eq(memberId.value))
+                )
             )
-            condition = condition.and(participantsExists)
         }
 
         return condition
     }
 
     override fun findByScheduledDate(scheduledDate: LocalDate, session: DSLContext): List<TaskExecution> {
-        return session.select(
-            TASK_EXECUTIONS.asterisk(),
-            snapshotField,
-            participantsField
-        )
+        val assigneeMemberId = assigneeMemberIdField()
+        val completedByMemberId = completedByMemberIdField()
+        return session.select(*taskExecutionSelectFields(assigneeMemberId, completedByMemberId))
             .from(TASK_EXECUTIONS)
+            .leftJoin(TASK_SNAPSHOTS)
+            .on(TASK_EXECUTIONS.ID.eq(TASK_SNAPSHOTS.TASK_EXECUTION_ID))
             .where(TASK_EXECUTIONS.SCHEDULED_DATE.eq(scheduledDate))
             .orderBy(TASK_EXECUTIONS.CREATED_AT.desc())
-            .fetch { record ->
-                reconstructFromRecord(
-                    record.into(TaskExecutionsRecord::class.java),
-                    record.get(snapshotField),
-                    record.get(participantsField)
-                )
-            }
+            .fetch()
+            .map { reconstructFromRecord(it) }
     }
 
-    override fun findByAssigneeMemberIds(memberIds: List<MemberId>, session: DSLContext): List<TaskExecution> {
-        val assigneeExists =
-            DSL.exists(
-                DSL.selectOne()
-                    .from(TASK_EXECUTION_PARTICIPANTS)
-                    .where(
-                        TASK_EXECUTION_PARTICIPANTS.TASK_EXECUTION_ID
-                            .eq(TASK_EXECUTIONS.ID)
-                    )
-                    .and(
-                        TASK_EXECUTION_PARTICIPANTS.MEMBER_ID.`in`(
-                            memberIds.map { it.value }
-                        )
-                    )
-            )
-
-        return session.select(
-            TASK_EXECUTIONS.asterisk(),
-            participantsField,
-            snapshotField
-        )
+    override fun findByAssigneeMemberId(memberId: MemberId, session: DSLContext): List<TaskExecution> {
+        val assigneeMemberId = assigneeMemberIdField()
+        val completedByMemberId = completedByMemberIdField()
+        return session.select(*taskExecutionSelectFields(assigneeMemberId, completedByMemberId))
             .from(TASK_EXECUTIONS)
-            .where(assigneeExists)
-            .orderBy(TASK_EXECUTIONS.SCHEDULED_DATE.desc(), TASK_EXECUTIONS.CREATED_AT.desc())
-            .fetch { record ->
-                reconstructFromRecord(
-                    record.into(TaskExecutionsRecord::class.java),
-                    record.get(snapshotField),
-                    record.get(participantsField)
+            .leftJoin(TASK_SNAPSHOTS)
+            .on(TASK_EXECUTIONS.ID.eq(TASK_SNAPSHOTS.TASK_EXECUTION_ID))
+            .where(
+                DSL.exists(
+                    DSL.selectOne()
+                        .from(TASK_EXECUTION_PARTICIPANTS)
+                        .where(TASK_EXECUTION_PARTICIPANTS.TASK_EXECUTION_ID.eq(TASK_EXECUTIONS.ID))
+                        .and(TASK_EXECUTION_PARTICIPANTS.MEMBER_ID.eq(memberId.value))
                 )
-            }
+            )
+            .orderBy(TASK_EXECUTIONS.SCHEDULED_DATE.desc(), TASK_EXECUTIONS.CREATED_AT.desc())
+            .fetch()
+            .map { reconstructFromRecord(it) }
     }
-
-    private val participantsField = multiset(
-        select(TASK_EXECUTION_PARTICIPANTS.asterisk())
-            .from(TASK_EXECUTION_PARTICIPANTS)
-            .where(TASK_EXECUTION_PARTICIPANTS.TASK_EXECUTION_ID.eq(TASK_EXECUTIONS.ID))
-        ).convertFrom { record ->
-            record.into(TaskExecutionParticipantsRecord::class.java)
-    }
-
-    private val snapshotField =
-        multiset(
-            select(TASK_SNAPSHOTS.asterisk())
-                .from(TASK_SNAPSHOTS)
-                .where(TASK_SNAPSHOTS.TASK_EXECUTION_ID.eq(TASK_EXECUTIONS.ID))
-        ).convertFrom { r ->
-            r.into(TaskSnapshotsRecord::class.java).firstOrNull()
-        }
-
 
     override fun findByDefinitionAndDate(
         taskDefinitionId: TaskDefinitionId,
         scheduledDate: LocalDate,
         session: DSLContext
     ): TaskExecution? {
-        return session.select(
-            TASK_EXECUTIONS.asterisk(),
-            snapshotField,
-            participantsField
-        )
+        val assigneeMemberId = assigneeMemberIdField()
+        val completedByMemberId = completedByMemberIdField()
+        val record = session.select(*taskExecutionSelectFields(assigneeMemberId, completedByMemberId))
             .from(TASK_EXECUTIONS)
+            .leftJoin(TASK_SNAPSHOTS)
+            .on(TASK_EXECUTIONS.ID.eq(TASK_SNAPSHOTS.TASK_EXECUTION_ID))
             .where(TASK_EXECUTIONS.TASK_DEFINITION_ID.eq(taskDefinitionId.value))
             .and(TASK_EXECUTIONS.SCHEDULED_DATE.eq(scheduledDate))
-            .fetchOne { record ->
-                reconstructFromRecord(
-                    record.into(TaskExecutionsRecord::class.java),
-                    record.get(snapshotField),
-                    record.get(participantsField)
-                )
-            }
+            .fetchOne() ?: return null
+
+        return reconstructFromRecord(record)
     }
 
     override fun findByDefinitionId(definitionId: TaskDefinitionId, session: DSLContext): List<TaskExecution>? {
-        return session.select(
-            TASK_EXECUTIONS.asterisk(),
-            snapshotField,
-            participantsField
-        )
+        val assigneeMemberId = assigneeMemberIdField()
+        val completedByMemberId = completedByMemberIdField()
+        return session.select(*taskExecutionSelectFields(assigneeMemberId, completedByMemberId))
             .from(TASK_EXECUTIONS)
+            .leftJoin(TASK_SNAPSHOTS)
+            .on(TASK_EXECUTIONS.ID.eq(TASK_SNAPSHOTS.TASK_EXECUTION_ID))
             .where(TASK_EXECUTIONS.TASK_DEFINITION_ID.eq(definitionId.value))
             .orderBy(TASK_EXECUTIONS.SCHEDULED_DATE.desc(), TASK_EXECUTIONS.CREATED_AT.desc())
-            .fetch { record ->
-                reconstructFromRecord(
-                    record.into(TaskExecutionsRecord::class.java),
-                    record.get(snapshotField),
-                    record.get(participantsField)
-                )
-            }
+            .fetch()
+            .map { reconstructFromRecord(it) }
     }
 
-    override fun updateAssigneeMember(existingTaskExecution: TaskExecution, newAssigneeMemberIds:List<MemberId>, session: DSLContext): TaskExecution {
-        val existAssigneeMemberIds = session.select(TASK_EXECUTION_PARTICIPANTS.MEMBER_ID)
-            .from(TASK_EXECUTION_PARTICIPANTS)
-            .where(TASK_EXECUTION_PARTICIPANTS.TASK_EXECUTION_ID.eq(existingTaskExecution.id.value))
-            .fetch(TASK_EXECUTION_PARTICIPANTS.MEMBER_ID)
-            .toSet()
-        val newAssigneeMemberIds = newAssigneeMemberIds
-            .map { it.value }
-            .toSet()
+    private fun reconstructFromRecord(record: Record): TaskExecution {
+        val id = TaskExecutionId(record.get(TASK_EXECUTIONS.ID)!!)
+        val taskDefinitionId = TaskDefinitionId(record.get(TASK_EXECUTIONS.TASK_DEFINITION_ID)!!)
+        val scheduledDate = record.get(TASK_EXECUTIONS.SCHEDULED_DATE)!!.toDomainInstant()
+        val assigneeMemberIdRaw = record.get("assignee_member_id", UUID::class.java)
+        val completedByMemberIdRaw = record.get("completed_by_member_id", UUID::class.java)
+        val primaryMemberIdRaw = assigneeMemberIdRaw ?: completedByMemberIdRaw
+        val status = record.get(TASK_EXECUTIONS.STATUS)!!
 
-        val deleteAssigneeMemberIds = existAssigneeMemberIds - newAssigneeMemberIds
-        val insertMemberIdValues = newAssigneeMemberIds - existAssigneeMemberIds
-
-        if (deleteAssigneeMemberIds.isNotEmpty()) {
-            session.deleteFrom(TASK_EXECUTION_PARTICIPANTS)
-                .where(TASK_EXECUTION_PARTICIPANTS.TASK_EXECUTION_ID.eq(existingTaskExecution.id.value))
-                .and(TASK_EXECUTION_PARTICIPANTS.MEMBER_ID.`in`(deleteAssigneeMemberIds))
-                .execute()
-        }
-        if (insertMemberIdValues.isNotEmpty()) {
-            val insertMemberIds = existingTaskExecution.assigneeMemberIds
-                .filter { it.value in insertMemberIdValues }
-            insertTaskExecutionAssignee(existingTaskExecution.id, insertMemberIds, session)
-        }
-
-        val record = session.select(
-            TASK_EXECUTIONS.asterisk(),
-            snapshotField,
-            participantsField
-        )
-            .from(TASK_EXECUTIONS)
-            .where(TASK_EXECUTIONS.ID.eq(existingTaskExecution.id.value))
-            .fetchOne() ?: throw IllegalStateException("TaskExecution not found")
-
-            return reconstructFromRecord(
-                record.into(TaskExecutionsRecord::class.java),
-                record.get(snapshotField),
-                record.get(participantsField)
-            )
-
-    }
-
-    private fun reconstructFromRecord(
-        execution: TaskExecutionsRecord,
-        snapshot: TaskSnapshotsRecord?,
-        participants: List<TaskExecutionParticipantsRecord>
-    ): TaskExecution {
-        val id = TaskExecutionId(execution.id!!)
-        val taskDefinitionId = TaskDefinitionId(execution.taskDefinitionId!!)
-        val scheduledDate = execution.scheduledDate!!.toDomainInstant()
-
-        return when (execution.status) {
+        return when (status) {
             "NOT_STARTED" -> TaskExecution.reconstructNotStarted(
                 id = id,
                 taskDefinitionId = taskDefinitionId,
                 scheduledDate = scheduledDate,
-                assigneeMemberIds = participants.map {
-                    MemberId(it.memberId!!)
-                }
+                assigneeMemberId = assigneeMemberIdRaw?.let { MemberId(it) }
             )
 
             "IN_PROGRESS" -> TaskExecution.reconstructInProgress(
                 id = id,
                 taskDefinitionId = taskDefinitionId,
                 scheduledDate = scheduledDate,
-                assigneeMemberIds = participants.map {
-                    MemberId(it.memberId!!)
-                }.also {
-                    require(it.isNotEmpty()) { "IN_PROGRESS の担当者が存在しません。" }
-                },
-                taskSnapshot = reconstructSnapshot(
-                    requireNotNull(snapshot) { "IN_PROGRESS のタスクスナップショットが存在しません。" }
-                ),
-                startedAt = execution.get(TASK_EXECUTIONS.STARTED_AT)!!.toDomainInstant()
+                assigneeMemberId = MemberId(requireNotNull(primaryMemberIdRaw)),
+                taskSnapshot = reconstructSnapshot(record),
+                startedAt = record.get(TASK_EXECUTIONS.STARTED_AT)!!.toDomainInstant()
             )
 
             "COMPLETED" -> TaskExecution.reconstructCompleted(
                 id = id,
                 taskDefinitionId = taskDefinitionId,
                 scheduledDate = scheduledDate,
-                assigneeMemberIds = participants.map {
-                    MemberId(it.memberId!!)
-                }.also {
-                    require(it.isNotEmpty()) { "COMPLETED の担当者が存在しません。" }
-                },
-                taskSnapshot = reconstructSnapshot(
-                    requireNotNull(snapshot) { "COMPLETED のタスクスナップショットが存在しません。" }
-                ),
-                startedAt = execution.get(TASK_EXECUTIONS.STARTED_AT)!!.toDomainInstant(),
-                completedAt = execution.get(TASK_EXECUTIONS.COMPLETED_AT)!!.toDomainInstant(),
-                earnedPoint = participants.firstOrNull()?.earnedPoint
-                    ?: throw IllegalStateException("COMPLETED の earnedPoint が存在しません。")
+                assigneeMemberId = MemberId(requireNotNull(primaryMemberIdRaw)),
+                taskSnapshot = reconstructSnapshot(record),
+                startedAt = record.get(TASK_EXECUTIONS.STARTED_AT)!!.toDomainInstant(),
+                completedAt = record.get(TASK_EXECUTIONS.COMPLETED_AT)!!.toDomainInstant(),
+                completedByMemberId = MemberId(requireNotNull(completedByMemberIdRaw ?: primaryMemberIdRaw))
             )
 
             "CANCELLED" -> TaskExecution.reconstructCancelled(
                 id = id,
                 taskDefinitionId = taskDefinitionId,
                 scheduledDate = scheduledDate,
-                assigneeMemberIds = participants.map {
-                    MemberId(it.memberId!!)
-                },
-                taskSnapshot = snapshot?.let { reconstructSnapshot(it) },
-                startedAt = execution.get(TASK_EXECUTIONS.STARTED_AT)?.toDomainInstant(),
-                cancelledAt = execution.get(TASK_EXECUTIONS.UPDATED_AT)!!.toDomainInstant()
+                assigneeMemberId = assigneeMemberIdRaw?.let { MemberId(it) },
+                taskSnapshot = reconstructSnapshotOrNull(record),
+                startedAt = record.get(TASK_EXECUTIONS.STARTED_AT)?.toDomainInstant(),
+                cancelledAt = record.get(TASK_EXECUTIONS.UPDATED_AT)!!.toDomainInstant()
             )
 
-            else -> throw IllegalStateException("Unknown status: ${execution.status}")
+            else -> throw IllegalStateException("Unknown status: $status")
         }
     }
 
@@ -482,9 +368,22 @@ class TaskExecutionRepositoryImpl : TaskExecutionRepository {
                 startTime = record.get(TASK_SNAPSHOTS.SCHEDULED_START_TIME)!!.toDomainInstant(),
                 endTime = record.get(TASK_SNAPSHOTS.SCHEDULED_END_TIME)!!.toDomainInstant(),
             ),
-            frozenPoint = record.get(TASK_SNAPSHOTS.FROZEN_POINT)!!,
             definitionVersion = record.get(TASK_SNAPSHOTS.DEFINITION_VERSION)!!,
-            capturedAt = record.get(TASK_SNAPSHOTS.CREATED_AT)!!.toDomainInstant(),
+            capturedAt = record.get(TASK_SNAPSHOTS.CREATED_AT)!!.toDomainInstant()
+        )
+    }
+
+    private fun reconstructSnapshotOrNull(record: Record): TaskSnapshot? {
+        val name = record.get(TASK_SNAPSHOTS.NAME) ?: return null
+        return TaskSnapshot(
+            frozenName = TaskDefinitionName(name),
+            frozenDescription = TaskDefinitionDescription(record.get(TASK_SNAPSHOTS.DESCRIPTION) ?: ""),
+            frozenScheduledTimeRange = ScheduledTimeRange(
+                startTime = record.get(TASK_SNAPSHOTS.SCHEDULED_START_TIME)!!.toDomainInstant(),
+                endTime = record.get(TASK_SNAPSHOTS.SCHEDULED_END_TIME)!!.toDomainInstant(),
+            ),
+            definitionVersion = record.get(TASK_SNAPSHOTS.DEFINITION_VERSION)!!,
+            capturedAt = record.get(TASK_SNAPSHOTS.CREATED_AT)!!.toDomainInstant()
         )
     }
 }

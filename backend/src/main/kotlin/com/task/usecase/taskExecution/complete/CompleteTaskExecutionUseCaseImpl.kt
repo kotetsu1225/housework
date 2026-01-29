@@ -27,8 +27,10 @@ class CompleteTaskExecutionUseCaseImpl @Inject constructor(
 
             val stateChange = when(taskExecution){
                 is TaskExecution.InProgress -> {
-                    // ポイント計算はcomplete()内部で実行される
-                    taskExecution.complete(taskDefinition.isDeleted)
+                    taskExecution.complete(
+                        input.completedMemberId,
+                        taskDefinition.isDeleted
+                    )
                 }
                 is TaskExecution.NotStarted -> {
                     throw IllegalStateException("タスクが開始されていません")
@@ -60,8 +62,9 @@ class CompleteTaskExecutionUseCaseImpl @Inject constructor(
                 scheduledDate = completedExecution.scheduledDate,
                 taskSnapshot = completedExecution.taskSnapshot,
                 completedAt = completedExecution.completedAt,
+                completedMemberId = completedExecution.completedByMemberId,
                 startedAt = completedExecution.startedAt,
-                assigneeMemberIds = completedExecution.assigneeMemberIds,
+                assigneeMemberId = completedExecution.assigneeMemberId,
             )
         }
     }

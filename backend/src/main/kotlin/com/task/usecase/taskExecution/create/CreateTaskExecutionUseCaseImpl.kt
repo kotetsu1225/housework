@@ -20,7 +20,6 @@ class CreateTaskExecutionUseCaseImpl @Inject constructor(
                 taskDefinition = input.taskDefinition,
                 scheduledDate = input.scheduledDate,
             )
-
             val taskExecution = stateChange.newState
             taskExecutionRepository.create(taskExecution, session)
             domainEventDispatcher.dispatchAll(listOf(stateChange.event), session)
@@ -28,7 +27,7 @@ class CreateTaskExecutionUseCaseImpl @Inject constructor(
             CreateTaskExecutionUseCase.Output(
                 id = taskExecution.id,
                 taskDefinitionId = taskExecution.taskDefinitionId,
-                assigneeMemberIds = taskExecution.assigneeMemberIds,
+                assigneeMemberId = taskExecution.assigneeMemberId,
                 scheduledDate = taskExecution.scheduledDate,
             )
         }

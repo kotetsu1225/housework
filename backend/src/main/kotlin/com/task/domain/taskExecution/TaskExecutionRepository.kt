@@ -70,7 +70,7 @@ interface TaskExecutionRepository {
     /**
      * 特定メンバーに割り当てられたTaskExecutionを取得
      */
-    fun findByAssigneeMemberIds(memberIds: List<MemberId>, session: DSLContext): List<TaskExecution>
+    fun findByAssigneeMemberId(memberId: MemberId, session: DSLContext): List<TaskExecution>
 
     fun findByDefinitionAndDate(
         taskDefinitionId: TaskDefinitionId,
@@ -79,6 +79,4 @@ interface TaskExecutionRepository {
     ): TaskExecution?
 
     fun findByDefinitionId(definitionId: TaskDefinitionId, session: DSLContext): List<TaskExecution>?
-
-    fun updateAssigneeMember(existingTaskExecution: TaskExecution, newAssigneeMemberIds:List<MemberId>, session: DSLContext): TaskExecution
 }

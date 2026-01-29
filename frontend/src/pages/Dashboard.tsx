@@ -121,22 +121,22 @@ export function Dashboard() {
   /**
    * タスク開始処理
    */
-  const handleStartTask = useCallback(async (taskExecutionId: string, memberId: string) => {
-    return await startTask(taskExecutionId, memberId)
+  const handleStartTask = useCallback(async (taskExecutionId: string, memberIds: string[]) => {
+    return await startTask(taskExecutionId, memberIds)
   }, [startTask])
 
   /**
    * タスク完了処理
    */
-  const handleCompleteTask = useCallback(async (taskExecutionId: string, completedByMemberId: string) => {
-    return await completeTask(taskExecutionId, completedByMemberId)
+  const handleCompleteTask = useCallback(async (taskExecutionId: string) => {
+    return await completeTask(taskExecutionId)
   }, [completeTask])
 
   /**
    * 担当者割り当て処理
    */
-  const handleAssignTask = useCallback(async (taskExecutionId: string, assigneeMemberId: string) => {
-    return await assignTask(taskExecutionId, assigneeMemberId)
+  const handleAssignTask = useCallback(async (taskExecutionId: string, memberIds: string[]) => {
+    return await assignTask(taskExecutionId, memberIds)
   }, [assignTask])
 
   /**

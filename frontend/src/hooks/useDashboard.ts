@@ -40,21 +40,21 @@ interface UseDashboardActions {
   /**
    * タスクを開始する
    * @param taskExecutionId - タスク実行ID
-   * @param memberIds - 開始するメンバーのID配列
+   * @param memberId - 開始するメンバーのID
    */
-  startTask: (taskExecutionId: string, memberIds: string[]) => Promise<boolean>
+  startTask: (taskExecutionId: string, memberId: string) => Promise<boolean>
   /**
    * タスクを完了する
    * @param taskExecutionId - タスク実行ID
-   * @note 完了者はバックエンドで現在の担当者から推論されます
+   * @param completedByMemberId - 完了者のメンバーID
    */
-  completeTask: (taskExecutionId: string) => Promise<boolean>
+  completeTask: (taskExecutionId: string, completedByMemberId: string) => Promise<boolean>
   /**
    * タスクの担当者を割り当てる
    * @param taskExecutionId - タスク実行ID
-   * @param memberIds - 担当者のメンバーID配列
+   * @param assigneeMemberId - 担当者のメンバーID
    */
-  assignTask: (taskExecutionId: string, memberIds: string[]) => Promise<boolean>
+  assignTask: (taskExecutionId: string, assigneeMemberId: string) => Promise<boolean>
   /**
    * エラーをクリア
    */
@@ -132,12 +132,12 @@ export function useDashboard(date?: string): UseDashboardReturn {
   /**
    * タスクを開始する
    * @param taskExecutionId - タスク実行ID
-   * @param memberIds - 開始するメンバーのID配列
+   * @param memberId - 開始するメンバーのID
    */
   const startTask = useCallback(
-    async (taskExecutionId: string, memberIds: string[]): Promise<boolean> => {
+    async (taskExecutionId: string, memberId: string): Promise<boolean> => {
       try {
-        await startTaskExecution(taskExecutionId, { memberIds })
+        await startTaskExecution(taskExecutionId, { memberId })
         // 成功後にデータを再取得
         await fetchDashboardData()
         return true
@@ -157,9 +157,9 @@ export function useDashboard(date?: string): UseDashboardReturn {
    * タスクを完了する
    */
   const completeTask = useCallback(
-    async (taskExecutionId: string): Promise<boolean> => {
+    async (taskExecutionId: string, completedByMemberId: string): Promise<boolean> => {
       try {
-        await completeTaskExecution(taskExecutionId, {})
+        await completeTaskExecution(taskExecutionId, { memberId: completedByMemberId })
         // 成功後にデータを再取得
         await fetchDashboardData()
         return true
@@ -179,9 +179,9 @@ export function useDashboard(date?: string): UseDashboardReturn {
    * タスクの担当者を割り当てる
    */
   const assignTask = useCallback(
-    async (taskExecutionId: string, memberIds: string[]): Promise<boolean> => {
+    async (taskExecutionId: string, assigneeMemberId: string): Promise<boolean> => {
       try {
-        await assignTaskExecution(taskExecutionId, { memberIds })
+        await assignTaskExecution(taskExecutionId, { memberId: assigneeMemberId })
         // 成功後にデータを再取得
         await fetchDashboardData()
         return true

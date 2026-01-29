@@ -31,8 +31,8 @@ export interface TodayTaskDto {
   status: 'NOT_STARTED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED' | 'SCHEDULED'
   /** PERSONALの場合のオーナー（FAMILYはnull） */
   ownerMemberId: string | null
-  assigneeMemberIds: string[] // CHANGED: was assigneeMemberId (singular)
-  assigneeMemberNames: string[] // CHANGED: was assigneeMemberName (singular), now array
+  assigneeMemberId: string | null
+  assigneeMemberName: string | null
   scheduledDate: string
 }
 

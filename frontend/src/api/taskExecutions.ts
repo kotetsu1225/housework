@@ -27,8 +27,13 @@ export interface GetTaskExecutionsOptions {
   scheduledDate?: string
   /** ステータスでフィルタ */
   status?: 'NOT_STARTED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED'
-  /** 担当者IDsでフィルタ（バックエンド: assigneeMemberId） */
-  assigneeMemberIds?: string[] // CHANGED: now array to support multiple assignees
+  /** 担当者IDでフィルタ（バックエンド: assigneeMemberId） */
+  assigneeMemberId?: string
+  /**
+   * 互換用（非推奨）
+   * 以前の実装で memberId を使っていたため残している
+   */
+  memberId?: string
   /** 取得件数（デフォルト: 20） */
   limit?: number
   /** オフセット（デフォルト: 0） */
@@ -63,10 +68,8 @@ export async function getTaskExecutions(
 
   if (options.scheduledDate) params.append('scheduledDate', options.scheduledDate)
   if (options.status) params.append('status', options.status)
-  const memberIds = options.assigneeMemberIds
-  if (memberIds && memberIds.length > 0) {
-    memberIds.forEach((id) => params.append('assigneeMemberId', id))
-  }
+  const assignee = options.assigneeMemberId ?? options.memberId
+  if (assignee) params.append('assigneeMemberId', assignee)
   if (options.limit !== undefined) params.append('limit', String(options.limit))
   if (options.offset !== undefined) params.append('offset', String(options.offset))
 
@@ -99,7 +102,7 @@ export async function getTaskExecution(
  * POST /api/task-executions/{taskExecutionId}/start
  *
  * @param taskExecutionId - 開始対象のTaskExecution ID
- * @param request - 開始リクエスト（実行者のmemberIds配列）
+ * @param request - 開始リクエスト（実行者のmemberId）
  * @returns 更新後のTaskExecution情報
  *
  * @note この操作でTaskSnapshotが作成され、タスク定義の状態が凍結されます
@@ -107,7 +110,7 @@ export async function getTaskExecution(
  * @example
  * ```typescript
  * const updated = await startTaskExecution('uuid', {
- *   memberIds: ['member-uuid-1', 'member-uuid-2']
+ *   memberId: 'member-uuid'
  * })
  * console.log(updated.status) // 'IN_PROGRESS'
  * console.log(updated.taskSnapshot) // 凍結されたタスク情報
@@ -128,14 +131,14 @@ export async function startTaskExecution(
  * POST /api/task-executions/{taskExecutionId}/complete
  *
  * @param taskExecutionId - 完了対象のTaskExecution ID
- * @param request - 完了リクエスト（空オブジェクト）
+ * @param request - 完了リクエスト（完了者のmemberId）
  * @returns 更新後のTaskExecution情報
- *
- * @note 完了者はバックエンドで現在の担当者から推論されます
  *
  * @example
  * ```typescript
- * const updated = await completeTaskExecution('uuid', {})
+ * const updated = await completeTaskExecution('uuid', {
+ *   memberId: 'member-uuid'
+ * })
  * console.log(updated.status) // 'COMPLETED'
  * console.log(updated.completedAt) // 完了日時
  * ```
@@ -179,7 +182,7 @@ export async function cancelTaskExecution(
  * POST /api/task-executions/{taskExecutionId}/assign
  *
  * @param taskExecutionId - 割り当て対象のTaskExecution ID
- * @param request - 割り当てリクエスト（担当者のmemberIds配列）
+ * @param request - 割り当てリクエスト（担当者のmemberId）
  * @returns 更新後のTaskExecution情報
  *
  * @note NOT_STARTED状態のタスクのみ割り当て可能
@@ -187,9 +190,9 @@ export async function cancelTaskExecution(
  * @example
  * ```typescript
  * const updated = await assignTaskExecution('uuid', {
- *   memberIds: ['member-uuid-1', 'member-uuid-2']
+ *   memberId: 'member-uuid'
  * })
- * console.log(updated.assigneeMemberIds) // ['member-uuid-1', 'member-uuid-2']
+ * console.log(updated.assigneeMemberId) // 'member-uuid'
  * ```
  */
 export async function assignTaskExecution(

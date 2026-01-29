@@ -107,7 +107,7 @@ export function CompletedExecutions() {
       const items: TaskExecution[] = res.taskExecutions.map((t) => ({
         id: t.id,
         taskDefinitionId: t.taskDefinitionId,
-        assigneeMemberIds: t.assigneeMemberIds,
+        assigneeMemberId: t.assigneeMemberId ?? undefined,
         scheduledDate: t.scheduledDate,
         status: t.status,
         taskSnapshot: t.taskSnapshot
@@ -117,7 +117,6 @@ export function CompletedExecutions() {
               scheduledStartTime: t.taskSnapshot.scheduledStartTime,
               scheduledEndTime: t.taskSnapshot.scheduledEndTime,
               definitionVersion: t.taskSnapshot.definitionVersion,
-              frozenPoint: t.taskSnapshot.frozenPoint,
               capturedAt: t.taskSnapshot.capturedAt,
             }
           : {
@@ -125,11 +124,11 @@ export function CompletedExecutions() {
               scheduledStartTime: '',
               scheduledEndTime: '',
               definitionVersion: 0,
-              frozenPoint: 0,
               capturedAt: '',
             },
         startedAt: t.startedAt ?? undefined,
         completedAt: t.completedAt ?? undefined,
+        completedByMemberId: t.completedByMemberId ?? undefined,
         createdAt: t.createdAt,
         updatedAt: t.updatedAt,
       }))
@@ -172,7 +171,8 @@ export function CompletedExecutions() {
     const map = new Map(members.map((m) => [m.id, m]))
     return state.items.map((t) => ({
       ...t,
-      assignees: t.assigneeMemberIds.map((id) => map.get(id)).filter(Boolean) as Member[],
+      assignee: t.assigneeMemberId ? map.get(t.assigneeMemberId) : undefined,
+      completedBy: t.completedByMemberId ? map.get(t.completedByMemberId) : undefined,
     }))
   }, [members, state.items])
 
@@ -266,7 +266,7 @@ export function CompletedExecutions() {
     const taskName = t.taskSnapshot?.name || '(名称不明)'
     const scopeLabel = getScopeLabel(item.scope)
     const scheduleBadge = getScheduleBadgeFromDefinition(item.definition)
-    const assignees = t.assignees ?? []
+    const completedBy = t.completedBy
 
     const owner = item.ownerMemberId ? members.find((m) => m.id === item.ownerMemberId) : undefined
 
@@ -316,20 +316,15 @@ export function CompletedExecutions() {
                 {owner.name}
               </span>
             )}
-            {assignees.length > 0 && (
+            {completedBy && (
               <span className="flex items-center gap-1.5 text-coral-400 font-medium whitespace-nowrap">
-                {assignees.map((assignee, idx) => (
-                  <span key={assignee.id} className="flex items-center gap-1.5">
-                    {idx > 0 && <span className="text-white/30">,</span>}
-                    <Avatar
-                      name={assignee.name}
-                      size="sm"
-                      role={assignee.role}
-                      variant={isParentRole(assignee.role) ? 'parent' : 'child'}
-                    />
-                    {assignee.name}
-                  </span>
-                ))}
+                <Avatar
+                  name={completedBy.name}
+                  size="sm"
+                  role={completedBy.role}
+                  variant={isParentRole(completedBy.role) ? 'parent' : 'child'}
+                />
+                {completedBy.name}
               </span>
             )}
             {t.completedAt && (

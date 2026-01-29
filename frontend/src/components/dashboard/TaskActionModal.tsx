@@ -26,11 +26,11 @@ export interface TaskActionModalProps {
   /** 現在のログインユーザーID */
   currentMemberId?: string
   /** タスク開始時のコールバック */
-  onStart: (taskExecutionId: string, memberIds: string[]) => Promise<boolean>
+  onStart: (taskExecutionId: string, memberId: string) => Promise<boolean>
   /** タスク完了時のコールバック */
-  onComplete: (taskExecutionId: string) => Promise<boolean>
+  onComplete: (taskExecutionId: string, completedByMemberId: string) => Promise<boolean>
   /** 担当者割り当て時のコールバック */
-  onAssign: (taskExecutionId: string, memberIds: string[]) => Promise<boolean>
+  onAssign: (taskExecutionId: string, assigneeMemberId: string) => Promise<boolean>
 }
 
 /**
@@ -67,12 +67,12 @@ export function TaskActionModal({
   onAssign,
 }: TaskActionModalProps) {
   const [loading, setLoading] = useState(false)
-  const [selectedAssignees, setSelectedAssignees] = useState<string[]>([])
+  const [selectedAssignee, setSelectedAssignee] = useState<string | null>(null)
 
-  // タスクが変わったら選択状態を現在の担当者で初期化
+  // タスクが変わったら選択状態をリセット
   useEffect(() => {
-    setSelectedAssignees(task?.assigneeMemberIds ?? [])
-  }, [task?.taskExecutionId, task?.assigneeMemberIds])
+    setSelectedAssignee(null)
+  }, [task?.taskExecutionId])
 
   if (!task) return null
 
@@ -84,28 +84,25 @@ export function TaskActionModal({
   const scopeIcon = task.scope === 'FAMILY' ? <Users className="w-4 h-4" /> : <User className="w-4 h-4" />
 
   /**
-   * 実行に使用するメンバーIDsを決定
-   * 1. 画面上で選択したメンバーs
-   * 2. すでに割り当てられているメンバーs
+   * 実行に使用するメンバーIDを決定
+   * 1. 画面上で選択したメンバー
+   * 2. すでに割り当てられているメンバー
    * 3. 現在のログインユーザー
    */
-  const getEffectiveMemberIds = (): string[] => {
-    if (selectedAssignees.length > 0) return selectedAssignees
-    if (task.assigneeMemberIds.length > 0) return task.assigneeMemberIds
-    if (currentMemberId) return [currentMemberId]
-    return []
+  const getEffectiveMemberId = () => {
+    return selectedAssignee || task.assigneeMemberId || currentMemberId
   }
 
   /**
    * タスク開始処理
    */
   const handleStart = async () => {
-    const memberIds = getEffectiveMemberIds()
-    if (memberIds.length === 0) return
+    const memberId = getEffectiveMemberId()
+    if (!memberId) return
 
     setLoading(true)
     try {
-      const success = await onStart(task.taskExecutionId, memberIds)
+      const success = await onStart(task.taskExecutionId, memberId)
       if (success) {
         onClose()
       }
@@ -118,9 +115,12 @@ export function TaskActionModal({
    * タスク完了処理
    */
   const handleComplete = async () => {
+    const memberId = getEffectiveMemberId()
+    if (!memberId) return
+
     setLoading(true)
     try {
-      const success = await onComplete(task.taskExecutionId)
+      const success = await onComplete(task.taskExecutionId, memberId)
       if (success) {
         onClose()
       }
@@ -130,19 +130,14 @@ export function TaskActionModal({
   }
 
   /**
-   * 担当者割り当て処理（トグル形式で複数選択）
+   * 担当者割り当て処理
    */
   const handleAssign = async (memberId: string) => {
     setLoading(true)
     try {
-      // トグル: 既に選択されていたら削除、そうでなければ追加
-      const newSelection = selectedAssignees.includes(memberId)
-        ? selectedAssignees.filter((id) => id !== memberId)
-        : [...selectedAssignees, memberId]
-
-      const success = await onAssign(task.taskExecutionId, newSelection)
+      const success = await onAssign(task.taskExecutionId, memberId)
       if (success) {
-        setSelectedAssignees(newSelection)
+        setSelectedAssignee(memberId)
       }
     } finally {
       setLoading(false)
@@ -242,11 +237,13 @@ export function TaskActionModal({
         {(isNotStarted || isInProgress) && members.length > 0 && (
           <div className="space-y-3">
             <p className="text-sm text-white/70 font-medium">
-              担当者を選択（複数可）
+              担当者を選択
             </p>
             <div className="flex flex-wrap gap-2">
               {members.map((member) => {
-                const isSelected = selectedAssignees.includes(member.id)
+                const isSelected =
+                  selectedAssignee === member.id ||
+                  (!selectedAssignee && task.assigneeMemberId === member.id)
                 const isCurrent = member.id === currentMemberId
 
                 return (
@@ -281,35 +278,25 @@ export function TaskActionModal({
         )}
 
         {/* 現在の担当者（完了の場合のみ表示。進行中は上の選択UIで表示されるため） */}
-        {isCompleted && task.assigneeMemberNames.length > 0 && (
+        {isCompleted && task.assigneeMemberName && (
           <div className="flex items-center gap-2 text-sm text-white/70">
             <span>担当:</span>
-            <div className="flex flex-wrap items-center gap-2">
-              {task.assigneeMemberIds.map((memberId, idx) => {
-                const assignee = members.find((m) => m.id === memberId)
-                const name = task.assigneeMemberNames[idx] ?? '不明'
-
-                return (
-                  <div
-                    key={memberId}
-                    className="flex items-center gap-2 bg-dark-800/50 px-3 py-1.5 rounded-full"
-                  >
-                    {assignee ? (
-                      <Avatar
-                        name={assignee.name}
-                        size="sm"
-                        role={assignee.role}
-                        variant={isParentRole(assignee.role) ? 'parent' : 'child'}
-                      />
-                    ) : (
-                      <span className="w-6 h-6 rounded-full bg-coral-500/20 flex items-center justify-center text-[10px]">
-                        ?
-                      </span>
-                    )}
-                    <span className="text-white font-medium">{name}</span>
-                  </div>
-                )
-              })}
+            <div className="flex items-center gap-2 bg-dark-800/50 px-3 py-1.5 rounded-full">
+              {(() => {
+                const assignee = members.find(m => m.id === task.assigneeMemberId)
+                if (assignee) {
+                  return (
+                    <Avatar
+                      name={assignee.name}
+                      size="sm"
+                      role={assignee.role}
+                      variant={isParentRole(assignee.role) ? 'parent' : 'child'}
+                    />
+                  )
+                }
+                return <span className="w-6 h-6 rounded-full bg-coral-500/20 flex items-center justify-center text-[10px]">?</span>
+              })()}
+              <span className="text-white font-medium">{task.assigneeMemberName}</span>
             </div>
           </div>
         )}

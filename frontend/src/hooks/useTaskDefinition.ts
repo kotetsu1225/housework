@@ -172,7 +172,6 @@ export function useTaskDefinition(
             ...scheduleInfo,
             version: td.version,
             isDeleted: false,
-            point: td.point,
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
           }
@@ -217,7 +216,6 @@ export function useTaskDefinition(
           ...scheduleInfo,
           version: response.version,
           isDeleted: false,
-          point: response.point,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
         }

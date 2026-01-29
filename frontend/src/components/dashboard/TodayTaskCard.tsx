@@ -68,10 +68,8 @@ function getScheduleBadge(scheduleType: TodayTaskDto['scheduleType']) {
 export function TodayTaskCard({ task, onClick, showDate = false, members }: TodayTaskCardProps) {
   const handleClick = () => onClick(task)
 
-  // 担当者情報を取得（複数対応）
-  const assignees = task.assigneeMemberIds
-    .map((id) => members.find((m) => m.id === id))
-    .filter(Boolean) as Member[]
+  // 担当者情報を取得
+  const assignee = members.find((m) => m.id === task.assigneeMemberId)
 
   return (
     <Card
@@ -122,29 +120,21 @@ export function TodayTaskCard({ task, onClick, showDate = false, members }: Toda
             {task.scope === 'FAMILY' ? '家族' : '個人'}
           </span>
 
-          {task.assigneeMemberNames.length > 0 && (
+          {task.assigneeMemberName && (
             <span className="flex items-center gap-1.5 text-coral-400 font-medium whitespace-nowrap">
-              {assignees.length > 0 ? (
-                <>
-                  {assignees.slice(0, 2).map((assignee, idx) => (
-                    <span key={assignee.id} className="flex items-center gap-1.5">
-                      {idx > 0 && <span className="text-white/30">,</span>}
-                      <Avatar
-                        name={assignee.name}
-                        size="sm"
-                        role={assignee.role}
-                        variant={isParentRole(assignee.role) ? 'parent' : 'child'}
-                      />
-                      <span>{assignee.name}</span>
-                    </span>
-                  ))}
-                  {assignees.length > 2 && (
-                    <span className="text-white/50">他{assignees.length - 2}名</span>
-                  )}
-                </>
+              {assignee ? (
+                <Avatar
+                  name={assignee.name}
+                  size="sm"
+                  role={assignee.role}
+                  variant={isParentRole(assignee.role) ? 'parent' : 'child'}
+                />
               ) : (
-                <span>未割当</span>
+                <span className="w-4 h-4 rounded-full bg-coral-500/20 flex items-center justify-center text-[10px]">
+                  ?
+                </span>
               )}
+              {task.assigneeMemberName}
             </span>
           )}
         </div>

@@ -44,8 +44,8 @@ data class TodayTaskResponse(
     val scheduleType: String,
     val status: String,
     val ownerMemberId: String?,
-    val assigneeMemberId: String?,
-    val assigneeMemberName: String?,
+    val assigneeMemberIds: List<String>,
+    val assigneeMemberNames: List<String>,
     val scheduledDate: String
 )
 
@@ -80,8 +80,8 @@ private fun TodayTaskDto.toResponse() = TodayTaskResponse(
     scheduleType = scheduleType,
     status = status,
     ownerMemberId = ownerMemberId,
-    assigneeMemberId = assigneeMemberId,
-    assigneeMemberName = assigneeMemberName,
+    assigneeMemberIds = assigneeMemberIds,
+    assigneeMemberNames = assigneeMemberNames,
     scheduledDate = scheduledDate
 )
 
@@ -125,4 +125,3 @@ fun Route.dashboard() {
         )
     }
 }
-

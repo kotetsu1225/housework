@@ -119,7 +119,9 @@ class DashboardQueryServiceImpl @Inject constructor(
                 td.NAME.asc()
             )
             .fetch { record ->
-                val primaryAssignee = record.get(assignees)?.firstOrNull()
+                val assigneeRows = record.get(assignees).orEmpty()
+                val assigneeIds = assigneeRows.mapNotNull { it.memberId?.toString() }
+                val assigneeNames = assigneeRows.mapNotNull { it.memberName }
                 TodayTaskDto(
                     taskExecutionId = record.get(te.ID).toString(),
                     taskDefinitionId = record.get(te.TASK_DEFINITION_ID).toString(),
@@ -131,8 +133,8 @@ class DashboardQueryServiceImpl @Inject constructor(
                     scheduleType = record.get(td.SCHEDULE_TYPE) ?: "RECURRING",
                     status = record.get(te.STATUS) ?: "NOT_STARTED",
                     ownerMemberId = record.get(td.OWNER_MEMBER_ID)?.toString(),
-                    assigneeMemberId = primaryAssignee?.memberId?.toString(),
-                    assigneeMemberName = primaryAssignee?.memberName,
+                    assigneeMemberIds = assigneeIds,
+                    assigneeMemberNames = assigneeNames,
                     scheduledDate = record.get(te.SCHEDULED_DATE)?.format(dateFormatter) ?: ""
                 )
             }
@@ -192,7 +194,9 @@ class DashboardQueryServiceImpl @Inject constructor(
             .and(te.STATUS.ne("CANCELLED"))
             .orderBy(td.NAME.asc())
             .fetch { record ->
-                val primaryAssignee = record.get(assignees)?.firstOrNull()
+                val assigneeRows = record.get(assignees).orEmpty()
+                val assigneeIds = assigneeRows.mapNotNull { it.memberId?.toString() }
+                val assigneeNames = assigneeRows.mapNotNull { it.memberName }
                 TodayTaskDto(
                     taskExecutionId = record.get(te.ID).toString(),
                     taskDefinitionId = record.get(te.TASK_DEFINITION_ID).toString(),
@@ -204,8 +208,8 @@ class DashboardQueryServiceImpl @Inject constructor(
                     scheduleType = record.get(td.SCHEDULE_TYPE) ?: "RECURRING",
                     status = record.get(te.STATUS) ?: "NOT_STARTED",
                     ownerMemberId = record.get(td.OWNER_MEMBER_ID)?.toString(),
-                    assigneeMemberId = primaryAssignee?.memberId?.toString(),
-                    assigneeMemberName = primaryAssignee?.memberName,
+                    assigneeMemberIds = assigneeIds,
+                    assigneeMemberNames = assigneeNames,
                     scheduledDate = record.get(te.SCHEDULED_DATE)?.format(dateFormatter) ?: ""
                 )
             }
@@ -285,8 +289,8 @@ class DashboardQueryServiceImpl @Inject constructor(
                         scheduleType = record.get(td.SCHEDULE_TYPE) ?: "RECURRING",
                         status = "SCHEDULED",  // 予定（実行未生成）
                         ownerMemberId = record.get(td.OWNER_MEMBER_ID)?.toString(),
-                        assigneeMemberId = null,
-                        assigneeMemberName = null,
+                        assigneeMemberIds = emptyList(),
+                        assigneeMemberNames = emptyList(),
                         scheduledDate = targetDate.format(dateFormatter)
                     )
                 }
@@ -335,8 +339,8 @@ class DashboardQueryServiceImpl @Inject constructor(
                         scheduleType = record.get(td.SCHEDULE_TYPE) ?: "ONE_TIME",
                         status = "SCHEDULED",  // 予定（実行未生成）
                         ownerMemberId = record.get(td.OWNER_MEMBER_ID)?.toString(),
-                        assigneeMemberId = null,
-                        assigneeMemberName = null,
+                        assigneeMemberIds = emptyList(),
+                        assigneeMemberNames = emptyList(),
                         scheduledDate = targetDate.format(dateFormatter)
                     )
                 }
@@ -415,4 +419,3 @@ class DashboardQueryServiceImpl @Inject constructor(
         }
     }
 }
-

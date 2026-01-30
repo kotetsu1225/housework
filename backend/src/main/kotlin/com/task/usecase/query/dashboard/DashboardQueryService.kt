@@ -39,8 +39,8 @@ data class TodayTaskDto(
     val scheduleType: String,       // TaskDefinition.schedule_type (RECURRING/ONE_TIME)
     val status: String,             // TaskExecution.status
     val ownerMemberId: String?,     // TaskDefinition.owner_member_id (PERSONAL only)
-    val assigneeMemberId: String?,
-    val assigneeMemberName: String?,
+    val assigneeMemberIds: List<String>,
+    val assigneeMemberNames: List<String>,
     val scheduledDate: String
 )
 
@@ -64,4 +64,3 @@ data class MemberTaskDto(
     val taskName: String,
     val status: String
 )
-

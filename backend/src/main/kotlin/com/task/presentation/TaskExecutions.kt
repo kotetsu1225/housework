@@ -48,7 +48,7 @@ class TaskExecutions {
     ) {
         @Serializable
         data class Request(
-            val memberId: String
+            val memberIds: kotlin.collections.List<String>
         )
     }
 
@@ -59,7 +59,7 @@ class TaskExecutions {
     ) {
         @Serializable
         data class Request(
-            val memberId: String
+            val memberIds: kotlin.collections.List<String>
         )
     }
 
@@ -76,7 +76,7 @@ class TaskExecutions {
     ) {
         @Serializable
         data class Request(
-            val memberId: String
+            val memberIds: kotlin.collections.List<String>
         )
     }
 }
@@ -205,7 +205,7 @@ fun Route.taskExecutions() {
         val output = instance<StartTaskExecutionUseCase>().execute(
             StartTaskExecutionUseCase.Input(
                 id = TaskExecutionId.from(resource.taskExecutionId),
-                assigneeMemberIds = listOf(MemberId(UUID.fromString(request.memberId)))
+                assigneeMemberIds = request.memberIds.map { MemberId(UUID.fromString(it)) }
             )
         )
 
@@ -284,7 +284,7 @@ fun Route.taskExecutions() {
         val output = instance<UpdateAssignTaskExecutionUseCase>().execute(
             UpdateAssignTaskExecutionUseCase.Input(
                 id = TaskExecutionId.from(resource.taskExecutionId),
-                newAssigneeMemberIds = listOf(MemberId(UUID.fromString(request.memberId)))
+                newAssigneeMemberIds = request.memberIds.map { MemberId(UUID.fromString(it)) }
             )
         )
 

@@ -48,3 +48,12 @@ export const PARENT_ROLES: FamilyRole[] = ['FATHER', 'MOTHER'] as const
  */
 export const CHILD_ROLES: FamilyRole[] = ['BROTHER', 'SISTER'] as const
 
+/**
+ * 役割からラベルを取得する
+ * @param role - 役割
+ * @returns ラベル（父/母/兄/妹）
+ */
+export function getRoleLabel(role: FamilyRole): string {
+  return ROLE_LABELS[role] ?? role
+}
+

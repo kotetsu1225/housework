@@ -6,7 +6,9 @@ import { ToastProvider } from './components/ui/Toast'
 import { BottomNav } from './components/layout/BottomNav'
 import { Dashboard } from './pages/Dashboard'
 import { Tasks } from './pages/Tasks'
+import { TaskList } from './pages/TaskList'
 import { Members } from './pages/Members'
+import { MemberDetail } from './pages/MemberDetail'
 import { CompletedExecutions } from './pages/CompletedExecutions'
 import { Login } from './pages/Login'
 import { Register } from './pages/Register'
@@ -59,6 +61,14 @@ function AppContent() {
           }
         />
         <Route
+          path="/tasks/list"
+          element={
+            <ProtectedRoute>
+              <TaskList />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/executions/completed"
           element={
             <ProtectedRoute>
@@ -71,6 +81,22 @@ function AppContent() {
           element={
             <ProtectedRoute>
               <Members />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/members/:memberId"
+          element={
+            <ProtectedRoute>
+              <MemberDetail />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/members/:memberId/completed"
+          element={
+            <ProtectedRoute>
+              <CompletedExecutions />
             </ProtectedRoute>
           }
         />

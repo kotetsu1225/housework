@@ -16,7 +16,7 @@ import { Card } from '../components/ui/Card'
 import { Modal } from '../components/ui/Modal'
 import { ProgressSummaryCard, TaskGroupsSection, TodayTaskCard, TomorrowTaskDetailModal } from '../components/dashboard'
 import { TaskActionModal } from '../components/dashboard/TaskActionModal'
-import { useDashboard, useMember } from '../hooks'
+import { useDashboard, useMembers } from '../hooks'
 import { useAuth } from '../contexts'
 import { formatJa, toISODateString } from '../utils'
 import { getDashboardData, ApiError } from '../api'
@@ -60,7 +60,7 @@ export function Dashboard() {
   } = useDashboard(todayStr)
 
   // メンバー一覧取得（モーダルの担当者選択用）
-  const { members, fetchMembers } = useMember()
+  const { members, fetchMembers } = useMembers()
 
   // 初回ロード時にメンバーも取得
   useState(() => {
@@ -93,12 +93,14 @@ export function Dashboard() {
 
   // 明日モーダル/今日のactive/完了済み表示は TaskGroupsSection に移譲
 
-  // 進捗サマリーの計算（今日のタスクのみ）
+  // 進捗サマリーの計算（今日の家族タスクのみ）
   const { completedCount, totalCount } = useMemo(() => {
-    // 完了数はcompletedTasksの数、総数はactive + completed
+    // 家族タスクのみをカウント
+    const familyActiveTasks = todayActiveTasks.filter((t) => t.scope === 'FAMILY')
+    const familyCompletedTasks = completedTasks.filter((t) => t.scope === 'FAMILY')
     return { 
-      completedCount: completedTasks.length, 
-      totalCount: todayActiveTasks.length + completedTasks.length 
+      completedCount: familyCompletedTasks.length, 
+      totalCount: familyActiveTasks.length + familyCompletedTasks.length 
     }
   }, [todayActiveTasks, completedTasks])
 
@@ -194,11 +196,12 @@ export function Dashboard() {
           </Alert>
         )}
 
-        {/* 進捗サマリー */}
+        {/* 進捗サマリー（家族タスクのみ） */}
         <section className="py-6">
           <ProgressSummaryCard
             completedCount={completedCount}
             totalCount={totalCount}
+            label="今日の家族タスク進捗"
           />
         </section>
 

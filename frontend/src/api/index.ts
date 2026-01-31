@@ -52,3 +52,12 @@ export type {
   MemberTaskDto,
   MemberTaskSummaryDto,
 } from './dashboard'
+
+// CompletedTasks API (CQRS Query)
+export { getCompletedTasks } from './completedTasks'
+export type {
+  GetCompletedTasksResponse,
+  GetCompletedTasksOptions,
+  CompletedTaskDto,
+  AssigneeMemberDto,
+} from './completedTasks'

@@ -58,7 +58,7 @@ export interface UpdateMemberResponse {
  * @note バックエンドにエンドポイント追加後に対応予定
  */
 export interface GetMembersResponse {
-  members: MemberResponse[]
+  members: MemberListItemResponse[]
 }
 
 export interface MemberResponse {
@@ -66,10 +66,20 @@ export interface MemberResponse {
   name: string
   email: string
   familyRole: FamilyRole
-  /** personal(owner)+assignee 母集団の総数（CANCELLED/削除済み除外） */
-  totalCount: number
-  /** 上記母集団のうち、本人が完了(completedBy=本人)した件数 */
-  completedCount: number
+}
+
+/**
+ * メンバー一覧用の要約レスポンス
+ */
+export interface MemberListItemResponse extends MemberResponse {
+  /** 今日獲得したポイント */
+  todayEarnedPoint: number
+  /** 今日の完了済み家族タスク合計 */
+  todayFamilyTaskCompletedTotal: number
+  /** 今日の完了済み家族タスクのうち担当分 */
+  todayFamilyTaskCompleted: number
+  /** 今日の完了済み個人タスク数 */
+  todayPersonalTaskCompleted: number
 }
 
 // ==========================================

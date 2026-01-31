@@ -70,25 +70,48 @@ interface UseTaskDefinitionActions {
 type UseTaskDefinitionReturn = UseTaskDefinitionState & UseTaskDefinitionActions
 
 /**
+ * APIのパターンタイプをフロントエンドの型に変換
+ * 'Daily' -> 'DAILY', 'Weekly' -> 'WEEKLY', 'Monthly' -> 'MONTHLY'
+ */
+function convertPatternType(apiType: 'Daily' | 'Weekly' | 'Monthly'): 'DAILY' | 'WEEKLY' | 'MONTHLY' {
+  switch (apiType) {
+    case 'Daily':
+      return 'DAILY'
+    case 'Weekly':
+      return 'WEEKLY'
+    case 'Monthly':
+      return 'MONTHLY'
+  }
+}
+
+/**
  * ScheduleDtoをTaskDefinitionのスケジュール形式に変換
  */
+function normalizeDateString(dateStr: string): string {
+  const trimmed = dateStr.trim()
+  if (trimmed.length >= 10) {
+    return trimmed.slice(0, 10)
+  }
+  return trimmed
+}
+
 function scheduleDtoToTaskDefinition(
   dto: ScheduleDto
 ): Pick<TaskDefinition, 'scheduleType' | 'oneTimeDeadline' | 'recurrence'> {
   if (dto.type === 'OneTime') {
     return {
       scheduleType: 'ONE_TIME',
-      oneTimeDeadline: dto.deadline,
+      oneTimeDeadline: normalizeDateString(dto.deadline),
       recurrence: undefined,
     }
   }
 
   // Recurring
-  const patternType = dto.pattern.type
+  const patternType = convertPatternType(dto.pattern.type)
   return {
     scheduleType: 'RECURRING',
     recurrence: {
-      patternType: patternType as 'DAILY' | 'WEEKLY' | 'MONTHLY',
+      patternType,
       dailySkipWeekends:
         dto.pattern.type === 'Daily' ? dto.pattern.skipWeekends : undefined,
       weeklyDayOfWeek:
@@ -97,8 +120,8 @@ function scheduleDtoToTaskDefinition(
           : undefined,
       monthlyDayOfMonth:
         dto.pattern.type === 'Monthly' ? dto.pattern.dayOfMonth : undefined,
-      startDate: dto.startDate,
-      endDate: dto.endDate ?? undefined,
+      startDate: normalizeDateString(dto.startDate),
+      endDate: dto.endDate ? normalizeDateString(dto.endDate) : undefined,
     },
   }
 }

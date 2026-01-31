@@ -70,7 +70,7 @@ type UseMemberReturn = UseMemberState & UseMemberActions
  * }
  * ```
  */
-export function useMember(initialMembers: Member[] = []): UseMemberReturn {
+export function useMembers(initialMembers: Member[] = []): UseMemberReturn {
   const [members, setMembers] = useState<Member[]>(initialMembers)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -90,8 +90,9 @@ export function useMember(initialMembers: Member[] = []): UseMemberReturn {
         name: m.name,
         email: m.email,
         role: m.familyRole,
-        completedCount: m.completedCount,
-        totalCount: m.totalCount,
+        todayEarnedPoint: m.todayEarnedPoint,
+        todayFamilyTaskCompleted: m.todayFamilyTaskCompleted,
+        todayPersonalTaskCompleted: m.todayPersonalTaskCompleted,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       }))
@@ -128,6 +129,9 @@ export function useMember(initialMembers: Member[] = []): UseMemberReturn {
           name: response.name,
           email: response.email,
           role: response.familyRole,
+          todayEarnedPoint: 0,
+          todayFamilyTaskCompleted: 0,
+          todayPersonalTaskCompleted: 0,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
         }

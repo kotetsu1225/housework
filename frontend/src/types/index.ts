@@ -9,10 +9,12 @@ export interface Member {
   name: string
   email: string
   role: FamilyRole
-  /** personal(owner)+assignee 母集団の総数（CANCELLED/削除済み除外） */
-  totalCount?: number
-  /** 上記母集団のうち、本人が完了(completedBy=本人)した件数 */
-  completedCount?: number
+  /** 今日獲得したポイント */
+  todayEarnedPoint: number
+  /** 今日の完了済み家族タスクのうち担当分の数 */
+  todayFamilyTaskCompleted: number
+  /** 今日の完了済み個人タスク数 */
+  todayPersonalTaskCompleted: number
   createdAt: string
   updatedAt: string
 }

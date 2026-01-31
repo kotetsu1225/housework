@@ -1,368 +1,316 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { CheckCircle2, RefreshCw, Clock, User, Users, ChevronDown } from 'lucide-react'
+/**
+ * 完了済みタスク一覧ページ
+ *
+ * 2つのモードで動作:
+ * - ホームモード (/executions/completed): 全員の完了タスクを表示
+ * - メンバーモード (/members/:memberId/completed): 特定メンバーの全履歴を表示
+ */
+
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useParams, useNavigate } from 'react-router-dom'
+import { CheckCircle2, RefreshCw, User, Users, ChevronDown, ArrowLeft, Trophy } from 'lucide-react'
 import { Header } from '../components/layout/Header'
 import { PageContainer } from '../components/layout/PageContainer'
 import { Card } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
 import { Alert } from '../components/ui/Alert'
 import { Avatar } from '../components/ui/Avatar'
-import { Badge } from '../components/ui/Badge'
-import { getTaskExecutions, getTaskDefinitions, ApiError } from '../api'
-import { useMember } from '../hooks'
+import { CompletedTaskCard } from '../components/dashboard'
+import { useCompletedTasks, useMembers } from '../hooks'
 import { useAuth } from '../contexts'
-import { toISODateString, formatJa, formatTimeFromISO, isParentRole } from '../utils'
-import type { TaskExecutionWithDetails, TaskExecution, Member } from '../types'
-import type { TaskDefinitionResponse } from '../types/api'
+import { toISODateString, formatJa, isParentRole } from '../utils'
+import { getRoleLabel } from '../constants'
+import type { CompletedTaskDto } from '../api/completedTasks'
 
-type LoadState = {
-  loading: boolean
-  error: string | null
-  items: TaskExecution[]
-  hasMore: boolean
-}
-
-type DefinitionsState = {
-  loading: boolean
-  error: string | null
-  byId: Record<string, TaskDefinitionResponse>
-}
-
-function getScheduleBadgeFromDefinition(def?: TaskDefinitionResponse) {
-  if (!def) return null
-  const label = def.schedule?.type === 'OneTime' ? '単発' : '定期'
-  const variant = def.schedule?.type === 'OneTime' ? 'warning' : 'default'
-  return (
-    <Badge variant={variant} size="sm">
-      {label}
-    </Badge>
-  )
-}
-
-function getScopeLabel(scope?: string) {
-  return scope === 'PERSONAL' ? '個人' : '家族'
-}
+type FilterTab = 'all' | 'family' | 'personal'
 
 /**
- * 完了済みExecution一覧（snapshot表示）
+ * 完了済みタスク一覧ページ
  */
 export function CompletedExecutions() {
+  const { memberId } = useParams<{ memberId?: string }>()
+  const navigate = useNavigate()
   const today = new Date()
   const todayStr = toISODateString(today)
-  const [mode, setMode] = useState<'today' | 'all'>('today')
+
+  // メンバーモードかどうか
+  const isMemberMode = !!memberId
+
+  // ホームモード用の表示切替
+  const [homeMode, setHomeMode] = useState<'today' | 'all'>('today')
   const [showOtherMembers, setShowOtherMembers] = useState(false)
-  const requestIdRef = useRef(0)
-  const [state, setState] = useState<LoadState>({
-    loading: true,
-    error: null,
-    items: [],
-    hasMore: false,
-  })
-  const [defs, setDefs] = useState<DefinitionsState>({
-    loading: true,
-    error: null,
-    byId: {},
-  })
+
+  // メンバーモード用のフィルタータブ
+  const [filterTab, setFilterTab] = useState<FilterTab>('all')
 
   const { user } = useAuth()
-  const { members, fetchMembers } = useMember()
 
-  const fetchAllTaskDefinitions = useCallback(async () => {
-    setDefs((prev) => ({ ...prev, loading: true, error: null }))
-    try {
-      const limit = 100
-      let offset = 0
-      const all: Record<string, TaskDefinitionResponse> = {}
-      // hasMore が false になるまでページング取得
-      //（全件でも数が小さい前提。増えた場合はここをキャッシュ/サーバー側拡張で改善可能）
-      for (;;) {
-        const res = await getTaskDefinitions(limit, offset)
-        for (const td of res.taskDefinitions) {
-          all[td.id] = td
-        }
-        if (!res.hasMore) break
-        offset += limit
-      }
-      setDefs({ loading: false, error: null, byId: all })
-    } catch (err) {
-      const message =
-        err instanceof ApiError ? err.message : 'タスク定義の取得に失敗しました'
-      setDefs({ loading: false, error: message, byId: {} })
-    }
-  }, [])
+  // メンバー一覧取得
+  const { members, fetchMembers, loading: membersLoading } = useMembers()
 
-  const fetchCompleted = useCallback(async (opts?: { append?: boolean; offset?: number }) => {
-    const append = opts?.append ?? false
-    const offset = append ? (opts?.offset ?? 0) : 0
-    const requestId = ++requestIdRef.current
+  // 完了タスク取得
+  const {
+    completedTasks,
+    hasMore,
+    loading: tasksLoading,
+    error,
+    fetchCompletedTasks,
+    loadMore,
+  } = useCompletedTasks()
 
-    setState((prev) => ({ ...prev, loading: true, error: null }))
-    try {
-      const res = await getTaskExecutions({
-        scheduledDate: mode === 'today' ? todayStr : undefined,
-        status: 'COMPLETED',
-        limit: mode === 'today' ? 200 : 50,
-        offset,
+  const loading = tasksLoading || membersLoading
+
+  // 対象メンバー情報
+  const targetMember = useMemo(() => {
+    if (!memberId) return null
+    return members.find((m) => m.id === memberId) ?? null
+  }, [members, memberId])
+
+  // データ取得
+  const fetchData = useCallback(() => {
+    if (isMemberMode && memberId) {
+      // メンバーモード: 全履歴を取得
+      fetchCompletedTasks({
+        memberIds: [memberId],
+        limit: 100,
       })
-
-      const items: TaskExecution[] = res.taskExecutions.map((t) => ({
-        id: t.id,
-        taskDefinitionId: t.taskDefinitionId,
-        assigneeMemberIds: t.assigneeMemberIds,
-        scheduledDate: t.scheduledDate,
-        status: t.status,
-        taskSnapshot: t.taskSnapshot
-          ? {
-              name: t.taskSnapshot.name,
-              description: t.taskSnapshot.description ?? undefined,
-              scheduledStartTime: t.taskSnapshot.scheduledStartTime,
-              scheduledEndTime: t.taskSnapshot.scheduledEndTime,
-              definitionVersion: t.taskSnapshot.definitionVersion,
-              frozenPoint: t.taskSnapshot.frozenPoint,
-              capturedAt: t.taskSnapshot.capturedAt,
-            }
-          : {
-              name: '',
-              scheduledStartTime: '',
-              scheduledEndTime: '',
-              definitionVersion: 0,
-              frozenPoint: 0,
-              capturedAt: '',
-            },
-        startedAt: t.startedAt ?? undefined,
-        completedAt: t.completedAt ?? undefined,
-        createdAt: t.createdAt,
-        updatedAt: t.updatedAt,
-      }))
-
-      // 最新リクエスト以外の結果は破棄（連打・切替の競合対策）
-      if (requestId !== requestIdRef.current) return
-
-      setState((prev) => {
-        const merged = append ? [...prev.items, ...items] : items
-        // 表示は「新しい日付→古い日付」（同日内は completedAt → createdAt の降順）
-        merged.sort((a, b) => {
-          const dateCmp = (b.scheduledDate ?? '').localeCompare(a.scheduledDate ?? '')
-          if (dateCmp !== 0) return dateCmp
-          const aTime = a.completedAt ?? a.updatedAt ?? a.createdAt
-          const bTime = b.completedAt ?? b.updatedAt ?? b.createdAt
-          return (bTime ?? '').localeCompare(aTime ?? '')
-        })
-
-        return { loading: false, error: null, items: merged, hasMore: res.hasMore }
+    } else {
+      // ホームモード
+      fetchCompletedTasks({
+        date: homeMode === 'today' ? todayStr : undefined,
+        limit: homeMode === 'today' ? 200 : 50,
       })
-    } catch (err) {
-      if (requestId !== requestIdRef.current) return
-      const message =
-        err instanceof ApiError ? err.message : '完了一覧の取得に失敗しました'
-      setState((prev) => ({ ...prev, loading: false, error: message }))
     }
-  }, [mode, todayStr])
+  }, [isMemberMode, memberId, homeMode, todayStr, fetchCompletedTasks])
 
+  // 初回ロード
   useEffect(() => {
     fetchMembers()
-    fetchAllTaskDefinitions()
-  }, [fetchMembers, fetchAllTaskDefinitions])
+  }, [fetchMembers])
 
   useEffect(() => {
-    // モード変更時は先頭から取り直す
-    fetchCompleted({ append: false })
-  }, [fetchCompleted, mode])
+    fetchData()
+  }, [fetchData])
 
-  const itemsWithMembers: TaskExecutionWithDetails[] = useMemo(() => {
-    const map = new Map(members.map((m) => [m.id, m]))
-    return state.items.map((t) => ({
-      ...t,
-      assignees: t.assigneeMemberIds.map((id) => map.get(id)).filter(Boolean) as Member[],
-    }))
-  }, [members, state.items])
+  // メンバーモード: フィルタリングされたタスク
+  const filteredTasks = useMemo(() => {
+    if (!isMemberMode) return completedTasks
+    switch (filterTab) {
+      case 'family':
+        return completedTasks.filter((task) => task.scope === 'FAMILY')
+      case 'personal':
+        return completedTasks.filter((task) => task.scope === 'PERSONAL')
+      default:
+        return completedTasks
+    }
+  }, [isMemberMode, completedTasks, filterTab])
 
-  type CompletedEnriched = {
-    execution: TaskExecutionWithDetails
-    definition?: TaskDefinitionResponse
-    scope?: string
-    ownerMemberId?: string | null
-  }
+  // メンバーモード: 累計ポイント計算
+  const totalPoints = useMemo(() => {
+    return completedTasks.reduce((sum, task) => sum + (task.frozenPoint ?? 0), 0)
+  }, [completedTasks])
 
-  const enriched: CompletedEnriched[] = useMemo(() => {
-    return itemsWithMembers.map((t) => {
-      const def = defs.byId[t.taskDefinitionId]
-      return {
-        execution: t,
-        definition: def,
-        scope: def?.scope,
-        ownerMemberId: def?.ownerMemberId ?? null,
-      }
-    })
-  }, [defs.byId, itemsWithMembers])
+  // メンバーモード: スコープ別カウント
+  const familyCount = useMemo(() => {
+    return completedTasks.filter((t) => t.scope === 'FAMILY').length
+  }, [completedTasks])
 
-  type Grouped = {
-    family: CompletedEnriched[]
-    myPersonal: CompletedEnriched[]
-    otherByOwner: Map<string, CompletedEnriched[]>
-    otherUnknownOwner: CompletedEnriched[]
-  }
+  const personalCount = useMemo(() => {
+    return completedTasks.filter((t) => t.scope === 'PERSONAL').length
+  }, [completedTasks])
 
-  const grouped: Grouped = useMemo(() => {
-    const family: CompletedEnriched[] = []
-    const myPersonal: CompletedEnriched[] = []
-    const otherByOwner = new Map<string, CompletedEnriched[]>()
-    const otherUnknownOwner: CompletedEnriched[] = []
+  // ホームモード: グループ分け
+  const grouped = useMemo(() => {
+    if (isMemberMode) return null
+
+    const family: CompletedTaskDto[] = []
+    const myPersonal: CompletedTaskDto[] = []
+    const otherByOwner = new Map<string, CompletedTaskDto[]>()
+    const otherUnknownOwner: CompletedTaskDto[] = []
     const me = user?.id ?? null
 
-    for (const item of enriched) {
-      const scope = item.scope
-      if (scope === 'PERSONAL') {
-        if (item.ownerMemberId && me && item.ownerMemberId === me) {
-          myPersonal.push(item)
-          continue
+    for (const task of completedTasks) {
+      if (task.scope === 'PERSONAL') {
+        if (task.ownerMemberId && me && task.ownerMemberId === me) {
+          myPersonal.push(task)
+        } else if (task.ownerMemberId) {
+          const bucket = otherByOwner.get(task.ownerMemberId) ?? []
+          bucket.push(task)
+          otherByOwner.set(task.ownerMemberId, bucket)
+        } else {
+          otherUnknownOwner.push(task)
         }
-        if (item.ownerMemberId) {
-          const bucket = otherByOwner.get(item.ownerMemberId) ?? []
-          bucket.push(item)
-          otherByOwner.set(item.ownerMemberId, bucket)
-          continue
-        }
-        otherUnknownOwner.push(item)
-        continue
+      } else {
+        family.push(task)
       }
-
-      // scopeが不明ならFAMILY扱いでフォールバック
-      family.push(item)
     }
 
     return { family, myPersonal, otherByOwner, otherUnknownOwner }
-  }, [enriched, user?.id])
+  }, [isMemberMode, completedTasks, user?.id])
 
+  // ホームモード: 他メンバーのタスク数
   const otherCount = useMemo(() => {
+    if (!grouped) return 0
     return (
       Array.from(grouped.otherByOwner.values()).reduce((sum, arr) => sum + arr.length, 0) +
       grouped.otherUnknownOwner.length
     )
-  }, [grouped.otherByOwner, grouped.otherUnknownOwner.length])
+  }, [grouped])
 
+  // ホームモード: 他メンバーのオーナーをソート
   const sortedOtherOwners = useMemo(() => {
+    if (!grouped) return []
     const entries = Array.from(grouped.otherByOwner.entries())
-    entries.sort(([aId], [bId]) => {
-      const a = members.find((m) => m.id === aId)?.name ?? aId
-      const b = members.find((m) => m.id === bId)?.name ?? bId
-      return a.localeCompare(b, 'ja')
-    })
+    entries.sort(([aId], [bId]) => aId.localeCompare(bId))
     return entries
-  }, [grouped.otherByOwner, members])
+  }, [grouped])
 
-  const handleRefresh = useCallback(async () => {
-    await Promise.all([fetchMembers(), fetchAllTaskDefinitions()])
-    await fetchCompleted({ append: false })
-  }, [fetchMembers, fetchAllTaskDefinitions, fetchCompleted])
+  // 追加読み込み
+  const handleLoadMore = useCallback(() => {
+    if (isMemberMode && memberId) {
+      loadMore({
+        memberIds: [memberId],
+        limit: 50,
+      })
+    } else {
+      loadMore({
+        date: homeMode === 'today' ? todayStr : undefined,
+        limit: 50,
+      })
+    }
+  }, [isMemberMode, memberId, homeMode, todayStr, loadMore])
 
-  function CompletedTaskCard({
-    item,
-    members,
-  }: {
-    item: CompletedEnriched
-    members: Member[]
-  }) {
-    const t = item.execution
-    const taskName = t.taskSnapshot?.name || '(名称不明)'
-    const scopeLabel = getScopeLabel(item.scope)
-    const scheduleBadge = getScheduleBadgeFromDefinition(item.definition)
-    const assignees = t.assignees ?? []
-
-    const owner = item.ownerMemberId ? members.find((m) => m.id === item.ownerMemberId) : undefined
-
+  // =========================================
+  // メンバーモードのレンダリング
+  // =========================================
+  if (isMemberMode) {
     return (
-      <Card variant="glass" className="flex items-start gap-3">
-        <CheckCircle2 className="w-5 h-5 text-emerald-400 flex-shrink-0 mt-0.5" />
-        <div className="flex-1 min-w-0">
-          <div className="flex items-start justify-between gap-2">
-            <div className="min-w-0">
-              <div className="flex flex-wrap items-center gap-2">
-                <p className="font-medium text-white truncate">{taskName}</p>
-                {scheduleBadge}
-                <Badge variant="success" size="sm">
-                  完了
-                </Badge>
-              </div>
-              {t.taskSnapshot?.description && (
-                <p className="text-sm text-white/50 line-clamp-2 mt-1">
-                  {t.taskSnapshot.description}
-                </p>
-              )}
-            </div>
-            <div className="text-xs text-white/40 whitespace-nowrap">
-              v{t.taskSnapshot?.definitionVersion ?? 0}
-            </div>
-          </div>
+      <>
+        <Header
+          title={targetMember ? `${targetMember.name}の完了履歴` : '完了履歴'}
+          subtitle={targetMember ? getRoleLabel(targetMember.role) : undefined}
+          action={
+            <Button variant="secondary" size="sm" onClick={() => navigate(`/members/${memberId}`)}>
+              <ArrowLeft className="w-4 h-4 mr-1" />
+              戻る
+            </Button>
+          }
+        />
+        <PageContainer>
+          {error && (
+            <Alert variant="error" className="mb-4">
+              {error}
+            </Alert>
+          )}
 
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-white/50 mt-3">
-            {t.taskSnapshot?.scheduledStartTime && t.taskSnapshot?.scheduledEndTime && (
-              <span className="flex items-center gap-1 whitespace-nowrap">
-                <Clock className="w-3.5 h-3.5" />
-                {formatTimeFromISO(t.taskSnapshot.scheduledStartTime)} - {formatTimeFromISO(t.taskSnapshot.scheduledEndTime)}
-              </span>
-            )}
-            <span className="flex items-center gap-1 whitespace-nowrap">
-              {item.scope === 'PERSONAL' ? <User className="w-3.5 h-3.5" /> : <Users className="w-3.5 h-3.5" />}
-              {scopeLabel}
-            </span>
-            {owner && item.scope === 'PERSONAL' && (
-              <span className="flex items-center gap-1.5 text-white/50 whitespace-nowrap">
+          {/* プロフィール + 累計ポイント */}
+          {targetMember && (
+            <Card variant="glass" className="mb-6">
+              <div className="flex items-center gap-4">
                 <Avatar
-                  name={owner.name}
-                  size="sm"
-                  role={owner.role}
-                  variant={isParentRole(owner.role) ? 'parent' : 'child'}
+                  name={targetMember.name}
+                  size="lg"
+                  role={targetMember.role}
+                  variant={isParentRole(targetMember.role) ? 'parent' : 'child'}
                 />
-                {owner.name}
-              </span>
-            )}
-            {assignees.length > 0 && (
-              <span className="flex items-center gap-1.5 text-coral-400 font-medium whitespace-nowrap">
-                {assignees.map((assignee, idx) => (
-                  <span key={assignee.id} className="flex items-center gap-1.5">
-                    {idx > 0 && <span className="text-white/30">,</span>}
-                    <Avatar
-                      name={assignee.name}
-                      size="sm"
-                      role={assignee.role}
-                      variant={isParentRole(assignee.role) ? 'parent' : 'child'}
-                    />
-                    {assignee.name}
+                <div className="flex-1">
+                  <h2 className="text-lg font-bold text-white">{targetMember.name}</h2>
+                  <p className="text-white/50 text-sm">{getRoleLabel(targetMember.role)}</p>
+                </div>
+                <div className="text-right">
+                  <div className="flex items-center gap-1 text-amber-400">
+                    <Trophy className="w-5 h-5" />
+                    <span className="text-2xl font-bold">{totalPoints}</span>
+                    <span className="text-sm">pt</span>
+                  </div>
+                  <p className="text-xs text-white/50">累計獲得ポイント</p>
+                </div>
+              </div>
+            </Card>
+          )}
+
+          {/* フィルタータブ */}
+          <section className="mb-4">
+            <div className="flex gap-2">
+              {(['all', 'family', 'personal'] as FilterTab[]).map((tab) => (
+                <button
+                  key={tab}
+                  onClick={() => setFilterTab(tab)}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                    filterTab === tab
+                      ? 'bg-coral-500/20 text-coral-400 border border-coral-500/30'
+                      : 'bg-dark-800/50 text-white/50 border border-transparent hover:border-dark-600'
+                  }`}
+                >
+                  {tab === 'all' ? 'すべて' : tab === 'family' ? '家族' : '個人'}
+                  <span className="ml-1 text-xs">
+                    ({tab === 'all'
+                      ? completedTasks.length
+                      : tab === 'family'
+                      ? familyCount
+                      : personalCount})
                   </span>
+                </button>
+              ))}
+            </div>
+          </section>
+
+          {/* タスク一覧 */}
+          <section>
+            {loading && completedTasks.length === 0 ? (
+              <div className="text-center py-10">
+                <p className="text-white/50">読み込み中...</p>
+              </div>
+            ) : filteredTasks.length > 0 ? (
+              <div className="space-y-2">
+                {filteredTasks.map((task) => (
+                  <CompletedTaskCard key={task.taskExecutionId} task={task} members={members} />
                 ))}
-              </span>
+              </div>
+            ) : (
+              <div className="text-center py-10 text-white/50">
+                <CheckCircle2 className="w-12 h-12 mx-auto mb-2 opacity-30" />
+                <p>完了したタスクはありません</p>
+              </div>
             )}
-            {t.completedAt && (
-              <span className="text-white/40 whitespace-nowrap">
-                完了: {formatJa(new Date(t.completedAt), 'MM/dd HH:mm')}
-              </span>
-            )}
-          </div>
-        </div>
-      </Card>
+          </section>
+
+          {/* もっと読み込む */}
+          {!loading && completedTasks.length > 0 && hasMore && (
+            <section className="mt-6">
+              <Button variant="secondary" className="w-full" onClick={handleLoadMore}>
+                もっと読み込む
+              </Button>
+            </section>
+          )}
+        </PageContainer>
+      </>
     )
   }
 
+  // =========================================
+  // ホームモードのレンダリング
+  // =========================================
   return (
     <>
       <Header
         title="完了したタスク"
-        subtitle={mode === 'all' ? '全て' : formatJa(today, 'M月d日（E）')}
+        subtitle={homeMode === 'all' ? '全て' : formatJa(today, 'M月d日（E）')}
         action={
           <Button
             variant="secondary"
             size="sm"
-            onClick={handleRefresh}
-            disabled={state.loading}
+            onClick={fetchData}
+            disabled={loading}
           >
-            <RefreshCw className={`w-4 h-4 ${state.loading ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
           </Button>
         }
       />
       <PageContainer>
-        {state.error && (
+        {error && (
           <Alert variant="error" className="mb-4">
-            {state.error}
+            {error}
           </Alert>
         )}
 
@@ -370,18 +318,18 @@ export function CompletedExecutions() {
           <label className="block text-sm text-white/70 mb-2">表示</label>
           <div className="grid grid-cols-2 gap-2">
             <Button
-              variant={mode === 'today' ? 'primary' : 'secondary'}
+              variant={homeMode === 'today' ? 'primary' : 'secondary'}
               size="sm"
               className="w-full"
-              onClick={() => setMode('today')}
+              onClick={() => setHomeMode('today')}
             >
               今日
             </Button>
             <Button
-              variant={mode === 'all' ? 'primary' : 'secondary'}
+              variant={homeMode === 'all' ? 'primary' : 'secondary'}
               size="sm"
               className="w-full"
-              onClick={() => setMode('all')}
+              onClick={() => setHomeMode('all')}
             >
               全て
             </Button>
@@ -389,46 +337,43 @@ export function CompletedExecutions() {
         </section>
 
         <section className="space-y-3">
-          {state.loading ? (
+          {loading && completedTasks.length === 0 ? (
             <div className="text-center py-10">
               <p className="text-white/50">読み込み中...</p>
             </div>
-          ) : itemsWithMembers.length > 0 ? (
+          ) : completedTasks.length > 0 && grouped ? (
             <div className="space-y-6">
-              {defs.error && (
-                <Alert variant="error">
-                  {defs.error}
-                </Alert>
-              )}
-
+              {/* 家族タスク */}
               {grouped.family.length > 0 && (
                 <div className="space-y-3">
                   <h3 className="text-white/70 font-bold flex items-center gap-2">
-                    <Users className="w-4 h-4 text-white/50" />
+                    <Users className="w-4 h-4 text-blue-400" />
                     家族のタスク
                   </h3>
-                  <div className="space-y-3">
-                    {grouped.family.map((item) => (
-                      <CompletedTaskCard key={item.execution.id} item={item} members={members} />
+                  <div className="space-y-2">
+                    {grouped.family.map((task) => (
+                      <CompletedTaskCard key={task.taskExecutionId} task={task} members={members} />
                     ))}
                   </div>
                 </div>
               )}
 
+              {/* 自分のタスク */}
               {grouped.myPersonal.length > 0 && (
                 <div className="space-y-3">
                   <h3 className="text-white/70 font-bold flex items-center gap-2">
-                    <User className="w-4 h-4 text-white/50" />
+                    <User className="w-4 h-4 text-emerald-400" />
                     自分のタスク
                   </h3>
-                  <div className="space-y-3">
-                    {grouped.myPersonal.map((item) => (
-                      <CompletedTaskCard key={item.execution.id} item={item} members={members} />
+                  <div className="space-y-2">
+                    {grouped.myPersonal.map((task) => (
+                      <CompletedTaskCard key={task.taskExecutionId} task={task} members={members} />
                     ))}
                   </div>
                 </div>
               )}
 
+              {/* 他メンバーのタスク */}
               {otherCount > 0 && (
                 <div className="space-y-3">
                   <button
@@ -442,26 +387,16 @@ export function CompletedExecutions() {
 
                   {showOtherMembers && (
                     <div className="space-y-6">
-                      {sortedOtherOwners.map(([ownerId, items]) => {
-                        const owner = members.find((m) => m.id === ownerId)
+                      {sortedOtherOwners.map(([ownerId, tasks]) => {
+                        const ownerName = tasks[0]?.assigneeMembers.find(a => a.id === ownerId)?.name ?? '不明なメンバー'
                         return (
                           <div key={ownerId} className="space-y-3">
                             <div className="flex items-center gap-2 text-white/70 font-bold">
-                              {owner ? (
-                                <Avatar
-                                  name={owner.name}
-                                  size="sm"
-                                  role={owner.role}
-                                  variant={isParentRole(owner.role) ? 'parent' : 'child'}
-                                />
-                              ) : (
-                                <span className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-xs">?</span>
-                              )}
-                              <span className="truncate">{owner?.name ?? '不明なメンバー'}</span>
+                              <span className="truncate">{ownerName}</span>
                             </div>
-                            <div className="space-y-3">
-                              {items.map((item) => (
-                                <CompletedTaskCard key={item.execution.id} item={item} members={members} />
+                            <div className="space-y-2">
+                              {tasks.map((task) => (
+                                <CompletedTaskCard key={task.taskExecutionId} task={task} members={members} />
                               ))}
                             </div>
                           </div>
@@ -471,12 +406,11 @@ export function CompletedExecutions() {
                       {grouped.otherUnknownOwner.length > 0 && (
                         <div className="space-y-3">
                           <div className="flex items-center gap-2 text-white/70 font-bold">
-                            <span className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-xs">?</span>
                             <span className="truncate">不明なメンバー</span>
                           </div>
-                          <div className="space-y-3">
-                            {grouped.otherUnknownOwner.map((item) => (
-                              <CompletedTaskCard key={item.execution.id} item={item} members={members} />
+                          <div className="space-y-2">
+                            {grouped.otherUnknownOwner.map((task) => (
+                              <CompletedTaskCard key={task.taskExecutionId} task={task} members={members} />
                             ))}
                           </div>
                         </div>
@@ -489,18 +423,19 @@ export function CompletedExecutions() {
           ) : (
             <Card variant="glass" className="text-center py-10">
               <p className="text-white/50">
-                {mode === 'today' ? '今日の完了タスクはありません' : '完了タスクはありません'}
+                {homeMode === 'today' ? '今日の完了タスクはありません' : '完了タスクはありません'}
               </p>
             </Card>
           )}
         </section>
 
-        {mode === 'all' && !state.loading && state.items.length > 0 && state.hasMore && (
+        {/* もっと読み込むボタン */}
+        {homeMode === 'all' && !loading && completedTasks.length > 0 && hasMore && (
           <section className="mt-6">
             <Button
               variant="secondary"
               className="w-full"
-              onClick={() => fetchCompleted({ append: true, offset: state.items.length })}
+              onClick={handleLoadMore}
             >
               もっと読み込む
             </Button>
@@ -510,5 +445,3 @@ export function CompletedExecutions() {
     </>
   )
 }
-
-

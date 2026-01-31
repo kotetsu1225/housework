@@ -23,3 +23,6 @@ export type { TaskActionModalProps } from './TaskActionModal'
 export { TomorrowTaskDetailModal } from './TomorrowTaskDetailModal'
 export type { TomorrowTaskDetailModalProps } from './TomorrowTaskDetailModal'
 
+export { CompletedTaskCard } from './CompletedTaskCard'
+export type { CompletedTaskCardProps } from './CompletedTaskCard'
+

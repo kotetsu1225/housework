@@ -1,4 +1,6 @@
 export * from './Dashboard'
 export * from './Tasks'
+export * from './TaskList'
 export * from './Members'
+export * from './MemberDetail'
 export * from './CompletedExecutions'

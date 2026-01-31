@@ -34,6 +34,10 @@ export interface TodayTaskDto {
   assigneeMemberIds: string[] // CHANGED: was assigneeMemberId (singular)
   assigneeMemberNames: string[] // CHANGED: was assigneeMemberName (singular), now array
   scheduledDate: string
+  /** タスク定義のポイント */
+  point: number
+  /** 実行時に確定したポイント（未開始ならnull） */
+  frozenPoint: number | null
 }
 
 /**
@@ -55,6 +59,12 @@ export interface MemberTaskSummaryDto {
   completedCount: number
   totalCount: number
   tasks: MemberTaskDto[]
+  /** 今日獲得したポイント */
+  todayEarnedPoint?: number
+  /** 今日の家族タスク総数 */
+  todayFamilyTaskTotal?: number
+  /** 今日完了した家族タスク数 */
+  todayFamilyTaskCompleted?: number
 }
 
 /**

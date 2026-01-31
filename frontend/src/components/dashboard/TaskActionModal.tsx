@@ -5,7 +5,7 @@
  */
 
 import { useState, useEffect } from 'react'
-import { Clock, Users, User, Play, CheckCircle2 } from 'lucide-react'
+import { Clock, Users, User, Play, CheckCircle2, Star } from 'lucide-react'
 import { Modal } from '../ui/Modal'
 import { Button } from '../ui/Button'
 import { Badge } from '../ui/Badge'
@@ -209,7 +209,7 @@ export function TaskActionModal({
       {/* タスク情報 */}
       <div className="space-y-4">
         {/* メタ情報 */}
-        <div className="flex items-center gap-4 text-sm text-white/70">
+        <div className="flex flex-wrap items-center gap-3 text-sm text-white/70">
           <div className="flex items-center gap-1">
             <Clock className="w-4 h-4" />
             <span>{formatTimeFromISO(task.scheduledStartTime)} - {formatTimeFromISO(task.scheduledEndTime)}</span>
@@ -227,8 +227,15 @@ export function TaskActionModal({
                   : 'default'
             }
           >
-            {isCompleted ? '完了' : isInProgress ? '進行中' : 'やること'}
+            {isCompleted ? '完了' : isInProgress ? '進行中' : '未'}
           </Badge>
+          {/* ポイント表示 */}
+          {((task.frozenPoint ?? task.point ?? 0) > 0) && (
+            <span className="flex items-center gap-1 text-amber-400 font-bold">
+              <Star className="w-4 h-4 fill-amber-400" />
+              +{task.frozenPoint ?? task.point}pt
+            </span>
+          )}
         </div>
 
         {/* 説明 */}

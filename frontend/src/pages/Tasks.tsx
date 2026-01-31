@@ -247,7 +247,7 @@ export function Tasks() {
     description: '',
     scheduledStartTime: '09:00',
     scheduledEndTime: '10:00',
-    scope: 'FAMILY' as TaskScope,
+    scope: 'PERSONAL' as TaskScope,
     ownerMemberId: '',
     scheduleType: 'ONE_TIME' as 'RECURRING' | 'ONE_TIME',  // カレンダーから追加するのでデフォルトは単発
     patternType: 'DAILY' as PatternType,

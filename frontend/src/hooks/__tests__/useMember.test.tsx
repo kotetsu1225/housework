@@ -1,10 +1,10 @@
 /**
- * useMemberフックのテスト
+ * useMembersフックのテスト
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { renderHook, act, waitFor } from '@testing-library/react'
-import { useMember } from '../useMember'
+import { useMembers } from '../useMembers'
 import * as api from '../../api'
 import type { Member } from '../../types'
 
@@ -26,6 +26,9 @@ const mockMembers: Member[] = [
     name: '太郎',
     email: 'taro@example.com',
     role: 'BROTHER',
+    todayEarnedPoint: 10,
+    todayFamilyTaskCompleted: 2,
+    todayPersonalTaskCompleted: 1,
     createdAt: '2024-01-01T00:00:00Z',
     updatedAt: '2024-01-01T00:00:00Z',
   },
@@ -34,26 +37,29 @@ const mockMembers: Member[] = [
     name: '花子',
     email: 'hanako@example.com',
     role: 'SISTER',
+    todayEarnedPoint: 5,
+    todayFamilyTaskCompleted: 1,
+    todayPersonalTaskCompleted: 0,
     createdAt: '2024-01-01T00:00:00Z',
     updatedAt: '2024-01-01T00:00:00Z',
   },
 ]
 
-describe('useMember', () => {
+describe('useMembers', () => {
   beforeEach(() => {
     vi.clearAllMocks()
   })
 
   describe('初期状態', () => {
     it('初期メンバーなしで空配列が返される', () => {
-      const { result } = renderHook(() => useMember())
+      const { result } = renderHook(() => useMembers())
       expect(result.current.members).toEqual([])
       expect(result.current.loading).toBe(false)
       expect(result.current.error).toBeNull()
     })
 
     it('初期メンバーありで初期値が返される', () => {
-      const { result } = renderHook(() => useMember(mockMembers))
+      const { result } = renderHook(() => useMembers(mockMembers))
       expect(result.current.members).toEqual(mockMembers)
     })
   })
@@ -62,12 +68,30 @@ describe('useMember', () => {
     it('メンバー一覧を取得できる', async () => {
       vi.mocked(api.getMembers).mockResolvedValueOnce({
         members: [
-          { id: 'member-1', name: '太郎', email: 'taro@example.com', familyRole: 'BROTHER' },
-          { id: 'member-2', name: '花子', email: 'hanako@example.com', familyRole: 'SISTER' },
+          {
+            id: 'member-1',
+            name: '太郎',
+            email: 'taro@example.com',
+            familyRole: 'BROTHER',
+            todayEarnedPoint: 10,
+            todayFamilyTaskCompletedTotal: 3,
+            todayFamilyTaskCompleted: 2,
+            todayPersonalTaskCompleted: 1,
+          },
+          {
+            id: 'member-2',
+            name: '花子',
+            email: 'hanako@example.com',
+            familyRole: 'SISTER',
+            todayEarnedPoint: 5,
+            todayFamilyTaskCompletedTotal: 3,
+            todayFamilyTaskCompleted: 1,
+            todayPersonalTaskCompleted: 0,
+          },
         ],
       })
 
-      const { result } = renderHook(() => useMember())
+      const { result } = renderHook(() => useMembers())
 
       await act(async () => {
         await result.current.fetchMembers()
@@ -82,7 +106,7 @@ describe('useMember', () => {
         () => new Promise((resolve) => setTimeout(resolve, 100))
       )
 
-      const { result } = renderHook(() => useMember())
+      const { result } = renderHook(() => useMembers())
 
       act(() => {
         result.current.fetchMembers()
@@ -94,7 +118,7 @@ describe('useMember', () => {
     it('エラー時にerrorが設定される', async () => {
       vi.mocked(api.getMembers).mockRejectedValueOnce(new Error('ネットワークエラー'))
 
-      const { result } = renderHook(() => useMember())
+      const { result } = renderHook(() => useMembers())
 
       await act(async () => {
         await result.current.fetchMembers()
@@ -113,7 +137,7 @@ describe('useMember', () => {
         familyRole: 'BROTHER',
       })
 
-      const { result } = renderHook(() => useMember())
+      const { result } = renderHook(() => useMembers())
 
       let success: boolean
       await act(async () => {
@@ -128,7 +152,7 @@ describe('useMember', () => {
     it('追加失敗時はfalseを返す', async () => {
       vi.mocked(api.createMember).mockRejectedValueOnce(new Error('追加失敗'))
 
-      const { result } = renderHook(() => useMember())
+      const { result } = renderHook(() => useMembers())
 
       let success: boolean
       await act(async () => {
@@ -148,7 +172,7 @@ describe('useMember', () => {
         familyRole: 'FATHER',
       })
 
-      const { result } = renderHook(() => useMember(mockMembers))
+      const { result } = renderHook(() => useMembers(mockMembers))
 
       let success: boolean
       await act(async () => {
@@ -163,7 +187,7 @@ describe('useMember', () => {
     it('更新失敗時はfalseを返す', async () => {
       vi.mocked(api.updateMember).mockRejectedValueOnce(new Error('更新失敗'))
 
-      const { result } = renderHook(() => useMember(mockMembers))
+      const { result } = renderHook(() => useMembers(mockMembers))
 
       let success: boolean
       await act(async () => {
@@ -177,7 +201,7 @@ describe('useMember', () => {
 
   describe('setMembers', () => {
     it('メンバー一覧を直接設定できる', () => {
-      const { result } = renderHook(() => useMember())
+      const { result } = renderHook(() => useMembers())
 
       act(() => {
         result.current.setMembers(mockMembers)
@@ -191,7 +215,7 @@ describe('useMember', () => {
     it('エラーをクリアできる', async () => {
       vi.mocked(api.getMembers).mockRejectedValueOnce(new Error('エラー'))
 
-      const { result } = renderHook(() => useMember())
+      const { result } = renderHook(() => useMembers())
 
       await act(async () => {
         await result.current.fetchMembers()
@@ -207,4 +231,3 @@ describe('useMember', () => {
     })
   })
 })
-

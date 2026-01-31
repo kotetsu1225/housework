@@ -28,7 +28,7 @@ const mockTaskExecutions: TaskExecution[] = [
   {
     id: 'exec-1',
     taskDefinitionId: 'def-1',
-    assigneeMemberId: 'member-1',
+    assigneeMemberIds: ['member-1'],
     scheduledDate: '2024-01-15',
     status: 'NOT_STARTED',
     taskSnapshot: {
@@ -37,7 +37,8 @@ const mockTaskExecutions: TaskExecution[] = [
       scheduledStartTime: '2024-01-15T20:00:00Z',
       scheduledEndTime: '2024-01-15T20:15:00Z',
       definitionVersion: 1,
-      createdAt: '2024-01-15T00:00:00Z',
+      frozenPoint: 10,
+      capturedAt: '2024-01-15T00:00:00Z',
     },
     createdAt: '2024-01-15T00:00:00Z',
     updatedAt: '2024-01-15T00:00:00Z',
@@ -47,7 +48,7 @@ const mockTaskExecutions: TaskExecution[] = [
 const mockApiResponse = {
   id: 'exec-1',
   taskDefinitionId: 'def-1',
-  assigneeMemberId: 'member-1',
+  assigneeMemberIds: ['member-1'],
   scheduledDate: '2024-01-15',
   status: 'NOT_STARTED',
   taskSnapshot: {
@@ -56,11 +57,11 @@ const mockApiResponse = {
     scheduledStartTime: '2024-01-15T20:00:00Z',
     scheduledEndTime: '2024-01-15T20:15:00Z',
     definitionVersion: 1,
-    createdAt: '2024-01-15T00:00:00Z',
+    frozenPoint: 10,
+    capturedAt: '2024-01-15T00:00:00Z',
   },
   startedAt: null,
   completedAt: null,
-  completedByMemberId: null,
   createdAt: '2024-01-15T00:00:00Z',
   updatedAt: '2024-01-15T00:00:00Z',
 }
@@ -141,7 +142,7 @@ describe('useTaskExecution', () => {
 
       let success: boolean
       await act(async () => {
-        success = await result.current.startTask('exec-1', 'member-1')
+        success = await result.current.startTask('exec-1', ['member-1'])
       })
 
       expect(success!).toBe(true)
@@ -155,7 +156,7 @@ describe('useTaskExecution', () => {
 
       let success: boolean
       await act(async () => {
-        success = await result.current.startTask('exec-1', 'member-1')
+        success = await result.current.startTask('exec-1', ['member-1'])
       })
 
       expect(success!).toBe(false)
@@ -176,14 +177,13 @@ describe('useTaskExecution', () => {
         status: 'COMPLETED',
         startedAt: '2024-01-15T10:00:00Z',
         completedAt: '2024-01-15T11:00:00Z',
-        completedByMemberId: 'member-1',
       })
 
       const { result } = renderHook(() => useTaskExecution([inProgressTask]))
 
       let success: boolean
       await act(async () => {
-        success = await result.current.completeTask('exec-1', 'member-1')
+        success = await result.current.completeTask('exec-1')
       })
 
       expect(success!).toBe(true)
@@ -214,18 +214,18 @@ describe('useTaskExecution', () => {
     it('担当者を割り当てできる', async () => {
       vi.mocked(api.assignTaskExecution).mockResolvedValueOnce({
         ...mockApiResponse,
-        assigneeMemberId: 'member-2',
+        assigneeMemberIds: ['member-2'],
       })
 
       const { result } = renderHook(() => useTaskExecution(mockTaskExecutions))
 
       let success: boolean
       await act(async () => {
-        success = await result.current.assignTask('exec-1', 'member-2')
+        success = await result.current.assignTask('exec-1', ['member-2'])
       })
 
       expect(success!).toBe(true)
-      expect(result.current.taskExecutions[0].assigneeMemberId).toBe('member-2')
+      expect(result.current.taskExecutions[0].assigneeMemberIds).toEqual(['member-2'])
     })
   })
 

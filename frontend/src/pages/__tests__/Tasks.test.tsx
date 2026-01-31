@@ -68,7 +68,7 @@ describe('Tasks', () => {
 
       // ページの読み込みを待つ（ヘッダーの存在で確認）
       await waitFor(() => {
-        expect(screen.getByRole('heading')).toBeInTheDocument()
+        expect(screen.getByRole('heading', { name: 'タスク' })).toBeInTheDocument()
       })
     })
   })
@@ -88,7 +88,15 @@ describe('Tasks', () => {
       renderTasksPage()
 
       await waitFor(() => {
-        expect(screen.getByText(/タスク設定が見つかりません/)).toBeInTheDocument()
+        expect(screen.getByRole('heading', { name: 'タスク' })).toBeInTheDocument()
+      })
+
+      const dayButton = screen.getAllByRole('button').find((button) => button.textContent === '1')
+      expect(dayButton).toBeTruthy()
+      fireEvent.click(dayButton!)
+
+      await waitFor(() => {
+        expect(screen.getByText('この日のタスクはありません')).toBeInTheDocument()
       })
     })
 
@@ -152,4 +160,3 @@ describe('Tasks', () => {
     })
   })
 })
-

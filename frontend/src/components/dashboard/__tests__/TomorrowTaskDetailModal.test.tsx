@@ -8,7 +8,11 @@ const members: Member[] = [
   {
     id: 'member-1',
     name: '太郎',
+    email: 'taro@example.com',
     role: 'BROTHER',
+    todayEarnedPoint: 10,
+    todayFamilyTaskCompleted: 2,
+    todayPersonalTaskCompleted: 1,
     createdAt: '2024-01-01T00:00:00Z',
     updatedAt: '2024-01-01T00:00:00Z',
   },
@@ -25,9 +29,11 @@ const task: TodayTaskDto = {
   scheduleType: 'RECURRING',
   status: 'NOT_STARTED',
   ownerMemberId: null,
-  assigneeMemberId: 'member-1',
-  assigneeMemberName: '太郎',
+  assigneeMemberIds: ['member-1'],
+  assigneeMemberNames: ['太郎'],
   scheduledDate: '2024-01-16',
+  point: 5,
+  frozenPoint: null,
 }
 
 describe('TomorrowTaskDetailModal', () => {
@@ -66,5 +72,4 @@ describe('TomorrowTaskDetailModal', () => {
     expect(onBackToList).toHaveBeenCalledTimes(1)
   })
 })
-
 

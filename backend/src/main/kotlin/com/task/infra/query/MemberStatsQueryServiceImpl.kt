@@ -1,100 +1,130 @@
 package com.task.infra.query
 
-import com.google.inject.Inject
-import com.task.infra.database.Database
+import com.task.domain.AppTimeZone
 import com.task.infra.database.jooq.tables.references.MEMBERS
 import com.task.infra.database.jooq.tables.references.TASK_DEFINITIONS
 import com.task.infra.database.jooq.tables.references.TASK_EXECUTION_PARTICIPANTS
 import com.task.infra.database.jooq.tables.references.TASK_EXECUTIONS
 import com.task.usecase.query.member.MemberStatsQueryService
+import org.jooq.DSLContext
 import org.jooq.impl.DSL
-import java.util.UUID
+import org.jooq.impl.DSL.`when`
+import java.time.LocalDate
 
 /**
  * MemberStatsQueryService のインフラ層実装
  *
- * members 一覧に合成するため、memberId ごとの completedCount / totalCount を返す
- * - 全期間集計（scheduledDate では絞らない）
- * - CANCELLED と is_deleted=true を除外
- * - personal(owner) + participants を母集団にする
- * - 完了数は「参加しているタスクが完了」のみカウント
+ * members 一覧に合成するため、memberId ごとの今日集計を返す
+ * - todayEarnedPoint: 今日獲得したポイント
+ * - todayFamilyTaskCompletedTotal: 今日の完了済み家族タスク合計
+ * - todayFamilyTaskCompleted: 今日の完了済み家族タスクのうち担当分
+ * - todayPersonalTaskCompleted: 今日の完了済み個人タスク数
  */
-class MemberStatsQueryServiceImpl @Inject constructor(
-    private val database: Database
-) : MemberStatsQueryService {
+class MemberStatsQueryServiceImpl : MemberStatsQueryService {
 
-    override fun fetchMemberStats(): List<MemberStatsQueryService.MemberStatsDto> {
-        return database.withSession { dsl ->
-            val m = MEMBERS
-            val te = TASK_EXECUTIONS
-            val td = TASK_DEFINITIONS
-            val tep = TASK_EXECUTION_PARTICIPANTS
+    override fun fetchMemberStats(
+        session: DSLContext,
+        targetDate: LocalDate?
+    ): List<MemberStatsQueryService.MemberStatsDto> {
+        val today = targetDate ?: LocalDate.now(AppTimeZone.ZONE)
+        val todayStart = today.atStartOfDay(AppTimeZone.ZONE).toOffsetDateTime()
+        val todayEndExclusive = today.plusDays(1).atStartOfDay(AppTimeZone.ZONE).toOffsetDateTime()
+        val completedTodayCondition = TASK_EXECUTIONS.COMPLETED_AT.ge(todayStart)
+            .and(TASK_EXECUTIONS.COMPLETED_AT.lt(todayEndExclusive))
 
-            // 基本条件（母集団から除外するもの）
-            val baseFilter =
-                te.STATUS.ne("CANCELLED")
-                    .and(td.IS_DELETED.eq(false))
-
-            // personal(owner) で対象になる行
-            val ownerRows = dsl
-                .select(
-                    td.OWNER_MEMBER_ID.`as`("member_id"),
-                    te.ID.`as`("task_execution_id"),
-                    te.STATUS.eq("COMPLETED")
-                        .`as`("completed_by_member")
+        val todayEarnedPointByMember = session
+            .select(
+                MEMBERS.ID,
+                DSL.coalesce(
+                    DSL.sum(
+                        DSL.`when`(
+                            TASK_EXECUTIONS.ID.isNotNull,
+                            TASK_EXECUTION_PARTICIPANTS.EARNED_POINT
+                        ).otherwise(0)
+                    ),
+                    0
+                ).`as`("today_earned_point")
+            )
+            .from(MEMBERS)
+            .leftJoin(TASK_EXECUTION_PARTICIPANTS)
+                .on(TASK_EXECUTION_PARTICIPANTS.MEMBER_ID.eq(MEMBERS.ID))
+            .leftJoin(TASK_EXECUTIONS)
+                .on(
+                    TASK_EXECUTIONS.ID.eq(TASK_EXECUTION_PARTICIPANTS.TASK_EXECUTION_ID),
+                    TASK_EXECUTIONS.STATUS.eq("COMPLETED"),
+                    completedTodayCondition
                 )
-                .from(te)
-                .join(td).on(te.TASK_DEFINITION_ID.eq(td.ID))
-                .where(baseFilter)
-                .and(td.SCOPE.eq("PERSONAL"))
-                .and(td.OWNER_MEMBER_ID.isNotNull)
+            .groupBy(MEMBERS.ID)
+            .fetch()
+            .associate { record ->
+                record.get(MEMBERS.ID).toString() to (record.get("today_earned_point", Int::class.java) ?: 0)
+            }
 
-            // participants で対象になる行
-            val participantRows = dsl
-                .select(
-                    tep.MEMBER_ID.`as`("member_id"),
-                    te.ID.`as`("task_execution_id"),
-                    te.STATUS.eq("COMPLETED").`as`("completed_by_member")
+        val todayFamilyCompletedByMemberCount = session
+            .select(
+                MEMBERS.ID,
+                DSL.countDistinct(
+                    DSL.`when`(
+                        TASK_DEFINITIONS.SCOPE.eq("FAMILY"),
+                        TASK_EXECUTIONS.ID
+                    )
+                ).`as`("family_completed_count")
+            )
+            .from(MEMBERS)
+            .leftJoin(TASK_EXECUTION_PARTICIPANTS)
+                .on(TASK_EXECUTION_PARTICIPANTS.MEMBER_ID.eq(MEMBERS.ID))
+            .leftJoin(TASK_EXECUTIONS)
+                .on(
+                    TASK_EXECUTIONS.ID.eq(TASK_EXECUTION_PARTICIPANTS.TASK_EXECUTION_ID),
+                    TASK_EXECUTIONS.STATUS.eq("COMPLETED"),
+                    completedTodayCondition
                 )
-                .from(te)
-                .join(td).on(te.TASK_DEFINITION_ID.eq(td.ID))
-                .join(tep).on(tep.TASK_EXECUTION_ID.eq(te.ID))
-                .where(baseFilter)
+            .leftJoin(TASK_DEFINITIONS)
+                .on(TASK_DEFINITIONS.ID.eq(TASK_EXECUTIONS.TASK_DEFINITION_ID))
+            .groupBy(MEMBERS.ID)
+            .fetch()
+            .associate { record ->
+                record.get(MEMBERS.ID).toString() to (record.get("family_completed_count", Int::class.java) ?: 0)
+            }
 
-            // personal(owner) と participants の和集合（task_execution_id を distinct で重複排除）
-            val pool = ownerRows.unionAll(participantRows).asTable("pool")
-            val memberId = requireNotNull(pool.field("member_id", UUID::class.java))
-            val taskExecutionId = requireNotNull(pool.field("task_execution_id", UUID::class.java))
-            val completedByMember = requireNotNull(pool.field("completed_by_member", Boolean::class.java))
-            val completedTaskExecutionId = DSL.case_()
-                .`when`(completedByMember.eq(true), taskExecutionId)
-                .otherwise(DSL.inline(null, UUID::class.java))
-
-            val stats = dsl
-                .select(
-                    m.ID,
-                    DSL.coalesce(DSL.countDistinct(taskExecutionId), 0).`as`("total_count"),
-                    DSL.coalesce(
-                        DSL.countDistinct(
-                            completedTaskExecutionId
-                        ),
-                        0
-                    ).`as`("completed_count")
+        val todayPersonalCompletedByMember = session
+            .select(
+                MEMBERS.ID,
+                DSL.countDistinct(
+                    DSL.`when`(
+                        TASK_DEFINITIONS.SCOPE.eq("PERSONAL"),
+                        TASK_EXECUTIONS.ID
+                    )
+                ).`as`("personal_completed_count")
+            )
+            .from(MEMBERS)
+            .leftJoin(TASK_EXECUTION_PARTICIPANTS)
+                .on(TASK_EXECUTION_PARTICIPANTS.MEMBER_ID.eq(MEMBERS.ID))
+            .leftJoin(TASK_EXECUTIONS)
+                .on(
+                    TASK_EXECUTIONS.ID.eq(TASK_EXECUTION_PARTICIPANTS.TASK_EXECUTION_ID),
+                    TASK_EXECUTIONS.STATUS.eq("COMPLETED"),
+                    completedTodayCondition
                 )
-                .from(m)
-                .leftJoin(pool).on(memberId.eq(m.ID))
-                .groupBy(m.ID)
-                .fetch()
+            .leftJoin(TASK_DEFINITIONS)
+                .on(TASK_DEFINITIONS.ID.eq(TASK_EXECUTIONS.TASK_DEFINITION_ID))
+            .groupBy(MEMBERS.ID)
+            .fetch()
+            .associate { record ->
+                record.get(MEMBERS.ID).toString() to (record.get("personal_completed_count", Int::class.java) ?: 0)
+            }
 
-            stats.map { record ->
+        return session.select(MEMBERS.ID)
+            .from(MEMBERS)
+            .fetch(MEMBERS.ID)
+            .map { memberId ->
+                val memberKey = memberId.toString()
                 MemberStatsQueryService.MemberStatsDto(
-                    memberId = record.get(m.ID).toString(),
-                    totalCount = record.get("total_count", Int::class.java) ?: 0,
-                    completedCount = record.get("completed_count", Int::class.java) ?: 0
+                    memberId = memberKey,
+                    todayEarnedPoint = todayEarnedPointByMember[memberKey] ?: 0,
+                    todayFamilyTaskCompleted = todayFamilyCompletedByMemberCount[memberKey] ?: 0,
+                    todayPersonalTaskCompleted = todayPersonalCompletedByMember[memberKey] ?: 0
                 )
             }
-        }
     }
 }
-
-

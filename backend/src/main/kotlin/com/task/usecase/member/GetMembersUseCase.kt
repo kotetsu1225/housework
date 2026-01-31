@@ -19,6 +19,9 @@ interface GetMembersUseCase {
         val name: MemberName,
         val email: MemberEmail,
         val familyRole: FamilyRole,
+        val todayEarnedPoint: Int,
+        val todayFamilyTaskCompleted: Int,
+        val todayPersonalTaskCompleted: Int,
     )
 
     fun execute(): Output

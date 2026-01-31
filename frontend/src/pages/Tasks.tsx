@@ -439,108 +439,110 @@ export function Tasks() {
           </div>
         }
       />
-      <PageContainer className="px-0 sm:px-4 md:px-6 lg:px-8">
-        {/* エラーメッセージ */}
-        {error && (
-          <Alert variant="error" className="mb-4">
-            {error}
-          </Alert>
-        )}
+      <PageContainer noPadding className="max-w-none px-0">
+        <div className="px-4 md:px-6 lg:px-8 max-w-lg md:max-w-2xl lg:max-w-4xl mx-auto">
+          {/* エラーメッセージ */}
+          {error && (
+            <Alert variant="error" className="mb-4">
+              {error}
+            </Alert>
+          )}
 
-        {/* スコープフィルター */}
-        <div className="flex flex-wrap gap-2 mb-4">
-          {(['all', 'family', 'personal'] as FilterScope[]).map((scope) => (
-            <button
-              key={scope}
-              onClick={() => {
-                setFilterScope(scope)
-                if (scope !== 'personal') {
-                  setSelectedMemberId(null)
-                  setShowMemberFilter(false)
-                }
-              }}
-              className={clsx(
-                'px-4 py-2 rounded-lg text-sm font-medium transition-all',
-                filterScope === scope
-                  ? 'bg-coral-500/20 text-coral-400 border border-coral-500/30'
-                  : 'bg-dark-800/50 text-white/50 border border-transparent hover:border-dark-600'
-              )}
-            >
-              {scope === 'all' ? 'すべて' : scope === 'family' ? '家族' : '個人'}
-            </button>
-          ))}
-
-          {/* 個人フィルター用メンバー選択 */}
-          {filterScope === 'personal' && (
-            <div className="relative">
+          {/* スコープフィルター */}
+          <div className="flex flex-wrap gap-2 mb-4">
+            {(['all', 'family', 'personal'] as FilterScope[]).map((scope) => (
               <button
-                onClick={() => setShowMemberFilter(!showMemberFilter)}
+                key={scope}
+                onClick={() => {
+                  setFilterScope(scope)
+                  if (scope !== 'personal') {
+                    setSelectedMemberId(null)
+                    setShowMemberFilter(false)
+                  }
+                }}
                 className={clsx(
-                  'px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2',
-                  'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                  'px-4 py-2 rounded-lg text-sm font-medium transition-all',
+                  filterScope === scope
+                    ? 'bg-coral-500/20 text-coral-400 border border-coral-500/30'
+                    : 'bg-dark-800/50 text-white/50 border border-transparent hover:border-dark-600'
                 )}
               >
-                {selectedMember ? (
-                  <>
-                    <Avatar
-                      name={selectedMember.name}
-                      size="xs"
-                      role={selectedMember.role}
-                      variant={isParentRole(selectedMember.role) ? 'parent' : 'child'}
-                    />
-                    {selectedMember.name}
-                  </>
-                ) : (
-                  '全員'
-                )}
-                <ChevronDown className={clsx('w-4 h-4 transition-transform', showMemberFilter && 'rotate-180')} />
+                {scope === 'all' ? 'すべて' : scope === 'family' ? '家族' : '個人'}
               </button>
+            ))}
 
-              {/* メンバー選択ドロップダウン */}
-              {showMemberFilter && (
-                <div className="absolute top-full left-0 mt-1 w-48 bg-dark-800 border border-dark-700 rounded-lg shadow-lg z-20">
-                  <button
-                    onClick={() => {
-                      setSelectedMemberId(null)
-                      setShowMemberFilter(false)
-                    }}
-                    className={clsx(
-                      'w-full px-4 py-2 text-left text-sm hover:bg-dark-700 transition-colors',
-                      !selectedMemberId ? 'text-emerald-400' : 'text-white/70'
-                    )}
-                  >
-                    全員
-                  </button>
-                  {members.map((member) => (
+            {/* 個人フィルター用メンバー選択 */}
+            {filterScope === 'personal' && (
+              <div className="relative">
+                <button
+                  onClick={() => setShowMemberFilter(!showMemberFilter)}
+                  className={clsx(
+                    'px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2',
+                    'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                  )}
+                >
+                  {selectedMember ? (
+                    <>
+                      <Avatar
+                        name={selectedMember.name}
+                        size="xs"
+                        role={selectedMember.role}
+                        variant={isParentRole(selectedMember.role) ? 'parent' : 'child'}
+                      />
+                      {selectedMember.name}
+                    </>
+                  ) : (
+                    '全員'
+                  )}
+                  <ChevronDown className={clsx('w-4 h-4 transition-transform', showMemberFilter && 'rotate-180')} />
+                </button>
+
+                {/* メンバー選択ドロップダウン */}
+                {showMemberFilter && (
+                  <div className="absolute top-full left-0 mt-1 w-48 bg-dark-800 border border-dark-700 rounded-lg shadow-lg z-20">
                     <button
-                      key={member.id}
                       onClick={() => {
-                        setSelectedMemberId(member.id)
+                        setSelectedMemberId(null)
                         setShowMemberFilter(false)
                       }}
                       className={clsx(
-                        'w-full px-4 py-2 text-left text-sm hover:bg-dark-700 transition-colors flex items-center gap-2',
-                        selectedMemberId === member.id ? 'text-emerald-400' : 'text-white/70'
+                        'w-full px-4 py-2 text-left text-sm hover:bg-dark-700 transition-colors',
+                        !selectedMemberId ? 'text-emerald-400' : 'text-white/70'
                       )}
                     >
-                      <Avatar
-                        name={member.name}
-                        size="xs"
-                        role={member.role}
-                        variant={isParentRole(member.role) ? 'parent' : 'child'}
-                      />
-                      {member.name}
-                      {member.id === user?.id && <span className="text-white/40">(自分)</span>}
+                      全員
                     </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
+                    {members.map((member) => (
+                      <button
+                        key={member.id}
+                        onClick={() => {
+                          setSelectedMemberId(member.id)
+                          setShowMemberFilter(false)
+                        }}
+                        className={clsx(
+                          'w-full px-4 py-2 text-left text-sm hover:bg-dark-700 transition-colors flex items-center gap-2',
+                          selectedMemberId === member.id ? 'text-emerald-400' : 'text-white/70'
+                        )}
+                      >
+                        <Avatar
+                          name={member.name}
+                          size="xs"
+                          role={member.role}
+                          variant={isParentRole(member.role) ? 'parent' : 'child'}
+                        />
+                        {member.name}
+                        {member.id === user?.id && <span className="text-white/40">(自分)</span>}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* カレンダー */}
-        <section className="mb-4 sm:mb-6 mx-1 sm:mx-0">
+        <section className="mb-4 sm:mb-6 px-2 sm:px-3 md:px-4">
           <TaskCalendar
             tasks={filteredTasks}
             selectedDate={selectedDate}
@@ -551,31 +553,33 @@ export function Tasks() {
           />
         </section>
 
-        {/* 定期タスク一覧 */}
-        <section className="mb-6">
-          <RecurringTaskList
-            tasks={filteredTasks}
-            onEdit={handleEditTask}
-            onTaskClick={handleTaskDetailClick}
-            filterScope={filterScope}
-            members={members}
-            selectedMemberId={selectedMemberId}
-            defaultOpen={true}
-            currentUserId={user?.id}
-          />
-        </section>
+        <div className="px-4 md:px-6 lg:px-8 max-w-lg md:max-w-2xl lg:max-w-4xl mx-auto">
+          {/* 定期タスク一覧 */}
+          <section className="mb-6">
+            <RecurringTaskList
+              tasks={filteredTasks}
+              onEdit={handleEditTask}
+              onTaskClick={handleTaskDetailClick}
+              filterScope={filterScope}
+              members={members}
+              selectedMemberId={selectedMemberId}
+              defaultOpen={true}
+              currentUserId={user?.id}
+            />
+          </section>
 
-        {/* タスク一覧を編集するリンク */}
-        <section>
-          <Button
-            variant="ghost"
-            className="w-full"
-            onClick={() => navigate('/tasks/list')}
-          >
-            <Settings className="w-4 h-4 mr-2" />
-            タスク一覧を編集する
-          </Button>
-        </section>
+          {/* タスク一覧を編集するリンク */}
+          <section>
+            <Button
+              variant="ghost"
+              className="w-full"
+              onClick={() => navigate('/tasks/list')}
+            >
+              <Settings className="w-4 h-4 mr-2" />
+              タスク一覧を編集する
+            </Button>
+          </section>
+        </div>
 
         {/* 日付選択モーダル */}
         <Modal

@@ -5,7 +5,7 @@
  */
 
 import { useState, useMemo } from 'react'
-import { ChevronLeft, ChevronRight, Users, User, Repeat } from 'lucide-react'
+import { ChevronLeft, ChevronRight, User, Repeat } from 'lucide-react'
 import {
   format,
   startOfMonth,
@@ -103,6 +103,14 @@ export function TaskCalendar({
     return eachDayOfInterval({ start: calendarStart, end: calendarEnd })
   }, [currentMonth])
 
+  const calendarWeeks = useMemo(() => {
+    const weeks: Date[][] = []
+    for (let i = 0; i < calendarDays.length; i += 7) {
+      weeks.push(calendarDays.slice(i, i + 7))
+    }
+    return weeks
+  }, [calendarDays])
+
   // 日付ごとのタスクをマッピング（単発 + 週次・月次定期）
   const tasksByDate = useMemo(() => {
     const result: Record<string, { task: TaskDefinition; isRecurring: boolean }[]> = {}
@@ -146,7 +154,7 @@ export function TaskCalendar({
   }
 
   return (
-    <div className="bg-dark-800/50 backdrop-blur-sm rounded-2xl p-4 border border-dark-700/50">
+    <div className="bg-dark-900/30 sm:bg-dark-800/50 backdrop-blur-sm rounded-none sm:rounded-2xl p-0 sm:p-4 border-0 sm:border sm:border-dark-700/50">
       {/* ヘッダー: 月の表示と移動ボタン */}
       <div className="flex items-center justify-between mb-4">
         <Button variant="ghost" size="sm" onClick={handlePrevMonth}>
@@ -161,12 +169,12 @@ export function TaskCalendar({
       </div>
 
       {/* 曜日ヘッダー */}
-      <div className="grid grid-cols-7 gap-1 mb-2">
+      <div className="grid grid-cols-7 gap-0 sm:gap-1 mb-1 sm:mb-2">
         {WEEKDAYS.map((day, index) => (
           <div
             key={day}
             className={clsx(
-              'text-center text-xs font-medium py-2',
+              'text-center text-[11px] sm:text-xs font-semibold py-1 sm:py-2',
               index === 0 ? 'text-red-400' : index === 6 ? 'text-blue-400' : 'text-white/50'
             )}
           >
@@ -176,84 +184,135 @@ export function TaskCalendar({
       </div>
 
       {/* カレンダー本体 */}
-      <div className="grid grid-cols-7 gap-1">
-        {calendarDays.map((day) => {
-          const dateKey = format(day, 'yyyy-MM-dd')
-          const dayTaskItems = tasksByDate[dateKey] || []
-          const isCurrentMonth = isSameMonth(day, currentMonth)
-          const isSelected = isSameDay(day, selectedDate)
-          const isToday = isSameDay(day, new Date())
-          const dayOfWeek = day.getDay()
-          const hasTasks = dayTaskItems.length > 0
+      <div className="space-y-0">
+        {calendarWeeks.map((week, weekIndex) => (
+          <div
+            key={format(week[0], 'yyyy-MM-dd')}
+            className={clsx('grid grid-cols-7 gap-0')}
+          >
+            {week.map((day) => {
+              const dateKey = format(day, 'yyyy-MM-dd')
+              const dayTaskItems = tasksByDate[dateKey] || []
+              const isCurrentMonth = isSameMonth(day, currentMonth)
+              const isSelected = isSameDay(day, selectedDate)
+              const isToday = isSameDay(day, new Date())
+              const dayOfWeek = day.getDay()
+              const hasTasks = dayTaskItems.length > 0
 
-          return (
-            <button
-              key={dateKey}
-              onClick={() => onSelectDate(day)}
-              className={clsx(
-                'relative min-h-[95px] p-1 flex flex-col items-start rounded-lg transition-all',
-                'hover:bg-dark-700/50',
-                isCurrentMonth ? 'text-white' : 'text-white/30',
-                isSelected && 'bg-coral-500/20 border border-coral-500',
-                isToday && !isSelected && 'bg-dark-700/50 border border-dark-600',
-                hasTasks && !isSelected && 'bg-dark-700/30'
-              )}
-            >
-              <span
-                className={clsx(
-                  'text-sm font-medium mb-1',
-                  isToday && 'text-coral-400 font-bold',
-                  dayOfWeek === 0 && isCurrentMonth && 'text-red-400',
-                  dayOfWeek === 6 && isCurrentMonth && 'text-blue-400'
-                )}
-              >
-                {format(day, 'd')}
-              </span>
+              return (
+                <button
+                  key={dateKey}
+                  onClick={() => onSelectDate(day)}
+                  className={clsx(
+                    'relative min-h-[92px] sm:min-h-[110px] p-[1px] sm:p-1 flex flex-col items-start rounded-[4px] sm:rounded-lg transition-colors',
+                    isCurrentMonth ? 'text-white bg-dark-800/35' : 'text-white/30 bg-dark-900/20',
+                    hasTasks && isCurrentMonth && 'bg-dark-700/45',
+                    isSelected && 'bg-coral-500/20 ring-1 ring-inset ring-coral-400/80',
+                    isToday && !isSelected && 'ring-1 ring-inset ring-coral-400/50',
+                    'hover:bg-dark-700/50'
+                  )}
+                >
+                  <span
+                    className={clsx(
+                      'text-sm font-medium mb-1',
+                      isToday && 'text-coral-400 font-bold',
+                      dayOfWeek === 0 && isCurrentMonth && 'text-red-400',
+                      dayOfWeek === 6 && isCurrentMonth && 'text-blue-400'
+                    )}
+                  >
+                    {format(day, 'd')}
+                  </span>
 
-              {/* タスク名表示（最大4件） */}
-              {hasTasks && isCurrentMonth && (
-                <div className="w-full space-y-0.5 overflow-hidden">
-                  {dayTaskItems.slice(0, 4).map(({ task, isRecurring }) => {
-                    const owner = task.scope === 'PERSONAL' ? getOwner(task.ownerMemberId) : null
-                    return (
-                      <div
-                        key={`${task.id}-${isRecurring ? 'rec' : 'one'}`}
-                        className={clsx(
-                          'flex items-center gap-0.5 text-[9px] leading-tight px-0.5 py-0.5 rounded',
-                          task.scope === 'FAMILY'
-                            ? 'bg-blue-500/30 text-blue-300'
-                            : 'bg-emerald-500/30 text-emerald-300'
-                        )}
-                      >
-                        {/* 定期タスクの場合はリピートアイコンを表示 */}
-                        {isRecurring ? (
-                          <Repeat className="w-2.5 h-2.5 flex-shrink-0 text-amber-400" />
-                        ) : task.scope === 'FAMILY' ? (
-                          <Users className="w-2.5 h-2.5 flex-shrink-0" />
-                        ) : owner ? (
-                          <Avatar
-                            name={owner.name}
-                            size="xs"
-                            role={owner.role}
-                            variant={isParentRole(owner.role) ? 'parent' : 'child'}
-                          />
-                        ) : (
-                          <User className="w-2.5 h-2.5 flex-shrink-0" />
-                        )}
-                        <span className="truncate">{task.name}</span>
-                      </div>
-                    )
-                  })}
-                  {dayTaskItems.length > 4 && (
-                    <div className="text-[9px] text-white/40 px-0.5">
-                      +{dayTaskItems.length - 4}件
+                  {/* タスク名表示（最大4件） */}
+                  {hasTasks && isCurrentMonth && (
+                    <div className="w-full space-y-0.5 overflow-hidden">
+                      {dayTaskItems.slice(0, 4).map(({ task, isRecurring }, index) => {
+                        const owner = task.scope === 'PERSONAL' ? getOwner(task.ownerMemberId) : null
+                        const showMobileOwner = task.scope === 'PERSONAL' && !!owner
+                        const showMobilePersonalFallback = task.scope === 'PERSONAL' && !owner
+                        const showMobileRecurring = isRecurring
+                        const showMobileIcon = showMobileOwner || showMobilePersonalFallback || showMobileRecurring
+                        const showDesktopOwner = showMobileOwner
+                        const showDesktopPersonalFallback = showMobilePersonalFallback
+                        const showDesktopRecurring = isRecurring
+                        const showDesktopIcon = showDesktopOwner || showDesktopPersonalFallback || showDesktopRecurring
+                        const mobileTitle = Array.from(task.name).slice(0, 4).join('')
+
+                        return (
+                          <div
+                            key={`${task.id}-${isRecurring ? 'rec' : 'one'}`}
+                            className={clsx(
+                              index >= 2 ? 'hidden sm:flex' : 'flex',
+                              'relative w-full min-w-0 items-center gap-[1px] sm:gap-0.5 text-[10px] font-medium leading-tight py-0.5 min-h-[20px] sm:min-h-0 rounded pl-[1px] pr-[1px] sm:px-1',
+                              task.scope === 'FAMILY'
+                                ? 'bg-blue-500/25 text-blue-100'
+                                : 'bg-emerald-500/25 text-emerald-100'
+                            )}
+                          >
+                            {showMobileIcon && (
+                              <div
+                                className="sm:hidden flex flex-col items-center justify-center flex-shrink-0 w-3 gap-[1px]"
+                              >
+                                {showMobileOwner ? (
+                                  <Avatar
+                                    name={owner!.name}
+                                    size="xs"
+                                    role={owner!.role}
+                                    variant={isParentRole(owner!.role) ? 'parent' : 'child'}
+                                    className="w-3 h-3 shadow-none"
+                                  />
+                                ) : showMobilePersonalFallback ? (
+                                  <User className="w-3 h-3 text-emerald-100" />
+                                ) : null}
+                                {showMobileRecurring && (
+                                  <Repeat className="w-3 h-3 text-amber-300 ml-[1px] sm:ml-0" />
+                                )}
+                              </div>
+                            )}
+                            {showDesktopIcon && (
+                              <div className="hidden sm:flex items-center gap-0.5">
+                                {showDesktopRecurring && (
+                                  <Repeat className="w-2.5 h-2.5 flex-shrink-0 text-amber-400" />
+                                )}
+                                {showDesktopOwner ? (
+                                  <Avatar
+                                    name={owner!.name}
+                                    size="xs"
+                                    role={owner!.role}
+                                    variant={isParentRole(owner!.role) ? 'parent' : 'child'}
+                                    className="flex-shrink-0 w-3 h-3"
+                                  />
+                                ) : showDesktopPersonalFallback ? (
+                                  <User className="w-2.5 h-2.5 flex-shrink-0 text-emerald-200" />
+                                ) : null}
+                              </div>
+                            )}
+                            <span
+                              className="flex-1 min-w-0 text-[9px] sm:text-[9.5px] leading-[1.2] tracking-[-0.04em] pr-0 sm:pr-[1px] overflow-hidden text-clip whitespace-nowrap"
+                            >
+                              <span className="sm:hidden">{mobileTitle}</span>
+                              <span className="hidden sm:inline">{task.name}</span>
+                            </span>
+                          </div>
+                        )
+                      })}
+                      {dayTaskItems.length > 2 && (
+                        <div className="text-[9px] text-white/40 px-0.5 sm:hidden">
+                          +{dayTaskItems.length - 2}件
+                        </div>
+                      )}
+                      {dayTaskItems.length > 4 && (
+                        <div className="hidden sm:block text-[9px] text-white/40 px-0.5">
+                          +{dayTaskItems.length - 4}件
+                        </div>
+                      )}
                     </div>
                   )}
-                </div>
-              )}
-            </button>
-          )
-        })}
+                </button>
+              )
+            })}
+          </div>
+        ))}
       </div>
 
       {/* 凡例 */}

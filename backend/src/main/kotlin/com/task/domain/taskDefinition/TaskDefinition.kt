@@ -4,7 +4,6 @@ import com.task.domain.AggregateRoot
 import com.task.domain.member.MemberId
 import com.task.domain.taskDefinition.event.TaskDefinitionCreated
 import com.task.domain.taskDefinition.event.TaskDefinitionDeleted
-import java.awt.Point
 import java.time.Instant
 import java.util.UUID
 

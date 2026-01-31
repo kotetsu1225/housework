@@ -111,6 +111,7 @@ class TaskExecutionRepositoryImpl : TaskExecutionRepository {
             .set(TASK_SNAPSHOTS.SCHEDULED_START_TIME, snapshot.frozenScheduledTimeRange.startTime.toOffsetDateTime())
             .set(TASK_SNAPSHOTS.SCHEDULED_END_TIME, snapshot.frozenScheduledTimeRange.endTime.toOffsetDateTime())
             .set(TASK_SNAPSHOTS.DEFINITION_VERSION, snapshot.definitionVersion)
+            .set(TASK_SNAPSHOTS.FROZEN_POINT, snapshot.frozenPoint)
             .set(TASK_SNAPSHOTS.CREATED_AT, snapshot.capturedAt.toOffsetDateTime())
             .execute()
     }

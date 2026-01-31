@@ -46,6 +46,7 @@ class TaskDefinitionRepositoryImpl : TaskDefinitionRepository {
             ownerMemberId = taskDefinition.ownerMemberId?.value
             version = taskDefinition.version
             isDeleted = taskDefinition.isDeleted
+            point = taskDefinition.point
             createdAt = now
             updatedAt = now
 
@@ -82,6 +83,7 @@ class TaskDefinitionRepositoryImpl : TaskDefinitionRepository {
             .set(TASK_DEFINITIONS.OWNER_MEMBER_ID, taskDefinition.ownerMemberId?.value)
             .set(TASK_DEFINITIONS.VERSION, taskDefinition.version)
             .set(TASK_DEFINITIONS.IS_DELETED, taskDefinition.isDeleted)
+            .set(TASK_DEFINITIONS.POINT, taskDefinition.point)
             .set(TASK_DEFINITIONS.UPDATED_AT, now)
             .apply {
                 when (val schedule = taskDefinition.schedule) {

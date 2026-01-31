@@ -52,6 +52,11 @@ import com.task.usecase.query.dashboard.DashboardQueryService
 import com.task.infra.query.DashboardQueryServiceImpl
 import com.task.usecase.query.member.MemberStatsQueryService
 import com.task.infra.query.MemberStatsQueryServiceImpl
+import com.task.usecase.query.execution.CompletedTaskQueryService
+import com.task.infra.query.CompletedTaskQueryServiceImpl
+// Execution UseCases
+import com.task.usecase.execution.GetCompletedTasksUseCase
+import com.task.usecase.execution.GetCompletedTasksUseCaseImpl
 
 class AppModule : AbstractModule() {
     override fun configure() {
@@ -124,6 +129,10 @@ class AppModule : AbstractModule() {
         // Query Services (CQRS)
         bind(DashboardQueryService::class.java).to(DashboardQueryServiceImpl::class.java)
         bind(MemberStatsQueryService::class.java).to(MemberStatsQueryServiceImpl::class.java)
+        bind(CompletedTaskQueryService::class.java).to(CompletedTaskQueryServiceImpl::class.java)
+
+        // Execution UseCase bindings
+        bind(GetCompletedTasksUseCase::class.java).to(GetCompletedTasksUseCaseImpl::class.java)
 
         val handlerBinder = Multibinder.newSetBinder(
             binder(),

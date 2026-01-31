@@ -10,6 +10,7 @@ import com.task.presentation.taskDefinitions
 import com.task.presentation.taskExecutions
 import com.task.presentation.taskGenerations
 import com.task.presentation.dashboard
+import com.task.presentation.completedTasks
 import com.task.presentation.health
 import com.task.scheduler.DailyTaskGenerationScheduler
 import com.task.usecase.task.GenerateDailyExecutionsUseCase
@@ -116,6 +117,7 @@ fun Application.module() {
             taskExecutions()
             taskGenerations()
             dashboard()
+            completedTasks()
         }
 
     }

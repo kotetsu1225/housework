@@ -231,6 +231,16 @@ export function Tasks() {
     return filteredTasks.filter((task) => isRecurringTaskOnDate(task, selectedDate))
   }, [filteredTasks, selectedDate])
 
+  // 毎日以外の定期タスク（週次・月次）
+  const nonDailyRecurringTasks = useMemo(() => {
+    return selectedDateRecurringTasks.filter((task) => task.recurrence?.patternType !== 'DAILY')
+  }, [selectedDateRecurringTasks])
+
+  // 毎日のタスク
+  const dailyRecurringTasks = useMemo(() => {
+    return selectedDateRecurringTasks.filter((task) => task.recurrence?.patternType === 'DAILY')
+  }, [selectedDateRecurringTasks])
+
   // フォーム初期値
   const getDefaultFormState = (date: Date) => ({
     name: '',
@@ -429,7 +439,7 @@ export function Tasks() {
           </div>
         }
       />
-      <PageContainer>
+      <PageContainer className="px-0 sm:px-4 md:px-6 lg:px-8">
         {/* エラーメッセージ */}
         {error && (
           <Alert variant="error" className="mb-4">
@@ -530,7 +540,7 @@ export function Tasks() {
         </div>
 
         {/* カレンダー */}
-        <section className="mb-6">
+        <section className="mb-4 sm:mb-6 mx-1 sm:mx-0">
           <TaskCalendar
             tasks={filteredTasks}
             selectedDate={selectedDate}
@@ -592,15 +602,30 @@ export function Tasks() {
                   </div>
                 )}
 
-                {/* この日の定期タスク一覧 */}
-                {selectedDateRecurringTasks.length > 0 && (
+                {/* 毎日以外の定期タスク一覧 */}
+                {nonDailyRecurringTasks.length > 0 && (
                   <div>
                     <h4 className="text-sm font-medium text-white/70 mb-2 flex items-center gap-2">
                       <Repeat className="w-4 h-4" />
-                      定期タスク ({selectedDateRecurringTasks.length})
+                      定期タスク ({nonDailyRecurringTasks.length})
                     </h4>
                     <div className="space-y-2 max-h-40 overflow-y-auto">
-                      {selectedDateRecurringTasks.map((task) => (
+                      {nonDailyRecurringTasks.map((task) => (
+                        <DayTaskCard key={task.id} task={task} members={members} isRecurring onClick={handleTaskDetailClick} />
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* 毎日のタスク一覧 */}
+                {dailyRecurringTasks.length > 0 && (
+                  <div>
+                    <h4 className="text-sm font-medium text-white/70 mb-2 flex items-center gap-2">
+                      <RefreshCw className="w-4 h-4" />
+                      毎日のタスク ({dailyRecurringTasks.length})
+                    </h4>
+                    <div className="space-y-2 max-h-40 overflow-y-auto">
+                      {dailyRecurringTasks.map((task) => (
                         <DayTaskCard key={task.id} task={task} members={members} isRecurring onClick={handleTaskDetailClick} />
                       ))}
                     </div>

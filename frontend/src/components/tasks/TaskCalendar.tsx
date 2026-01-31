@@ -5,7 +5,7 @@
  */
 
 import { useState, useMemo } from 'react'
-import { ChevronLeft, ChevronRight, User, Repeat } from 'lucide-react'
+import { ChevronLeft, ChevronRight, User } from 'lucide-react'
 import {
   format,
   startOfMonth,
@@ -230,12 +230,10 @@ export function TaskCalendar({
                         const owner = task.scope === 'PERSONAL' ? getOwner(task.ownerMemberId) : null
                         const showMobileOwner = task.scope === 'PERSONAL' && !!owner
                         const showMobilePersonalFallback = task.scope === 'PERSONAL' && !owner
-                        const showMobileRecurring = isRecurring
-                        const showMobileIcon = showMobileOwner || showMobilePersonalFallback || showMobileRecurring
+                        const showMobileIcon = showMobileOwner || showMobilePersonalFallback
                         const showDesktopOwner = showMobileOwner
                         const showDesktopPersonalFallback = showMobilePersonalFallback
-                        const showDesktopRecurring = isRecurring
-                        const showDesktopIcon = showDesktopOwner || showDesktopPersonalFallback || showDesktopRecurring
+                        const showDesktopIcon = showDesktopOwner || showDesktopPersonalFallback
                         const mobileTitle = Array.from(task.name).slice(0, 4).join('')
 
                         return (
@@ -246,7 +244,8 @@ export function TaskCalendar({
                               'relative w-full min-w-0 items-center gap-[1px] sm:gap-0.5 text-[10px] font-medium leading-tight py-0.5 min-h-[20px] sm:min-h-0 rounded pl-[1px] pr-[1px] sm:px-1',
                               task.scope === 'FAMILY'
                                 ? 'bg-blue-500/25 text-blue-100'
-                                : 'bg-emerald-500/25 text-emerald-100'
+                                : 'bg-emerald-500/25 text-emerald-100',
+                              isRecurring && 'ring-1 ring-inset ring-amber-400/80'
                             )}
                           >
                             {showMobileIcon && (
@@ -264,16 +263,10 @@ export function TaskCalendar({
                                 ) : showMobilePersonalFallback ? (
                                   <User className="w-3 h-3 text-emerald-100" />
                                 ) : null}
-                                {showMobileRecurring && (
-                                  <Repeat className="w-3 h-3 text-amber-300 ml-[1px] sm:ml-0" />
-                                )}
                               </div>
                             )}
                             {showDesktopIcon && (
                               <div className="hidden sm:flex items-center gap-0.5">
-                                {showDesktopRecurring && (
-                                  <Repeat className="w-2.5 h-2.5 flex-shrink-0 text-amber-400" />
-                                )}
                                 {showDesktopOwner ? (
                                   <Avatar
                                     name={owner!.name}
@@ -325,9 +318,9 @@ export function TaskCalendar({
           <span className="w-2 h-2 rounded-full bg-emerald-400" />
           <span>個人</span>
         </div>
-        <div className="flex items-center gap-1">
-          <Repeat className="w-3 h-3 text-amber-400" />
-          <span>週次/月次</span>
+        <div className="flex items-center gap-2">
+          <span className="w-4 h-2.5 rounded-sm bg-gradient-to-r from-blue-500/25 to-emerald-500/25 ring-1 ring-inset ring-amber-400/80" />
+          <span>週次/月次（黄色枠）</span>
         </div>
       </div>
     </div>

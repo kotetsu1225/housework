@@ -83,9 +83,6 @@ function MemberRankingCard({ member, rank, familyCompletionRate, onClick }: Memb
             <span className="font-bold text-white truncate">{member.name}</span>
             <span className="text-xs text-white/50">({getRoleLabel(member.role)})</span>
           </div>
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-white/50">({member.email})</span>
-          </div>
           
           {/* 今日の獲得ポイント */}
           <div className="flex items-center gap-1 text-amber-400 font-bold text-sm mb-2">

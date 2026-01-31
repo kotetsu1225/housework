@@ -41,7 +41,9 @@ data class TodayTaskDto(
     val ownerMemberId: String?,     // TaskDefinition.owner_member_id (PERSONAL only)
     val assigneeMemberIds: List<String>,
     val assigneeMemberNames: List<String>,
-    val scheduledDate: String
+    val scheduledDate: String,
+    val point: Int,                 // TaskDefinition.point (タスク定義のポイント)
+    val frozenPoint: Int?           // TaskSnapshot.frozen_point (実行時に確定したポイント、未開始ならnull)
 )
 
 /**

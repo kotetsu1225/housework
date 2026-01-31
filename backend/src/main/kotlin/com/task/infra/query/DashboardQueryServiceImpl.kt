@@ -102,7 +102,9 @@ class DashboardQueryServiceImpl @Inject constructor(
             te.STATUS,
             td.OWNER_MEMBER_ID,
             assignees,
-            te.SCHEDULED_DATE
+            te.SCHEDULED_DATE,
+            td.POINT,
+            ts.FROZEN_POINT
         )
             .from(te)
             .join(td).on(te.TASK_DEFINITION_ID.eq(td.ID))
@@ -135,7 +137,9 @@ class DashboardQueryServiceImpl @Inject constructor(
                     ownerMemberId = record.get(td.OWNER_MEMBER_ID)?.toString(),
                     assigneeMemberIds = assigneeIds,
                     assigneeMemberNames = assigneeNames,
-                    scheduledDate = record.get(te.SCHEDULED_DATE)?.format(dateFormatter) ?: ""
+                    scheduledDate = record.get(te.SCHEDULED_DATE)?.format(dateFormatter) ?: "",
+                    point = record.get(td.POINT) ?: 0,
+                    frozenPoint = record.get(ts.FROZEN_POINT)
                 )
             }
     }
@@ -184,7 +188,9 @@ class DashboardQueryServiceImpl @Inject constructor(
             te.STATUS,
             td.OWNER_MEMBER_ID,
             assignees,
-            te.SCHEDULED_DATE
+            te.SCHEDULED_DATE,
+            td.POINT,
+            ts.FROZEN_POINT
         )
             .from(te)
             .join(td).on(te.TASK_DEFINITION_ID.eq(td.ID))
@@ -210,7 +216,9 @@ class DashboardQueryServiceImpl @Inject constructor(
                     ownerMemberId = record.get(td.OWNER_MEMBER_ID)?.toString(),
                     assigneeMemberIds = assigneeIds,
                     assigneeMemberNames = assigneeNames,
-                    scheduledDate = record.get(te.SCHEDULED_DATE)?.format(dateFormatter) ?: ""
+                    scheduledDate = record.get(te.SCHEDULED_DATE)?.format(dateFormatter) ?: "",
+                    point = record.get(td.POINT) ?: 0,
+                    frozenPoint = record.get(ts.FROZEN_POINT)
                 )
             }
     }
@@ -262,7 +270,8 @@ class DashboardQueryServiceImpl @Inject constructor(
             td.SCHEDULED_END_TIME,
             td.SCOPE,
             td.SCHEDULE_TYPE,
-            td.OWNER_MEMBER_ID
+            td.OWNER_MEMBER_ID,
+            td.POINT
         )
             .from(td)
             .join(tr).on(tr.TASK_DEFINITION_ID.eq(td.ID))
@@ -291,7 +300,9 @@ class DashboardQueryServiceImpl @Inject constructor(
                         ownerMemberId = record.get(td.OWNER_MEMBER_ID)?.toString(),
                         assigneeMemberIds = emptyList(),
                         assigneeMemberNames = emptyList(),
-                        scheduledDate = targetDate.format(dateFormatter)
+                        scheduledDate = targetDate.format(dateFormatter),
+                        point = record.get(td.POINT) ?: 0,
+                        frozenPoint = null  // 実行未生成のためスナップショットなし
                     )
                 }
             }.filterNotNull()
@@ -315,7 +326,8 @@ class DashboardQueryServiceImpl @Inject constructor(
             td.SCHEDULED_END_TIME,
             td.SCOPE,
             td.SCHEDULE_TYPE,
-            td.OWNER_MEMBER_ID
+            td.OWNER_MEMBER_ID,
+            td.POINT
         )
             .from(td)
             .where(td.IS_DELETED.eq(false))
@@ -341,7 +353,9 @@ class DashboardQueryServiceImpl @Inject constructor(
                         ownerMemberId = record.get(td.OWNER_MEMBER_ID)?.toString(),
                         assigneeMemberIds = emptyList(),
                         assigneeMemberNames = emptyList(),
-                        scheduledDate = targetDate.format(dateFormatter)
+                        scheduledDate = targetDate.format(dateFormatter),
+                        point = record.get(td.POINT) ?: 0,
+                        frozenPoint = null  // 実行未生成のためスナップショットなし
                     )
                 }
             }.filterNotNull()

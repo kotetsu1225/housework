@@ -46,7 +46,9 @@ data class TodayTaskResponse(
     val ownerMemberId: String?,
     val assigneeMemberIds: List<String>,
     val assigneeMemberNames: List<String>,
-    val scheduledDate: String
+    val scheduledDate: String,
+    val point: Int,
+    val frozenPoint: Int?
 )
 
 @Serializable
@@ -82,7 +84,9 @@ private fun TodayTaskDto.toResponse() = TodayTaskResponse(
     ownerMemberId = ownerMemberId,
     assigneeMemberIds = assigneeMemberIds,
     assigneeMemberNames = assigneeMemberNames,
-    scheduledDate = scheduledDate
+    scheduledDate = scheduledDate,
+    point = point,
+    frozenPoint = frozenPoint
 )
 
 private fun MemberTaskDto.toResponse() = MemberTaskResponse(

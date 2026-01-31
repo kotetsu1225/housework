@@ -7,7 +7,7 @@ export interface AvatarProps extends HTMLAttributes<HTMLDivElement> {
   name: string
   /** 家族の役割（指定された場合は役割アイコンを優先表示） */
   role?: FamilyRole
-  size?: 'sm' | 'md' | 'lg' | 'xl'
+  size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl'
   variant?: 'parent' | 'child'
   /** role指定時に画像表示するか（デフォルト: true） */
   showImage?: boolean
@@ -34,6 +34,7 @@ const getColorFromName = (name: string, isParent: boolean): string => {
 export const Avatar = forwardRef<HTMLDivElement, AvatarProps>(
   ({ className, name, role, size = 'md', variant = 'child', showImage = true, ...props }, ref) => {
     const sizes = {
+      xs: 'w-4 h-4',
       sm: 'w-8 h-8',
       md: 'w-10 h-10',
       lg: 'w-12 h-12',
@@ -41,6 +42,7 @@ export const Avatar = forwardRef<HTMLDivElement, AvatarProps>(
     }
 
     const textSizes = {
+      xs: 'text-[8px]',
       sm: 'text-xs',
       md: 'text-sm',
       lg: 'text-base',

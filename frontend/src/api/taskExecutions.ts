@@ -29,6 +29,8 @@ export interface GetTaskExecutionsOptions {
   status?: 'NOT_STARTED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED'
   /** 担当者IDsでフィルタ（バックエンド: assigneeMemberId） */
   assigneeMemberIds?: string[] // CHANGED: now array to support multiple assignees
+  /** 完了日時でフィルタ (YYYY-MM-DD) */
+  completedAt?: string
   /** 取得件数（デフォルト: 20） */
   limit?: number
   /** オフセット（デフォルト: 0） */
@@ -67,6 +69,7 @@ export async function getTaskExecutions(
   if (memberIds && memberIds.length > 0) {
     memberIds.forEach((id) => params.append('assigneeMemberId', id))
   }
+  if (options.completedAt) params.append('completedAt', options.completedAt)
   if (options.limit !== undefined) params.append('limit', String(options.limit))
   if (options.offset !== undefined) params.append('offset', String(options.offset))
 

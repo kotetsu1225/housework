@@ -31,7 +31,7 @@ class TaskDefinitions {
     @Resource("")
     class List(
         val parent: TaskDefinitions = TaskDefinitions(),
-        val limit: Int = 20,
+        val limit: Int? = null,
         val offset: Int = 0
     ) {
         @Serializable

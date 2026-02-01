@@ -8,7 +8,7 @@ import com.task.domain.taskDefinition.*
 @ImplementedBy(GetTaskDefinitionsUseCaseImpl::class)
 interface GetTaskDefinitionsUseCase {
     data class Input(
-        val limit: Int = 20,
+        val limit: Int? = null,
         val offset: Int = 0
     )
 

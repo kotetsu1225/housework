@@ -95,8 +95,8 @@ export async function deleteTaskDefinition(
  * タスク定義一覧を取得する
  * GET /api/task-definitions
  *
- * @param limit - 取得件数（デフォルト: 20）
- * @param offset - オフセット（デフォルト: 0）
+ * @param limit - 取得件数（省略時は全件取得）
+ * @param offset - オフセット（limit指定時のみ有効）
  * @returns タスク定義一覧
  *
  * @example
@@ -105,10 +105,21 @@ export async function deleteTaskDefinition(
  * ```
  */
 export async function getTaskDefinitions(
-  limit: number = 20,
-  offset: number = 0
+  limit?: number,
+  offset?: number
 ): Promise<GetTaskDefinitionsResponse> {
-  return apiGet<GetTaskDefinitionsResponse>(`/task-definitions?limit=${limit}&offset=${offset}`)
+  const params = new URLSearchParams()
+  if (limit !== undefined) {
+    params.set('limit', String(limit))
+    if (offset !== undefined) {
+      params.set('offset', String(offset))
+    }
+  }
+
+  const query = params.toString()
+  const path = query ? `/task-definitions?${query}` : '/task-definitions'
+
+  return apiGet<GetTaskDefinitionsResponse>(path)
 }
 
 /**
@@ -126,4 +137,3 @@ export async function getTaskDefinitions(
 export async function getTaskDefinition(taskDefinitionId: string): Promise<TaskDefinitionResponse> {
   return apiGet<TaskDefinitionResponse>(`/task-definitions/${taskDefinitionId}`)
 }
-

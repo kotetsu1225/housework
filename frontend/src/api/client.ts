@@ -114,6 +114,9 @@ export async function apiClient<T>(
     const token = getStoredToken()
     if (token) {
       authHeaders['Authorization'] = `Bearer ${token}`
+    } else {
+      // デバッグ用: トークンが存在しない場合のログ
+      console.warn(`[API Client] No token found for endpoint: ${endpoint}`)
     }
   }
 

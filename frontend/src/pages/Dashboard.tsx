@@ -4,7 +4,7 @@
  * 今日のタスク一覧を表示するホーム画面
  * CQRSパターン: DashboardQueryServiceを使用して一括データ取得
  */
-import { useState, useCallback, useMemo } from 'react'
+import { useState, useCallback, useMemo, useEffect } from 'react'
 import { RefreshCw, ListTodo, CheckCircle2, ChevronDown, Calendar } from 'lucide-react'
 import { addDays } from 'date-fns'
 import { useNavigate } from 'react-router-dom'
@@ -16,7 +16,8 @@ import { Card } from '../components/ui/Card'
 import { Modal } from '../components/ui/Modal'
 import { ProgressSummaryCard, TaskGroupsSection, TodayTaskCard, TomorrowTaskDetailModal } from '../components/dashboard'
 import { TaskActionModal } from '../components/dashboard/TaskActionModal'
-import { useDashboard, useMembers } from '../hooks'
+import { NotificationPermissionModal } from '../components/push/NotificationPermissionModal'
+import { useDashboard, useMembers, usePushSubscription } from '../hooks'
 import { useAuth } from '../contexts'
 import { formatJa, toISODateString } from '../utils'
 import { getDashboardData, ApiError } from '../api'
@@ -62,10 +63,57 @@ export function Dashboard() {
   // メンバー一覧取得（モーダルの担当者選択用）
   const { members, fetchMembers } = useMembers()
 
+  // Push通知購読
+  const {
+    permission,
+    isRegistering,
+    subscribe,
+    hasBackendSubscription,
+    isCheckingSubscription,
+    hasPermissionAnswer,
+    isCheckingPermissionAnswer,
+    savePermissionAnswer,
+    checkSubscription,
+  } = usePushSubscription()
+
+  // 通知許可モーダルの表示状態
+  const [showNotificationModal, setShowNotificationModal] = useState(false)
+
   // 初回ロード時にメンバーも取得
   useState(() => {
     fetchMembers()
   })
+
+  // ログイン時に購読状態を再確認
+  useEffect(() => {
+    if (user) {
+      void checkSubscription()
+    }
+  }, [user, checkSubscription])
+
+  // 通知許可モーダルの表示条件チェック
+  useEffect(() => {
+    if (!user) return
+    if (isCheckingSubscription || isCheckingPermissionAnswer) return
+
+    if (hasPermissionAnswer) {
+      setShowNotificationModal(false)
+      return
+    }
+
+    const shouldShow =
+      !hasBackendSubscription &&
+      permission !== 'denied'
+
+    setShowNotificationModal(shouldShow)
+  }, [
+    user,
+    permission,
+    hasBackendSubscription,
+    hasPermissionAnswer,
+    isCheckingSubscription,
+    isCheckingPermissionAnswer,
+  ])
 
   // タスクを今日のタスクと将来のタスクに分離
   const { todayActiveTasks, completedTasks, futureTasks } = useMemo(() => {
@@ -140,6 +188,30 @@ export function Dashboard() {
   const handleAssignTask = useCallback(async (taskExecutionId: string, memberIds: string[]) => {
     return await assignTask(taskExecutionId, memberIds)
   }, [assignTask])
+
+  /**
+   * 通知許可モーダル: 許可する
+   */
+  const handleAllowNotification = useCallback(async () => {
+    const success = await subscribe()
+    if (success) {
+      setShowNotificationModal(false)
+    }
+  }, [subscribe])
+
+  /**
+   * 通知許可モーダル: 今はしない
+   */
+  const handleDismissNotification = useCallback(() => {
+    const save = async () => {
+      const saved = await savePermissionAnswer(false)
+      if (saved) {
+        setShowNotificationModal(false)
+      }
+    }
+
+    void save()
+  }, [savePermissionAnswer])
 
   /**
    * データ再取得
@@ -313,6 +385,14 @@ export function Dashboard() {
           onStart={handleStartTask}
           onComplete={handleCompleteTask}
           onAssign={handleAssignTask}
+        />
+
+        <NotificationPermissionModal
+          isOpen={showNotificationModal}
+          onClose={() => setShowNotificationModal(false)}
+          onAllow={handleAllowNotification}
+          onDismiss={handleDismissNotification}
+          isRegistering={isRegistering}
         />
 
         {/* 明日のタスク一覧モーダル */}

@@ -1,5 +1,6 @@
 package com.task
 
+import com.task.infra.config.DotenvLoader
 import com.task.infra.security.JwtConfig
 import com.task.presentation.GuicePlugin
 import com.task.presentation.auth
@@ -12,8 +13,11 @@ import com.task.presentation.taskGenerations
 import com.task.presentation.dashboard
 import com.task.presentation.completedTasks
 import com.task.presentation.health
+import com.task.presentation.pushSubscriptions
 import com.task.scheduler.DailyTaskGenerationScheduler
+import com.task.scheduler.DailyNotCompletedTaskNotificationScheduler
 import com.task.usecase.task.GenerateDailyExecutionsUseCase
+import com.task.usecase.task.SendDailyNotCompletedTaskNotificationsUseCase
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpMethod
 import io.ktor.serialization.kotlinx.json.*
@@ -37,6 +41,8 @@ fun main() {
 }
 
 fun Application.module() {
+    DotenvLoader.loadIfPresent()
+
     install(GuicePlugin) {
         modules = listOf(AppModule())
     }
@@ -92,16 +98,39 @@ fun Application.module() {
     val jwtConfig = injector.getInstance(JwtConfig::class.java)
     configureJwtAuth(jwtConfig)
 
-    val scheduler = DailyTaskGenerationScheduler(
+    val taskGenerationScheduler = DailyTaskGenerationScheduler(
         injector.getInstance(GenerateDailyExecutionsUseCase::class.java),
     )
 
-    launch{
-        scheduler.start(this)
+    // 通知スケジューラの実行時刻（環境変数で上書き可能、テスト用）
+    val notificationScheduleTime = (
+        System.getenv("NOTIFICATION_SCHEDULE_TIME")
+            ?: System.getProperty("NOTIFICATION_SCHEDULE_TIME")
+    )?.let {
+        try {
+            val parts = it.split(":")
+            java.time.LocalTime.of(parts[0].toInt(), if (parts.size > 1) parts[1].toInt() else 0)
+        } catch (e: Exception) {
+            java.time.LocalTime.of(19, 0) // デフォルト値
+        }
+    } ?: java.time.LocalTime.of(19, 0)
+
+    val notificationScheduler = DailyNotCompletedTaskNotificationScheduler(
+        injector.getInstance(SendDailyNotCompletedTaskNotificationsUseCase::class.java),
+        executionTime = notificationScheduleTime
+    )
+
+    launch {
+        taskGenerationScheduler.start(this)
+    }
+
+    launch {
+        notificationScheduler.start(this)
     }
 
     environment.monitor.subscribe(ApplicationStopped) {
-        scheduler.stop()
+        taskGenerationScheduler.stop()
+        notificationScheduler.stop()
     }
 
     routing {
@@ -118,6 +147,7 @@ fun Application.module() {
             taskGenerations()
             dashboard()
             completedTasks()
+            pushSubscriptions()
         }
 
     }

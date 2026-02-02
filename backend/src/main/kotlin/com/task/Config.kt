@@ -10,6 +10,10 @@ import com.task.domain.taskDefinition.TaskDefinitionRepository
 import com.task.infra.database.Database
 import com.task.infra.event.InMemoryDomainEventDispatcher
 import com.task.infra.member.MemberRepositoryImpl
+import com.task.infra.memberMeta.MemberMetaRepository
+import com.task.infra.memberMeta.MemberMetaRepositoryImpl
+import com.task.infra.pushSubscription.PushSubscriptionRepository
+import com.task.infra.pushSubscription.PushSubscriptionRepositoryImpl
 import com.task.infra.taskDefinition.TaskDefinitionRepositoryImpl
 // Member UseCases
 import com.task.usecase.member.CreateMemberUseCase
@@ -47,6 +51,10 @@ import com.task.infra.mail.SendGridMailSender
 import com.task.infra.mail.SmtpMailSender
 import com.task.infra.mail.SmtpConfig
 import com.task.infra.event.handler.EmailNotificationHandler
+// WebPush
+import com.task.infra.webpush.VapidConfig
+import com.task.infra.webpush.WebPushSender
+import com.task.infra.webpush.WebPushSenderImpl
 // Query Services (CQRS)
 import com.task.usecase.query.dashboard.DashboardQueryService
 import com.task.infra.query.DashboardQueryServiceImpl
@@ -57,6 +65,13 @@ import com.task.infra.query.CompletedTaskQueryServiceImpl
 // Execution UseCases
 import com.task.usecase.execution.GetCompletedTasksUseCase
 import com.task.usecase.execution.GetCompletedTasksUseCaseImpl
+// Task Notification UseCases
+import com.task.usecase.task.SendDailyNotCompletedTaskNotificationsUseCase
+import com.task.usecase.task.SendDailyNotCompletedTaskNotificationsUseCaseImpl
+import com.task.usecase.pushSubscription.RegisterPushSubscriptionUseCase
+import com.task.usecase.pushSubscription.RegisterPushSubscriptionUseCaseImpl
+import com.task.usecase.memberMeta.SaveMemberMetaUseCase
+import com.task.usecase.memberMeta.SaveMemberMetaUseCaseImpl
 
 class AppModule : AbstractModule() {
     override fun configure() {
@@ -66,6 +81,9 @@ class AppModule : AbstractModule() {
         // 修正: インターフェースを実装クラスにバインド（元のコードは自身にバインドしていたバグ）
         // GuiceはTaskDefinitionRepositoryImplをインスタンス化し、TaskDefinitionRepositoryとして注入
         bind(TaskDefinitionRepository::class.java).to(TaskDefinitionRepositoryImpl::class.java)
+        // 注: PushSubscriptionはインフラ層のみに配置（ドメイン知識がないため）
+        bind(PushSubscriptionRepository::class.java).to(PushSubscriptionRepositoryImpl::class.java)
+        bind(MemberMetaRepository::class.java).to(MemberMetaRepositoryImpl::class.java)
 
         // Member UseCase bindings
         bind(CreateMemberUseCase::class.java).to(CreateMemberUseCaseImpl::class.java)
@@ -83,6 +101,11 @@ class AppModule : AbstractModule() {
         bind(GetTaskDefinitionUseCase::class.java).to(GetTaskDefinitionUseCaseImpl::class.java)
 
         bind(DomainEventDispatcher::class.java).to(InMemoryDomainEventDispatcher::class.java)
+
+        bind(SendDailyNotCompletedTaskNotificationsUseCase::class.java)
+            .to(SendDailyNotCompletedTaskNotificationsUseCaseImpl::class.java)
+        bind(RegisterPushSubscriptionUseCase::class.java).to(RegisterPushSubscriptionUseCaseImpl::class.java)
+        bind(SaveMemberMetaUseCase::class.java).to(SaveMemberMetaUseCaseImpl::class.java)
 
         // Mail bindings (環境変数で切り替え)
         val appConfig = ConfigFactory.load()
@@ -122,6 +145,15 @@ class AppModule : AbstractModule() {
                 bind(MailSender::class.java).to(LoggingMailSender::class.java)
             }
         }
+
+        // WebPush bindings
+        val vapidConfig = VapidConfig(
+            publicKey = appConfig.getString("webpush.vapid.publicKey"),
+            privateKey = appConfig.getString("webpush.vapid.privateKey"),
+            subject = appConfig.getString("webpush.vapid.subject")
+        )
+        bind(VapidConfig::class.java).toInstance(vapidConfig)
+        bind(WebPushSender::class.java).to(WebPushSenderImpl::class.java)
 
         // Auth UseCase bindings
         bind(LoginUseCase::class.java).to(LoginUseCaseImpl::class.java)

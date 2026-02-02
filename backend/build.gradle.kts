@@ -81,6 +81,9 @@ dependencies {
 
     // JOOQ code generation
     jooqGenerator("org.postgresql:postgresql:$postgresVersion")
+
+    implementation("nl.martijndwars:web-push:5.1.1")
+    implementation("org.bouncycastle:bcprov-jdk18on:1.77")
 }
 
 // Flyway configuration

@@ -373,3 +373,58 @@ export interface GenerateTaskExecutionsResponse {
 export interface ApiErrorResponse {
   error: string
 }
+
+// ==========================================
+// Push Subscription API Types
+// ==========================================
+
+/**
+ * Push通知購読登録リクエスト
+ * POST /api/push-subscriptions
+ * @see backend/src/main/kotlin/com/task/presentation/PushSubscriptions.kt
+ */
+export interface RegisterPushSubscriptionRequest {
+  endpoint: string
+  keys: {
+    p256dh: string
+    auth: string
+  }
+}
+
+/**
+ * Push通知購読登録レスポンス
+ */
+export interface RegisterPushSubscriptionResponse {
+  subscriptionId: string
+}
+
+/**
+ * Push通知購読確認レスポンス
+ * GET /api/push-subscriptions/my
+ */
+export interface CheckPushSubscriptionResponse {
+  hasActiveSubscription: boolean
+}
+
+/**
+ * Push通知許可の回答済み確認レスポンス
+ * GET /api/push-subscriptions/is-push-notification-permission-answer
+ */
+export interface IsPushNotificationsPermissionAnswerResponse {
+  hasPushNotificationsPermissionAnswer: boolean
+}
+
+/**
+ * Push通知許可の回答保存リクエスト
+ * POST /api/push-subscriptions/permission-answer
+ */
+export interface SavePushNotificationsPermissionAnswerRequest {
+  value: boolean
+}
+
+/**
+ * Push通知許可の回答保存レスポンス
+ */
+export interface SavePushNotificationsPermissionAnswerResponse {
+  success: boolean
+}

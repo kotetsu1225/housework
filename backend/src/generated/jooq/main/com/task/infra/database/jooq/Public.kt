@@ -4,7 +4,9 @@
 package com.task.infra.database.jooq
 
 
+import com.task.infra.database.jooq.tables.MemberMetas
 import com.task.infra.database.jooq.tables.Members
+import com.task.infra.database.jooq.tables.PushSubscriptions
 import com.task.infra.database.jooq.tables.ScheduledNotifications
 import com.task.infra.database.jooq.tables.TaskDefinitions
 import com.task.infra.database.jooq.tables.TaskExecutionParticipants
@@ -33,9 +35,19 @@ open class Public : SchemaImpl("public", DefaultCatalog.DEFAULT_CATALOG) {
     }
 
     /**
+     * メンバーのメタ情報（回答済みフラグなど）
+     */
+    val MEMBER_METAS: MemberMetas get() = MemberMetas.MEMBER_METAS
+
+    /**
      * 家族メンバー
      */
     val MEMBERS: Members get() = Members.MEMBERS
+
+    /**
+     * Web Push通知の購読情報
+     */
+    val PUSH_SUBSCRIPTIONS: PushSubscriptions get() = PushSubscriptions.PUSH_SUBSCRIPTIONS
 
     /**
      * 予定された通知
@@ -70,7 +82,9 @@ open class Public : SchemaImpl("public", DefaultCatalog.DEFAULT_CATALOG) {
     override fun getCatalog(): Catalog = DefaultCatalog.DEFAULT_CATALOG
 
     override fun getTables(): List<Table<*>> = listOf(
+        MemberMetas.MEMBER_METAS,
         Members.MEMBERS,
+        PushSubscriptions.PUSH_SUBSCRIPTIONS,
         ScheduledNotifications.SCHEDULED_NOTIFICATIONS,
         TaskDefinitions.TASK_DEFINITIONS,
         TaskExecutionParticipants.TASK_EXECUTION_PARTICIPANTS,

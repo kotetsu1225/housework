@@ -4,7 +4,9 @@
 package com.task.infra.database.jooq.indexes
 
 
+import com.task.infra.database.jooq.tables.MemberMetas
 import com.task.infra.database.jooq.tables.Members
+import com.task.infra.database.jooq.tables.PushSubscriptions
 import com.task.infra.database.jooq.tables.ScheduledNotifications
 import com.task.infra.database.jooq.tables.TaskDefinitions
 import com.task.infra.database.jooq.tables.TaskExecutionParticipants
@@ -20,8 +22,11 @@ import org.jooq.impl.Internal
 // INDEX definitions
 // -------------------------------------------------------------------------
 
+val IDX_MEMBER_METAS_MEMBER_ID: Index = Internal.createIndex(DSL.name("idx_member_metas_member_id"), MemberMetas.MEMBER_METAS, arrayOf(MemberMetas.MEMBER_METAS.MEMBER_ID), false)
 val IDX_MEMBERS_NAME: Index = Internal.createIndex(DSL.name("idx_members_name"), Members.MEMBERS, arrayOf(Members.MEMBERS.NAME), true)
 val IDX_MEMBERS_ROLE: Index = Internal.createIndex(DSL.name("idx_members_role"), Members.MEMBERS, arrayOf(Members.MEMBERS.ROLE), false)
+val IDX_PUSH_SUBSCRIPTIONS_ACTIVE: Index = Internal.createIndex(DSL.name("idx_push_subscriptions_active"), PushSubscriptions.PUSH_SUBSCRIPTIONS, arrayOf(PushSubscriptions.PUSH_SUBSCRIPTIONS.IS_ACTIVE), false)
+val IDX_PUSH_SUBSCRIPTIONS_MEMBER: Index = Internal.createIndex(DSL.name("idx_push_subscriptions_member"), PushSubscriptions.PUSH_SUBSCRIPTIONS, arrayOf(PushSubscriptions.PUSH_SUBSCRIPTIONS.MEMBER_ID), false)
 val IDX_SCHEDULED_NOTIFICATIONS_MEMBER: Index = Internal.createIndex(DSL.name("idx_scheduled_notifications_member"), ScheduledNotifications.SCHEDULED_NOTIFICATIONS, arrayOf(ScheduledNotifications.SCHEDULED_NOTIFICATIONS.MEMBER_ID), false)
 val IDX_SCHEDULED_NOTIFICATIONS_PENDING: Index = Internal.createIndex(DSL.name("idx_scheduled_notifications_pending"), ScheduledNotifications.SCHEDULED_NOTIFICATIONS, arrayOf(ScheduledNotifications.SCHEDULED_NOTIFICATIONS.STATUS, ScheduledNotifications.SCHEDULED_NOTIFICATIONS.NOTIFY_AT), false)
 val IDX_SCHEDULED_NOTIFICATIONS_TASK_EXECUTION: Index = Internal.createIndex(DSL.name("idx_scheduled_notifications_task_execution"), ScheduledNotifications.SCHEDULED_NOTIFICATIONS, arrayOf(ScheduledNotifications.SCHEDULED_NOTIFICATIONS.TASK_EXECUTION_ID), false)

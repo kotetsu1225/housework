@@ -4,14 +4,18 @@
 package com.task.infra.database.jooq.keys
 
 
+import com.task.infra.database.jooq.tables.MemberMetas
 import com.task.infra.database.jooq.tables.Members
+import com.task.infra.database.jooq.tables.PushSubscriptions
 import com.task.infra.database.jooq.tables.ScheduledNotifications
 import com.task.infra.database.jooq.tables.TaskDefinitions
 import com.task.infra.database.jooq.tables.TaskExecutionParticipants
 import com.task.infra.database.jooq.tables.TaskExecutions
 import com.task.infra.database.jooq.tables.TaskRecurrences
 import com.task.infra.database.jooq.tables.TaskSnapshots
+import com.task.infra.database.jooq.tables.records.MemberMetasRecord
 import com.task.infra.database.jooq.tables.records.MembersRecord
+import com.task.infra.database.jooq.tables.records.PushSubscriptionsRecord
 import com.task.infra.database.jooq.tables.records.ScheduledNotificationsRecord
 import com.task.infra.database.jooq.tables.records.TaskDefinitionsRecord
 import com.task.infra.database.jooq.tables.records.TaskExecutionParticipantsRecord
@@ -30,8 +34,11 @@ import org.jooq.impl.Internal
 // UNIQUE and PRIMARY KEY definitions
 // -------------------------------------------------------------------------
 
+val MEMBER_METAS_PKEY: UniqueKey<MemberMetasRecord> = Internal.createUniqueKey(MemberMetas.MEMBER_METAS, DSL.name("member_metas_pkey"), arrayOf(MemberMetas.MEMBER_METAS.MEMBER_ID, MemberMetas.MEMBER_METAS.KEY), true)
 val MEMBERS_EMAIL_KEY: UniqueKey<MembersRecord> = Internal.createUniqueKey(Members.MEMBERS, DSL.name("members_email_key"), arrayOf(Members.MEMBERS.EMAIL), true)
 val MEMBERS_PKEY: UniqueKey<MembersRecord> = Internal.createUniqueKey(Members.MEMBERS, DSL.name("members_pkey"), arrayOf(Members.MEMBERS.ID), true)
+val PUSH_SUBSCRIPTIONS_PKEY: UniqueKey<PushSubscriptionsRecord> = Internal.createUniqueKey(PushSubscriptions.PUSH_SUBSCRIPTIONS, DSL.name("push_subscriptions_pkey"), arrayOf(PushSubscriptions.PUSH_SUBSCRIPTIONS.ID), true)
+val UQ_PUSH_SUBSCRIPTIONS_ENDPOINT: UniqueKey<PushSubscriptionsRecord> = Internal.createUniqueKey(PushSubscriptions.PUSH_SUBSCRIPTIONS, DSL.name("uq_push_subscriptions_endpoint"), arrayOf(PushSubscriptions.PUSH_SUBSCRIPTIONS.ENDPOINT), true)
 val SCHEDULED_NOTIFICATIONS_PKEY: UniqueKey<ScheduledNotificationsRecord> = Internal.createUniqueKey(ScheduledNotifications.SCHEDULED_NOTIFICATIONS, DSL.name("scheduled_notifications_pkey"), arrayOf(ScheduledNotifications.SCHEDULED_NOTIFICATIONS.ID), true)
 val TASK_DEFINITIONS_PKEY: UniqueKey<TaskDefinitionsRecord> = Internal.createUniqueKey(TaskDefinitions.TASK_DEFINITIONS, DSL.name("task_definitions_pkey"), arrayOf(TaskDefinitions.TASK_DEFINITIONS.ID), true)
 val TASK_EXECUTION_PARTICIPANTS_PKEY: UniqueKey<TaskExecutionParticipantsRecord> = Internal.createUniqueKey(TaskExecutionParticipants.TASK_EXECUTION_PARTICIPANTS, DSL.name("task_execution_participants_pkey"), arrayOf(TaskExecutionParticipants.TASK_EXECUTION_PARTICIPANTS.TASK_EXECUTION_ID, TaskExecutionParticipants.TASK_EXECUTION_PARTICIPANTS.MEMBER_ID), true)
@@ -43,6 +50,8 @@ val TASK_SNAPSHOTS_PKEY: UniqueKey<TaskSnapshotsRecord> = Internal.createUniqueK
 // FOREIGN KEY definitions
 // -------------------------------------------------------------------------
 
+val MEMBER_METAS__MEMBER_METAS_MEMBER_ID_FKEY: ForeignKey<MemberMetasRecord, MembersRecord> = Internal.createForeignKey(MemberMetas.MEMBER_METAS, DSL.name("member_metas_member_id_fkey"), arrayOf(MemberMetas.MEMBER_METAS.MEMBER_ID), com.task.infra.database.jooq.keys.MEMBERS_PKEY, arrayOf(Members.MEMBERS.ID), true)
+val PUSH_SUBSCRIPTIONS__PUSH_SUBSCRIPTIONS_MEMBER_ID_FKEY: ForeignKey<PushSubscriptionsRecord, MembersRecord> = Internal.createForeignKey(PushSubscriptions.PUSH_SUBSCRIPTIONS, DSL.name("push_subscriptions_member_id_fkey"), arrayOf(PushSubscriptions.PUSH_SUBSCRIPTIONS.MEMBER_ID), com.task.infra.database.jooq.keys.MEMBERS_PKEY, arrayOf(Members.MEMBERS.ID), true)
 val SCHEDULED_NOTIFICATIONS__SCHEDULED_NOTIFICATIONS_MEMBER_ID_FKEY: ForeignKey<ScheduledNotificationsRecord, MembersRecord> = Internal.createForeignKey(ScheduledNotifications.SCHEDULED_NOTIFICATIONS, DSL.name("scheduled_notifications_member_id_fkey"), arrayOf(ScheduledNotifications.SCHEDULED_NOTIFICATIONS.MEMBER_ID), com.task.infra.database.jooq.keys.MEMBERS_PKEY, arrayOf(Members.MEMBERS.ID), true)
 val SCHEDULED_NOTIFICATIONS__SCHEDULED_NOTIFICATIONS_TASK_EXECUTION_ID_FKEY: ForeignKey<ScheduledNotificationsRecord, TaskExecutionsRecord> = Internal.createForeignKey(ScheduledNotifications.SCHEDULED_NOTIFICATIONS, DSL.name("scheduled_notifications_task_execution_id_fkey"), arrayOf(ScheduledNotifications.SCHEDULED_NOTIFICATIONS.TASK_EXECUTION_ID), com.task.infra.database.jooq.keys.TASK_EXECUTIONS_PKEY, arrayOf(TaskExecutions.TASK_EXECUTIONS.ID), true)
 val TASK_DEFINITIONS__TASK_DEFINITIONS_OWNER_MEMBER_ID_FKEY: ForeignKey<TaskDefinitionsRecord, MembersRecord> = Internal.createForeignKey(TaskDefinitions.TASK_DEFINITIONS, DSL.name("task_definitions_owner_member_id_fkey"), arrayOf(TaskDefinitions.TASK_DEFINITIONS.OWNER_MEMBER_ID), com.task.infra.database.jooq.keys.MEMBERS_PKEY, arrayOf(Members.MEMBERS.ID), true)

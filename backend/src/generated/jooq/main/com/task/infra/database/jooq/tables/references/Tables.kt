@@ -4,7 +4,9 @@
 package com.task.infra.database.jooq.tables.references
 
 
+import com.task.infra.database.jooq.tables.MemberMetas
 import com.task.infra.database.jooq.tables.Members
+import com.task.infra.database.jooq.tables.PushSubscriptions
 import com.task.infra.database.jooq.tables.ScheduledNotifications
 import com.task.infra.database.jooq.tables.TaskDefinitions
 import com.task.infra.database.jooq.tables.TaskExecutionParticipants
@@ -15,9 +17,19 @@ import com.task.infra.database.jooq.tables.TaskSnapshots
 
 
 /**
+ * メンバーのメタ情報（回答済みフラグなど）
+ */
+val MEMBER_METAS: MemberMetas = MemberMetas.MEMBER_METAS
+
+/**
  * 家族メンバー
  */
 val MEMBERS: Members = Members.MEMBERS
+
+/**
+ * Web Push通知の購読情報
+ */
+val PUSH_SUBSCRIPTIONS: PushSubscriptions = PushSubscriptions.PUSH_SUBSCRIPTIONS
 
 /**
  * 予定された通知

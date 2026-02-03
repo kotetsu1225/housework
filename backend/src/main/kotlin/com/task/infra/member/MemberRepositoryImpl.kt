@@ -56,6 +56,15 @@ class MemberRepositoryImpl : MemberRepository {
         return record?.toDomain()
     }
 
+    override fun findByIds(ids: List<MemberId>, session: DSLContext): List<Member>? {
+        val records = session
+            .selectFrom(MEMBERS)
+            .where(MEMBERS.ID.`in`(ids.map { it.value }))
+            .fetch()
+
+        return records.map { record -> record.toDomain() }
+    }
+
     override fun findByName(name: MemberName, session: DSLContext): Member? {
         val record = session
             .selectFrom(MEMBERS)

@@ -17,9 +17,11 @@ import com.task.presentation.pushSubscriptions
 import com.task.scheduler.DailyTaskGenerationScheduler
 import com.task.scheduler.DailyNotCompletedTaskNotificationScheduler
 import com.task.scheduler.NotDailyTomorrowTaskNotificationScheduler
+import com.task.scheduler.NotDailyTaskReminderScheduler
 import com.task.usecase.task.GenerateDailyExecutionsUseCase
 import com.task.usecase.task.SendDailyNotCompletedTaskNotificationsUseCase
 import com.task.usecase.task.SendNotDailyTomorrowTaskNotificationsUseCase
+import com.task.usecase.task.SendNotDailyTaskRemindersUseCase
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpMethod
 import io.ktor.serialization.kotlinx.json.*
@@ -126,6 +128,11 @@ fun Application.module() {
         injector.getInstance(SendNotDailyTomorrowTaskNotificationsUseCase::class.java)
     )
 
+    // 非毎日タスクのリマインダー通知スケジューラー（5分間隔）
+    val notDailyTaskReminderScheduler = NotDailyTaskReminderScheduler(
+        injector.getInstance(SendNotDailyTaskRemindersUseCase::class.java)
+    )
+
     launch {
         taskGenerationScheduler.start(this)
     }
@@ -138,10 +145,15 @@ fun Application.module() {
         notDailyTomorrowNotificationScheduler.start(this)
     }
 
+    launch {
+        notDailyTaskReminderScheduler.start(this)
+    }
+
     environment.monitor.subscribe(ApplicationStopped) {
         taskGenerationScheduler.stop()
         notificationScheduler.stop()
         notDailyTomorrowNotificationScheduler.stop()
+        notDailyTaskReminderScheduler.stop()
     }
 
     routing {

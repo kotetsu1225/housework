@@ -51,6 +51,7 @@ sealed class TaskExecution {
                 assigneeMemberIds = assigneeMemberIds,
                 taskName = taskDefinition.name,
                 occurredAt = now,
+                taskScope = taskDefinition.scope
             )
 
             return StateChange(newInProgressState, startEvent)
@@ -101,7 +102,8 @@ sealed class TaskExecution {
             }
         }
         fun complete(
-            definitionIsDeleted: Boolean
+            definitionIsDeleted: Boolean,
+            taskScope: TaskScope
         ): StateChange<Completed> {
             require(!definitionIsDeleted) {
                 "削除されたタスクは完了できません。"
@@ -127,7 +129,8 @@ sealed class TaskExecution {
                 taskExecutionId = this.id,
                 assigneeMemberIds = this.assigneeMemberIds,
                 taskName = this.taskSnapshot.frozenName,
-                occurredAt = now
+                occurredAt = now,
+                taskScope = taskScope
             )
 
             return StateChange(newCompletedState, completedEvent)

@@ -9,6 +9,8 @@ import com.task.usecase.query.notifications.UpcomingNotDailyTaskQueryService
 import com.task.usecase.task.SendNotDailyTaskRemindersUseCase.ExecutionResult
 import org.slf4j.LoggerFactory
 import java.time.Instant
+import java.time.LocalDate
+import java.time.LocalTime
 
 /**
  * 非毎日タスクのリマインダー通知を送信するUseCase実装
@@ -29,14 +31,23 @@ class SendNotDailyTaskRemindersUseCaseImpl @Inject constructor(
 
     override fun execute(input: SendNotDailyTaskRemindersUseCase.Input): ExecutionResult {
         val now = input.now
-        val targetDate = now.atZone(AppTimeZone.ZONE).toLocalDate()
+        val windowStart = now.plusSeconds(55 * 60).atZone(AppTimeZone.ZONE)
+        val windowEnd = now.plusSeconds(65 * 60).atZone(AppTimeZone.ZONE)
 
-        val windowStart = now.plusSeconds(55 * 60)
-        val windowEnd = now.plusSeconds(65 * 60)
+        val windowStartDate: LocalDate = windowStart.toLocalDate()
+        val windowStartTime: LocalTime = windowStart.toLocalTime()
+        val windowEndDate: LocalDate = windowEnd.toLocalDate()
+        val windowEndTime: LocalTime = windowEnd.toLocalTime()
 
         return database.withTransaction { session ->
             val notificationTargets = upcomingNotDailyTaskQueryService
-                .fetchUpcomingNotDailyTasks(session, targetDate, windowStart, windowEnd)
+                .fetchUpcomingNotDailyTasks(
+                    session,
+                    windowStartDate,
+                    windowStartTime,
+                    windowEndDate,
+                    windowEndTime
+                )
                 .filter { it.taskNames.isNotEmpty() }
 
             if (notificationTargets.isEmpty()) {

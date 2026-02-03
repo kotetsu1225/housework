@@ -5,8 +5,8 @@ import com.task.domain.member.MemberId
 import com.task.domain.taskDefinition.TaskDefinitionName
 import com.task.infra.query.UpcomingNotDailyTaskQueryServiceImpl
 import org.jooq.DSLContext
-import java.time.Instant
 import java.time.LocalDate
+import java.time.LocalTime
 
 @ImplementedBy(UpcomingNotDailyTaskQueryServiceImpl::class)
 interface UpcomingNotDailyTaskQueryService {
@@ -18,8 +18,9 @@ interface UpcomingNotDailyTaskQueryService {
 
     fun fetchUpcomingNotDailyTasks(
         session: DSLContext,
-        targetDate: LocalDate,
-        windowStart: Instant,
-        windowEnd: Instant
+        windowStartDate: LocalDate,
+        windowStartTime: LocalTime,
+        windowEndDate: LocalDate,
+        windowEndTime: LocalTime
     ): List<NotificationForMember>
 }

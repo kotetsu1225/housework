@@ -1,19 +1,17 @@
 package com.task.infra.query
 
 import com.google.inject.Inject
-import com.task.domain.AppTimeZone
 import com.task.domain.member.MemberId
 import com.task.domain.member.MemberRepository
 import com.task.domain.taskDefinition.TaskDefinitionName
-import com.task.infra.database.jooq.tables.references.MEMBERS
 import com.task.infra.database.jooq.tables.references.TASK_DEFINITIONS
 import com.task.infra.database.jooq.tables.references.TASK_EXECUTIONS
 import com.task.infra.database.jooq.tables.references.TASK_RECURRENCES
 import com.task.usecase.query.notifications.UpcomingNotDailyTaskQueryService
 import com.task.usecase.query.notifications.UpcomingNotDailyTaskQueryService.NotificationForMember
+import org.jooq.Condition
 import org.jooq.DSLContext
 import org.jooq.impl.DSL
-import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
 import java.util.UUID
@@ -30,15 +28,14 @@ class UpcomingNotDailyTaskQueryServiceImpl @Inject constructor(
 
     override fun fetchUpcomingNotDailyTasks(
         session: DSLContext,
-        targetDate: LocalDate,
-        windowStart: Instant,
-        windowEnd: Instant
+        windowStartDate: LocalDate,
+        windowStartTime: LocalTime,
+        windowEndDate: LocalDate,
+        windowEndTime: LocalTime
     ): List<NotificationForMember> {
         val allMembers = memberRepository.findAll(session)
 
-        val windowStartTime = windowStart.atZone(AppTimeZone.ZONE).toLocalTime()
-        val windowEndTime = windowEnd.atZone(AppTimeZone.ZONE).toLocalTime()
-
+        // scheduled_start_time から時刻部分を抽出
         val scheduledTimeField = DSL.field(
             "({0} AT TIME ZONE 'Asia/Tokyo')::time",
             LocalTime::class.java,
@@ -58,6 +55,18 @@ class UpcomingNotDailyTaskQueryServiceImpl @Inject constructor(
                     )
             )
 
+        val dateTimeCondition: Condition = if (windowStartDate == windowEndDate) {
+            TASK_EXECUTIONS.SCHEDULED_DATE.eq(windowStartDate)
+                .and(scheduledTimeField.between(windowStartTime, windowEndTime))
+        } else {
+            TASK_EXECUTIONS.SCHEDULED_DATE.eq(windowStartDate)
+                .and(scheduledTimeField.greaterOrEqual(windowStartTime))
+                .or(
+                    TASK_EXECUTIONS.SCHEDULED_DATE.eq(windowEndDate)
+                        .and(scheduledTimeField.lessOrEqual(windowEndTime))
+                )
+        }
+
         val taskRows = session.select(
             TASK_DEFINITIONS.NAME,
             TASK_DEFINITIONS.SCOPE,
@@ -67,10 +76,9 @@ class UpcomingNotDailyTaskQueryServiceImpl @Inject constructor(
             .join(TASK_DEFINITIONS)
             .on(TASK_DEFINITIONS.ID.eq(TASK_EXECUTIONS.TASK_DEFINITION_ID))
             .where(TASK_EXECUTIONS.STATUS.eq("NOT_STARTED"))
-            .and(TASK_EXECUTIONS.SCHEDULED_DATE.eq(targetDate))
             .and(TASK_DEFINITIONS.IS_DELETED.eq(false))
             .and(notDailyCondition)
-            .and(scheduledTimeField.between(windowStartTime, windowEndTime))
+            .and(dateTimeCondition)
             .fetch { record ->
                 TaskRow(
                     taskName = record.get(TASK_DEFINITIONS.NAME) ?: "",

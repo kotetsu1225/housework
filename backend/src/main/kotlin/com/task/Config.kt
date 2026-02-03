@@ -51,6 +51,8 @@ import com.task.infra.mail.SendGridMailSender
 import com.task.infra.mail.SmtpMailSender
 import com.task.infra.mail.SmtpConfig
 import com.task.infra.event.handler.EmailNotificationHandler
+import com.task.infra.event.handler.FamilyTaskCompletedPushNotificationHandler
+import com.task.infra.event.handler.FamilyTaskStartedPushNotificationHandler
 // WebPush
 import com.task.infra.webpush.VapidConfig
 import com.task.infra.webpush.WebPushSender
@@ -173,6 +175,8 @@ class AppModule : AbstractModule() {
         handlerBinder.addBinding().to(CreateTaskExecutionOnTaskDefinitionCreatedHandler::class.java)
         handlerBinder.addBinding().to(TaskDefinitionDeletedHandler::class.java)
         handlerBinder.addBinding().to(EmailNotificationHandler::class.java)
+        handlerBinder.addBinding().to(FamilyTaskStartedPushNotificationHandler::class.java)
+        handlerBinder.addBinding().to(FamilyTaskCompletedPushNotificationHandler::class.java)
 
         val jwtConfig = JwtConfig(
             secret = appConfig.getString("jwt.secret"),

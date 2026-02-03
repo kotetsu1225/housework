@@ -21,16 +21,13 @@ class TomorrowNotDailyTaskQueryServiceImpl @Inject constructor(
         session: DSLContext,
         targetDate: LocalDate
     ): List<TaskDefinitionsForMember> {
-        // 全メンバー取得
         val allMembers = memberRepository.findAll(session)
 
-        // 対象日のアクティブタスク定義を取得し、非Daily のみを絞り込む
         val notDailyTaskDefinitions = taskDefinitionRepository
             .findAllActiveTaskDefinition(session, targetDate)
             .filter { it.schedule.isShouldCarryOut(targetDate) }
             .filter { !isDaily(it) }
 
-        // FAMILY タスク（全件）と PERSONAL タスク（オーナーごと）に分類
         val familyTasks = notDailyTaskDefinitions.filter { it.scope == TaskScope.FAMILY }
         val personalTasksByOwner = notDailyTaskDefinitions
             .filter { it.scope == TaskScope.PERSONAL && it.ownerMemberId != null }

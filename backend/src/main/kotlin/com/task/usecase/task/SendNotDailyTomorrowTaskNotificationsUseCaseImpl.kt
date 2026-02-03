@@ -36,7 +36,6 @@ class SendNotDailyTomorrowTaskNotificationsUseCaseImpl @Inject constructor(
             val tasksByMember = tomorrowNotDailyTaskQueryService
                 .fetchNotDailyTasksByMember(session, tomorrow)
 
-            // 2. 既に実行が存在するタスクIDを一回だけ収集（FAMILY タスクの重複チェックを排除）
             val definitionIdsWithExecution = tasksByMember
                 .flatMap { it.taskDefinitions }
                 .map { it.id }
@@ -46,7 +45,6 @@ class SendNotDailyTomorrowTaskNotificationsUseCaseImpl @Inject constructor(
                 }
                 .toSet()
 
-            // 3. 既存実行のある定義を除外し、NotificationForMember に変換
             val notificationTasks = SendNotDailyTomorrowTaskNotificationsUseCase.NotificationTasksOutput(
                 notificationsForMember = tasksByMember.map { memberTasks ->
                     SendNotDailyTomorrowTaskNotificationsUseCase.NotificationForMember(

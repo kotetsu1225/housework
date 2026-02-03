@@ -16,6 +16,16 @@ interface TaskDefinitionRepository {
     fun findAllRecurringActive(session: DSLContext): List<TaskDefinition>
 
     /**
+     * 日次タスク生成対象の取得。
+     *
+     * - 定期タスク: 論理削除されていない全件
+     * - 単発タスク: deadline >= today かつ論理削除されていないもの
+     *
+     * @param today 判定基準日（単発タスクの期限フィルタに使用）
+     */
+    fun findAllActiveTaskDefinition(session: DSLContext, today: LocalDate): List<TaskDefinition>
+
+    /**
      * タスク設定画面向けの一覧取得。
      *
      * - 定期タスク: 常に対象（論理削除を除く）

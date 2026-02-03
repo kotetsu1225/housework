@@ -36,7 +36,11 @@ sealed class TaskSchedule {
         val deadline: LocalDate
     ) : TaskSchedule() {
         override fun isShouldCarryOut(date: LocalDate): Boolean{
-            return false
+            if (deadline == date) {
+                return true
+            }else {
+                return false
+            }
         }
     }
 }

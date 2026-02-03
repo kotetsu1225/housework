@@ -18,9 +18,9 @@ class TaskGenerationServiceImpl @Inject constructor(
     private val domainEventDispatcher: DomainEventDispatcher,
 ) : TaskGenerationService {
     override fun generateDailyTaskExecution(today: LocalDate, session: DSLContext): List<TaskExecution.NotStarted> {
-        val activeRecurringTaskDefinitions = taskDefinitionRepository.findAllRecurringActive(session)
+        val activeTaskDefinitions = taskDefinitionRepository.findAllActiveTaskDefinition(session, today)
 
-        return activeRecurringTaskDefinitions.filter { it.schedule.isShouldCarryOut(today) }
+        return activeTaskDefinitions.filter { it.schedule.isShouldCarryOut(today) }
             .mapNotNull { definition ->
                 val existingExecution = taskExecutionRepository.findByDefinitionAndDate(
                     definition.id,

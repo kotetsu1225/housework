@@ -215,6 +215,25 @@ class TaskDefinitionRepositoryImpl : TaskDefinitionRepository {
             }
     }
 
+    override fun findAllActiveTaskDefinition(session: DSLContext, today: LocalDate): List<TaskDefinition> {
+        return session
+            .select(TASK_DEFINITIONS.asterisk(), recurrenceField)
+            .from(TASK_DEFINITIONS)
+            .where(TASK_DEFINITIONS.IS_DELETED.eq(false))
+            .and(
+                TASK_DEFINITIONS.SCHEDULE_TYPE.eq("RECURRING")
+                    .or(
+                        TASK_DEFINITIONS.SCHEDULE_TYPE.eq("ONE_TIME")
+                            .and(TASK_DEFINITIONS.ONE_TIME_DEADLINE.ge(today))
+                    )
+            )
+            .fetch { record ->
+                val definitionRecord = record.into(TaskDefinitionsRecord::class.java)
+                val recurrenceRecord = record.get(recurrenceField)
+                reconstructFromRecords(definitionRecord, recurrenceRecord)
+            }
+    }
+
     private fun reconstructFromRecords(
         definitionRecord: TaskDefinitionsRecord,
         recurrenceRecord: TaskRecurrencesRecord?

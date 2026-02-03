@@ -3,7 +3,6 @@ package com.task.usecase.task
 import com.google.inject.ImplementedBy
 import com.task.domain.member.MemberId
 import com.task.domain.taskDefinition.TaskDefinitionName
-import com.task.domain.taskExecution.TaskExecutionId
 import java.time.LocalDate
 
 @ImplementedBy(SendDailyNotCompletedTaskNotificationsUseCaseImpl::class)

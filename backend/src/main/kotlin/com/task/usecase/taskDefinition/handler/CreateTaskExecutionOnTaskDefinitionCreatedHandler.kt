@@ -6,7 +6,6 @@ import com.task.domain.event.DomainEventDispatcher
 import com.task.domain.event.DomainEventHandler
 import com.task.domain.taskDefinition.TaskDefinition
 import com.task.domain.taskDefinition.TaskDefinitionRepository
-import com.task.domain.taskDefinition.TaskSchedule
 import com.task.domain.taskDefinition.event.TaskDefinitionCreated
 import com.task.domain.taskExecution.TaskExecution
 import com.task.domain.taskExecution.TaskExecutionRepository
@@ -27,30 +26,18 @@ class CreateTaskExecutionOnTaskDefinitionCreatedHandler @Inject constructor(
         val taskDefinition = taskDefinitionRepository.findById(event.taskDefinitionId, session)
             ?: throw IllegalArgumentException("TaskDefinition not found: ${event.taskDefinitionId}")
 
-        when (schedule) {
-            is TaskSchedule.OneTime -> {
+        if (schedule.isShouldCarryOut(today)) {
+            val existingExecution = taskExecutionRepository.findByDefinitionAndDate(
+                event.taskDefinitionId,
+                today,
+                session,
+            )
+            if (existingExecution == null) {
                 createExecution(
-                    changeLocalDateToInstant(schedule.deadline),
+                    changeLocalDateToInstant(today),
                     taskDefinition,
                     session,
                 )
-            }
-
-            is TaskSchedule.Recurring -> {
-                if (schedule.isShouldCarryOut(today)) {
-                    val existingExecution = taskExecutionRepository.findByDefinitionAndDate(
-                        event.taskDefinitionId,
-                        today,
-                        session,
-                    )
-                    if (existingExecution == null) {
-                        createExecution(
-                            changeLocalDateToInstant(today),
-                            taskDefinition,
-                            session,
-                        )
-                    }
-                }
             }
         }
     }

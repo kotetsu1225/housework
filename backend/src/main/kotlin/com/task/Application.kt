@@ -16,8 +16,10 @@ import com.task.presentation.health
 import com.task.presentation.pushSubscriptions
 import com.task.scheduler.DailyTaskGenerationScheduler
 import com.task.scheduler.DailyNotCompletedTaskNotificationScheduler
+import com.task.scheduler.NotDailyTomorrowTaskNotificationScheduler
 import com.task.usecase.task.GenerateDailyExecutionsUseCase
 import com.task.usecase.task.SendDailyNotCompletedTaskNotificationsUseCase
+import com.task.usecase.task.SendNotDailyTomorrowTaskNotificationsUseCase
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpMethod
 import io.ktor.serialization.kotlinx.json.*
@@ -120,6 +122,10 @@ fun Application.module() {
         executionTime = notificationScheduleTime
     )
 
+    val notDailyTomorrowNotificationScheduler = NotDailyTomorrowTaskNotificationScheduler(
+        injector.getInstance(SendNotDailyTomorrowTaskNotificationsUseCase::class.java)
+    )
+
     launch {
         taskGenerationScheduler.start(this)
     }
@@ -128,9 +134,14 @@ fun Application.module() {
         notificationScheduler.start(this)
     }
 
+    launch {
+        notDailyTomorrowNotificationScheduler.start(this)
+    }
+
     environment.monitor.subscribe(ApplicationStopped) {
         taskGenerationScheduler.stop()
         notificationScheduler.stop()
+        notDailyTomorrowNotificationScheduler.stop()
     }
 
     routing {

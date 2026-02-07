@@ -4,8 +4,10 @@
 package com.task.infra.database.jooq
 
 
+import com.task.infra.database.jooq.tables.CompletedDomainEvents
 import com.task.infra.database.jooq.tables.MemberMetas
 import com.task.infra.database.jooq.tables.Members
+import com.task.infra.database.jooq.tables.Outbox
 import com.task.infra.database.jooq.tables.PushSubscriptions
 import com.task.infra.database.jooq.tables.ScheduledNotifications
 import com.task.infra.database.jooq.tables.TaskDefinitions
@@ -35,6 +37,11 @@ open class Public : SchemaImpl("public", DefaultCatalog.DEFAULT_CATALOG) {
     }
 
     /**
+     * 処理済みドメインイベント（冪等性担保用）
+     */
+    val COMPLETED_DOMAIN_EVENTS: CompletedDomainEvents get() = CompletedDomainEvents.COMPLETED_DOMAIN_EVENTS
+
+    /**
      * メンバーのメタ情報（回答済みフラグなど）
      */
     val MEMBER_METAS: MemberMetas get() = MemberMetas.MEMBER_METAS
@@ -43,6 +50,11 @@ open class Public : SchemaImpl("public", DefaultCatalog.DEFAULT_CATALOG) {
      * 家族メンバー
      */
     val MEMBERS: Members get() = Members.MEMBERS
+
+    /**
+     * ドメインイベントのOutboxテーブル（結果整合性用）
+     */
+    val OUTBOX: Outbox get() = Outbox.OUTBOX
 
     /**
      * Web Push通知の購読情報
@@ -82,8 +94,10 @@ open class Public : SchemaImpl("public", DefaultCatalog.DEFAULT_CATALOG) {
     override fun getCatalog(): Catalog = DefaultCatalog.DEFAULT_CATALOG
 
     override fun getTables(): List<Table<*>> = listOf(
+        CompletedDomainEvents.COMPLETED_DOMAIN_EVENTS,
         MemberMetas.MEMBER_METAS,
         Members.MEMBERS,
+        Outbox.OUTBOX,
         PushSubscriptions.PUSH_SUBSCRIPTIONS,
         ScheduledNotifications.SCHEDULED_NOTIFICATIONS,
         TaskDefinitions.TASK_DEFINITIONS,

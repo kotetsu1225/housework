@@ -4,8 +4,10 @@
 package com.task.infra.database.jooq.keys
 
 
+import com.task.infra.database.jooq.tables.CompletedDomainEvents
 import com.task.infra.database.jooq.tables.MemberMetas
 import com.task.infra.database.jooq.tables.Members
+import com.task.infra.database.jooq.tables.Outbox
 import com.task.infra.database.jooq.tables.PushSubscriptions
 import com.task.infra.database.jooq.tables.ScheduledNotifications
 import com.task.infra.database.jooq.tables.TaskDefinitions
@@ -13,8 +15,10 @@ import com.task.infra.database.jooq.tables.TaskExecutionParticipants
 import com.task.infra.database.jooq.tables.TaskExecutions
 import com.task.infra.database.jooq.tables.TaskRecurrences
 import com.task.infra.database.jooq.tables.TaskSnapshots
+import com.task.infra.database.jooq.tables.records.CompletedDomainEventsRecord
 import com.task.infra.database.jooq.tables.records.MemberMetasRecord
 import com.task.infra.database.jooq.tables.records.MembersRecord
+import com.task.infra.database.jooq.tables.records.OutboxRecord
 import com.task.infra.database.jooq.tables.records.PushSubscriptionsRecord
 import com.task.infra.database.jooq.tables.records.ScheduledNotificationsRecord
 import com.task.infra.database.jooq.tables.records.TaskDefinitionsRecord
@@ -34,9 +38,11 @@ import org.jooq.impl.Internal
 // UNIQUE and PRIMARY KEY definitions
 // -------------------------------------------------------------------------
 
+val COMPLETED_DOMAIN_EVENTS_PKEY: UniqueKey<CompletedDomainEventsRecord> = Internal.createUniqueKey(CompletedDomainEvents.COMPLETED_DOMAIN_EVENTS, DSL.name("completed_domain_events_pkey"), arrayOf(CompletedDomainEvents.COMPLETED_DOMAIN_EVENTS.EVENT_ID), true)
 val MEMBER_METAS_PKEY: UniqueKey<MemberMetasRecord> = Internal.createUniqueKey(MemberMetas.MEMBER_METAS, DSL.name("member_metas_pkey"), arrayOf(MemberMetas.MEMBER_METAS.MEMBER_ID, MemberMetas.MEMBER_METAS.KEY), true)
 val MEMBERS_EMAIL_KEY: UniqueKey<MembersRecord> = Internal.createUniqueKey(Members.MEMBERS, DSL.name("members_email_key"), arrayOf(Members.MEMBERS.EMAIL), true)
 val MEMBERS_PKEY: UniqueKey<MembersRecord> = Internal.createUniqueKey(Members.MEMBERS, DSL.name("members_pkey"), arrayOf(Members.MEMBERS.ID), true)
+val OUTBOX_PKEY: UniqueKey<OutboxRecord> = Internal.createUniqueKey(Outbox.OUTBOX, DSL.name("outbox_pkey"), arrayOf(Outbox.OUTBOX.ID), true)
 val PUSH_SUBSCRIPTIONS_PKEY: UniqueKey<PushSubscriptionsRecord> = Internal.createUniqueKey(PushSubscriptions.PUSH_SUBSCRIPTIONS, DSL.name("push_subscriptions_pkey"), arrayOf(PushSubscriptions.PUSH_SUBSCRIPTIONS.ID), true)
 val UQ_PUSH_SUBSCRIPTIONS_ENDPOINT: UniqueKey<PushSubscriptionsRecord> = Internal.createUniqueKey(PushSubscriptions.PUSH_SUBSCRIPTIONS, DSL.name("uq_push_subscriptions_endpoint"), arrayOf(PushSubscriptions.PUSH_SUBSCRIPTIONS.ENDPOINT), true)
 val SCHEDULED_NOTIFICATIONS_PKEY: UniqueKey<ScheduledNotificationsRecord> = Internal.createUniqueKey(ScheduledNotifications.SCHEDULED_NOTIFICATIONS, DSL.name("scheduled_notifications_pkey"), arrayOf(ScheduledNotifications.SCHEDULED_NOTIFICATIONS.ID), true)

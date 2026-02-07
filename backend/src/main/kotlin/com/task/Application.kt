@@ -18,10 +18,12 @@ import com.task.scheduler.DailyTaskGenerationScheduler
 import com.task.scheduler.DailyNotCompletedTaskNotificationScheduler
 import com.task.scheduler.NotDailyTomorrowTaskNotificationScheduler
 import com.task.scheduler.NotDailyTaskReminderScheduler
+import com.task.scheduler.OutboxEventProcessorScheduler
 import com.task.usecase.task.GenerateDailyExecutionsUseCase
 import com.task.usecase.task.SendDailyNotCompletedTaskNotificationsUseCase
 import com.task.usecase.task.SendNotDailyTomorrowTaskNotificationsUseCase
 import com.task.usecase.task.SendNotDailyTaskRemindersUseCase
+import com.task.usecase.outbox.ProcessOutboxEventsUseCase
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpMethod
 import io.ktor.serialization.kotlinx.json.*
@@ -84,7 +86,7 @@ fun Application.module() {
         allowMethod(HttpMethod.Delete)
         allowHeader(HttpHeaders.Authorization)
         allowHeader(HttpHeaders.ContentType)
-        allowCredentials = true  // 認証情報（Cookie、Authorization）を許可
+        allowCredentials = true
     }
 
     install(StatusPages) {
@@ -98,7 +100,6 @@ fun Application.module() {
 
     val injector = attributes[guiceInjectorKey]
 
-    // JWT認証を設定
     val jwtConfig = injector.getInstance(JwtConfig::class.java)
     configureJwtAuth(jwtConfig)
 
@@ -106,7 +107,6 @@ fun Application.module() {
         injector.getInstance(GenerateDailyExecutionsUseCase::class.java),
     )
 
-    // 通知スケジューラの実行時刻（環境変数で上書き可能、テスト用）
     val notificationScheduleTime = (
         System.getenv("NOTIFICATION_SCHEDULE_TIME")
             ?: System.getProperty("NOTIFICATION_SCHEDULE_TIME")
@@ -115,7 +115,7 @@ fun Application.module() {
             val parts = it.split(":")
             java.time.LocalTime.of(parts[0].toInt(), if (parts.size > 1) parts[1].toInt() else 0)
         } catch (e: Exception) {
-            java.time.LocalTime.of(19, 0) // デフォルト値
+            java.time.LocalTime.of(19, 0)
         }
     } ?: java.time.LocalTime.of(19, 0)
 
@@ -128,9 +128,13 @@ fun Application.module() {
         injector.getInstance(SendNotDailyTomorrowTaskNotificationsUseCase::class.java)
     )
 
-    // 非毎日タスクのリマインダー通知スケジューラー（5分間隔）
     val notDailyTaskReminderScheduler = NotDailyTaskReminderScheduler(
         injector.getInstance(SendNotDailyTaskRemindersUseCase::class.java)
+    )
+
+    val outboxScheduler = OutboxEventProcessorScheduler(
+        injector.getInstance(ProcessOutboxEventsUseCase::class.java),
+        intervalSeconds = 10
     )
 
     launch {
@@ -149,11 +153,16 @@ fun Application.module() {
         notDailyTaskReminderScheduler.start(this)
     }
 
+    launch {
+        outboxScheduler.start(this)
+    }
+
     environment.monitor.subscribe(ApplicationStopped) {
         taskGenerationScheduler.stop()
         notificationScheduler.stop()
         notDailyTomorrowNotificationScheduler.stop()
         notDailyTaskReminderScheduler.stop()
+        outboxScheduler.stop()
     }
 
     routing {

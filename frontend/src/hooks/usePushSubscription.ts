@@ -89,6 +89,8 @@ export interface PushSubscriptionState {
   hasBackendSubscription: boolean
   /** Push通知許可の回答済みか */
   hasPermissionAnswer: boolean
+  /** Push通知許可の回答状態をDBで確認済みか */
+  hasCheckedPermissionAnswer: boolean
   /** 購読状態の確認中かどうか */
   isCheckingSubscription: boolean
   /** 回答状態の確認中かどうか */
@@ -108,6 +110,7 @@ export function usePushSubscription() {
     subscription: null,
     hasBackendSubscription: false,
     hasPermissionAnswer: false,
+    hasCheckedPermissionAnswer: false,
     isCheckingSubscription: false,
     isCheckingPermissionAnswer: false,
     isRegistering: false,
@@ -141,6 +144,7 @@ export function usePushSubscription() {
           subscription: swResult.subscription,
           hasBackendSubscription: false,
           hasPermissionAnswer: false,
+          hasCheckedPermissionAnswer: false,
           isCheckingSubscription: false,
           isCheckingPermissionAnswer: false,
         }))
@@ -166,8 +170,13 @@ export function usePushSubscription() {
         permission,
         registration: swResult.registration,
         subscription: swResult.subscription,
-        hasBackendSubscription: backendResult.value,
-        hasPermissionAnswer: permissionResult.value,
+        hasBackendSubscription: backendResult.updated
+          ? backendResult.value
+          : prev.hasBackendSubscription,
+        hasPermissionAnswer: permissionResult.updated
+          ? permissionResult.value
+          : prev.hasPermissionAnswer,
+        hasCheckedPermissionAnswer: permissionResult.updated,
         isCheckingSubscription: false,
         isCheckingPermissionAnswer: false,
       }))
@@ -231,6 +240,7 @@ export function usePushSubscription() {
         subscription,
         hasBackendSubscription: true,
         hasPermissionAnswer: true,
+        hasCheckedPermissionAnswer: true,
         isRegistering: false,
         error: null,
       }))
@@ -264,6 +274,7 @@ export function usePushSubscription() {
         subscription: swResult.subscription,
         hasBackendSubscription: false,
         hasPermissionAnswer: false,
+        hasCheckedPermissionAnswer: false,
         isCheckingSubscription: false,
         isCheckingPermissionAnswer: false,
       }))
@@ -291,6 +302,7 @@ export function usePushSubscription() {
     }
     if (permissionResult.updated) {
       nextState.hasPermissionAnswer = permissionResult.value
+      nextState.hasCheckedPermissionAnswer = true
     }
     if (swResult.updated) {
       nextState.registration = swResult.registration
@@ -303,7 +315,11 @@ export function usePushSubscription() {
   const savePermissionAnswer = useCallback(async (value: boolean): Promise<boolean> => {
     try {
       await savePushNotificationsPermissionAnswer({ value })
-      setState((prev) => ({ ...prev, hasPermissionAnswer: true }))
+      setState((prev) => ({
+        ...prev,
+        hasPermissionAnswer: true,
+        hasCheckedPermissionAnswer: true,
+      }))
       return true
     } catch (err: any) {
       console.error('Push通知許可回答の保存に失敗しました:', err)

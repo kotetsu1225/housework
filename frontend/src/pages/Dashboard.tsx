@@ -65,12 +65,10 @@ export function Dashboard() {
 
   // Push通知購読
   const {
-    permission,
     isRegistering,
     subscribe,
-    hasBackendSubscription,
-    isCheckingSubscription,
     hasPermissionAnswer,
+    hasCheckedPermissionAnswer,
     isCheckingPermissionAnswer,
     savePermissionAnswer,
     checkSubscription,
@@ -93,25 +91,20 @@ export function Dashboard() {
 
   // 通知許可モーダルの表示条件チェック
   useEffect(() => {
-    if (!user) return
-    if (isCheckingSubscription || isCheckingPermissionAnswer) return
-
-    if (hasPermissionAnswer) {
+    if (!user) {
+      setShowNotificationModal(false)
+      return
+    }
+    if (isCheckingPermissionAnswer || !hasCheckedPermissionAnswer) {
       setShowNotificationModal(false)
       return
     }
 
-    const shouldShow =
-      !hasBackendSubscription &&
-      permission !== 'denied'
-
-    setShowNotificationModal(shouldShow)
+    setShowNotificationModal(!hasPermissionAnswer)
   }, [
     user,
-    permission,
-    hasBackendSubscription,
     hasPermissionAnswer,
-    isCheckingSubscription,
+    hasCheckedPermissionAnswer,
     isCheckingPermissionAnswer,
   ])
 

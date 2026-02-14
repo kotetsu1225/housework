@@ -73,3 +73,76 @@
 .safe-top {
   padding-top: env(safe-area-inset-top);
 }
+
+/* ──────────────────────────────────────
+   Landing Page Styles
+   ────────────────────────────────────── */
+
+html {
+  scroll-behavior: smooth;
+}
+
+.lp-hero-bg {
+  background: radial-gradient(
+    ellipse 80% 50% at 50% -10%,
+    rgba(255, 148, 148, 0.15),
+    transparent
+  );
+}
+
+.lp-section-divider {
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 148, 148, 0.2),
+    transparent
+  );
+  height: 1px;
+}
+
+@keyframes lp-float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+}
+
+@keyframes lp-scroll-indicator {
+  0%, 100% { opacity: 0.3; transform: translateY(0); }
+  50% { opacity: 1; transform: translateY(8px); }
+}
+
+@keyframes lp-progress-ring {
+  from { stroke-dashoffset: 251; }
+}
+
+@keyframes lp-shine {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.lp-animate-float {
+  animation: lp-float 3s ease-in-out infinite;
+}
+
+.lp-animate-scroll-indicator {
+  animation: lp-scroll-indicator 2s ease-in-out infinite;
+}
+
+.lp-animate-shine {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 148, 148, 0.08) 50%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  animation: lp-shine 3s ease-in-out infinite;
+}
+
+/* Reduced motion: disable all LP animations */
+@media (prefers-reduced-motion: reduce) {
+  .lp-animate-float,
+  .lp-animate-scroll-indicator,
+  .lp-animate-shine {
+    animation: none !important;
+  }
+}

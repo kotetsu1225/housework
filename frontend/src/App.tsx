@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react'
 import { Routes, Route } from 'react-router-dom'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import { ProtectedRoute } from './components/auth/ProtectedRoute'
@@ -13,6 +14,8 @@ import { CompletedExecutions } from './pages/CompletedExecutions'
 import { Login } from './pages/Login'
 import { Register } from './pages/Register'
 import { NotFound } from './pages/NotFound'
+
+const Landing = lazy(() => import('./pages/Landing').then(m => ({ default: m.Landing })))
 
 /**
  * アプリ初期化中のローディング画面
@@ -40,6 +43,11 @@ function AppContent() {
     <div className="min-h-screen bg-dark-950">
       <Routes>
         {/* Public routes */}
+        <Route path="/landing" element={
+          <Suspense fallback={<AppLoading />}>
+            <Landing />
+          </Suspense>
+        } />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
 

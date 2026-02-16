@@ -11,4 +11,7 @@ SET timezone = 'Asia/Tokyo';
 DO $$
 BEGIN
     RAISE NOTICE 'Database initialized successfully!';
+    IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'housework_app') THEN
+        CREATE ROLE housework_app WITH LOGIN PASSWORD 'housework_app_password';
+    END IF;
 END $$;

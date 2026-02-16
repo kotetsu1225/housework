@@ -12,12 +12,12 @@
 -- housework_app は非オーナーのため RLS が自動適用される
 -- housework（オーナー）はログイン・スケジューラ用（RLSバイパス）
 -- ============================================================
-DO$$
+DO $$
 BEGIN
     IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'housework_app') THEN
         CREATE ROLE housework_app WITH LOGIN PASSWORD 'housework_app_password';
     END IF;
-END$$;
+END $$;
 
 GRANT USAGE ON SCHEMA public TO housework_app;
 

@@ -16,5 +16,10 @@ node_modules/
 .env.*.local
 !.env.example
 
+# マルチテナント移行（個人情報を含むため）
+backend/db/manual/seed_tenant.sql
+# V22はseed実行後にignoreから外す
+backend/db/migration/V22__add_tenant_id_constraints.sql
+
 # macOS
 .DS_Store

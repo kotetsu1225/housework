@@ -6,7 +6,7 @@ import java.time.LocalTime
 
 class DailyTaskGenerationScheduler(
     private val generateDailyExecutionsUseCase: GenerateDailyExecutionsUseCase,
-    executionTime: LocalTime = LocalTime.of(22, 5)
+    executionTime: LocalTime = LocalTime.of(6, 0)
 ) : DailyScheduler(executionTime) {
 
     override val taskName: String = "daily task generation"

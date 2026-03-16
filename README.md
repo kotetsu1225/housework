@@ -50,7 +50,6 @@
 |------|------|
 | Docker Compose | コンテナオーケストレーション |
 | PostgreSQL 16 Alpine | データベースコンテナ |
-| nginx Alpine | フロントエンド静的ファイルサーバー・APIリバースプロキシ |
 | Qodana | CI/CDコード品質チェック（GitHub Actions） |
 
 ---
@@ -733,8 +732,3 @@ docker-compose down -v
 docker-compose up -d
 ```
 
----
-
-## ライセンス
-
-MIT License

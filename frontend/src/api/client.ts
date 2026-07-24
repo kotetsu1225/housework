@@ -126,7 +126,7 @@ export async function apiClient<T>(
       ...authHeaders,
       ...headers,
     },
-    body: body ? JSON.stringify(body) : undefined,
+    body: body === undefined ? undefined : JSON.stringify(body),
     ...restOptions,
   })
 
@@ -197,4 +197,3 @@ export async function apiPut<T, B = unknown>(
 export async function apiDelete<T>(endpoint: string): Promise<T> {
   return apiClient<T>(endpoint, { method: 'DELETE' })
 }
-

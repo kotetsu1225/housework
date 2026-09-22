@@ -23,25 +23,25 @@ describe('Alert', () => {
     it('errorバリアントのスタイルが適用される', () => {
       render(<Alert variant="error">エラー</Alert>)
       const alert = screen.getByRole('alert')
-      expect(alert).toHaveClass('bg-red-500/10', 'text-red-400')
+      expect(alert).toHaveClass('bg-danger-soft', 'text-danger')
     })
 
     it('successバリアントのスタイルが適用される', () => {
       render(<Alert variant="success">成功</Alert>)
       const alert = screen.getByRole('alert')
-      expect(alert).toHaveClass('bg-emerald-500/10', 'text-emerald-400')
+      expect(alert).toHaveClass('bg-family', 'text-family-ink')
     })
 
     it('warningバリアントのスタイルが適用される', () => {
       render(<Alert variant="warning">警告</Alert>)
       const alert = screen.getByRole('alert')
-      expect(alert).toHaveClass('bg-amber-500/10', 'text-amber-400')
+      expect(alert).toHaveClass('bg-once', 'text-once-ink')
     })
 
     it('infoバリアントがデフォルトで適用される', () => {
       render(<Alert>情報</Alert>)
       const alert = screen.getByRole('alert')
-      expect(alert).toHaveClass('bg-blue-500/10', 'text-blue-400')
+      expect(alert).toHaveClass('bg-cycle', 'text-cycle-ink')
     })
   })
 

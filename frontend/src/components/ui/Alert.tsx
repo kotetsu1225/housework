@@ -16,10 +16,10 @@ export interface AlertProps {
 }
 
 const variantStyles: Record<AlertVariant, string> = {
-  error: 'bg-red-500/10 border-red-500/20 text-red-400',
-  success: 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400',
-  warning: 'bg-amber-500/10 border-amber-500/20 text-amber-400',
-  info: 'bg-blue-500/10 border-blue-500/20 text-blue-400',
+  error: 'bg-danger-soft text-danger',
+  success: 'bg-family text-family-ink',
+  warning: 'bg-once text-once-ink',
+  info: 'bg-cycle text-cycle-ink',
 }
 
 const variantIcons: Record<AlertVariant, ReactNode> = {
@@ -30,7 +30,7 @@ const variantIcons: Record<AlertVariant, ReactNode> = {
 }
 
 /**
- * 再利用可能なアラートコンポーネント
+ * アラート（frontend/DESIGN.md §2）
  *
  * @example
  * ```tsx
@@ -47,17 +47,16 @@ export function Alert({
   return (
     <div
       className={clsx(
-        'p-4 border rounded-xl flex items-center gap-3',
+        'p-4 rounded-xl flex items-center gap-3',
         variantStyles[variant],
         className
       )}
       role="alert"
     >
       {showIcon && variantIcons[variant]}
-      <p className="text-sm">{children}</p>
+      <p className="text-sm font-medium">{children}</p>
     </div>
   )
 }
 
 Alert.displayName = 'Alert'
-

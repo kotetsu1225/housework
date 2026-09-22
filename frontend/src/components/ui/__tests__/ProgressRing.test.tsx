@@ -86,10 +86,10 @@ describe('ProgressRing', () => {
       expect(circles.length).toBeGreaterThanOrEqual(2)
     })
 
-    it('グラデーションが定義される', () => {
+    it('グラデーションを使わず単色で描画される', () => {
       const { container } = render(<ProgressRing progress={50} />)
-      const gradient = container.querySelector('#progressGradient')
-      expect(gradient).toBeInTheDocument()
+      expect(container.querySelector('linearGradient')).not.toBeInTheDocument()
+      expect(container.querySelector('.text-accent')).toBeInTheDocument()
     })
   })
 

@@ -2,34 +2,46 @@ import { HTMLAttributes, forwardRef } from 'react'
 import { clsx } from 'clsx'
 
 export interface BadgeProps extends HTMLAttributes<HTMLSpanElement> {
+  /**
+   * - recurring / info: 定期の周期チップ（毎日、毎週火曜）
+   * - onetime / warning: 単発の期日チップ（9/22）
+   * - success: 完了などの肯定的な状態
+   * - danger: 注意
+   * - personal: 個人タスク
+   * - default: それ以外
+   */
   variant?: 'default' | 'success' | 'warning' | 'danger' | 'info' | 'recurring' | 'onetime' | 'personal'
   size?: 'sm' | 'md'
 }
 
+/**
+ * チップ（frontend/DESIGN.md §2, §4）
+ *
+ * 角丸 6px、塗りと文字色の組み合わせは DESIGN.md のトークンのみ。
+ */
 export const Badge = forwardRef<HTMLSpanElement, BadgeProps>(
   ({ className, variant = 'default', size = 'md', children, ...props }, ref) => {
     const variants = {
-      default: 'bg-dark-700 text-dark-200',
-      success: 'bg-emerald-500/20 text-emerald-400',
-      warning: 'bg-amber-500/20 text-amber-400',
-      danger: 'bg-red-500/20 text-red-400',
-      info: 'bg-coral-500/20 text-coral-400',
-      // タスクカード用バリアント
-      recurring: 'bg-blue-500/20 text-blue-400 border border-blue-500/30',  // 定期タスク用
-      onetime: 'bg-amber-500/20 text-amber-400 border border-amber-500/30', // 単発タスク用
-      personal: 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30', // 個人タスク用
+      default: 'bg-control text-ink-soft',
+      success: 'bg-family text-family-ink',
+      warning: 'bg-once text-once-ink',
+      danger: 'bg-danger-soft text-danger',
+      info: 'bg-cycle text-cycle-ink',
+      recurring: 'bg-cycle text-cycle-ink',
+      onetime: 'bg-once text-once-ink',
+      personal: 'bg-personal-chip text-personal-ink',
     }
 
     const sizes = {
       sm: 'px-2 py-0.5 text-xs',
-      md: 'px-3 py-1 text-sm',
+      md: 'px-2.5 py-1 text-sm',
     }
 
     return (
       <span
         ref={ref}
         className={clsx(
-          'inline-flex items-center font-medium rounded-full whitespace-nowrap',
+          'inline-flex items-center font-bold rounded-chip whitespace-nowrap tabular',
           variants[variant],
           sizes[size],
           className

@@ -17,20 +17,12 @@ const getInitials = (name: string): string => {
   return name.charAt(0).toUpperCase()
 }
 
-const getColorFromName = (name: string, isParent: boolean): string => {
-  if (isParent) {
-    return 'from-coral-400 to-coral-500'
-  }
-  const colors = [
-    'from-accent-blue to-blue-400',
-    'from-accent-green to-emerald-400',
-    'from-amber-400 to-orange-400',
-    'from-violet-400 to-purple-400',
-  ]
-  const index = name.charCodeAt(0) % colors.length
-  return colors[index]
-}
-
+/**
+ * アバター
+ *
+ * 役割のイラスト（public/familyIcons）をそのまま丸く表示する。
+ * 画像が無いときはイニシャルを accent（親）／personal-ink（子）の塗りで表示。
+ */
 export const Avatar = forwardRef<HTMLDivElement, AvatarProps>(
   ({ className, name, role, size = 'md', variant = 'child', showImage = true, ...props }, ref) => {
     const sizes = {
@@ -56,9 +48,8 @@ export const Avatar = forwardRef<HTMLDivElement, AvatarProps>(
       <div
         ref={ref}
         className={clsx(
-          'rounded-full flex items-center justify-center font-bold text-white overflow-hidden',
-          `bg-gradient-to-br ${getColorFromName(name, variant === 'parent')}`,
-          'shadow-md',
+          'rounded-full flex items-center justify-center font-bold text-white overflow-hidden flex-shrink-0',
+          variant === 'parent' ? 'bg-accent' : 'bg-personal-ink',
           sizes[size],
           !shouldShowImage && textSizes[size],
           className

@@ -16,7 +16,7 @@ describe('Button', () => {
     it('デフォルトでprimaryバリアントが適用される', () => {
       render(<Button>テスト</Button>)
       const button = screen.getByRole('button')
-      expect(button).toHaveClass('bg-coral-500')
+      expect(button).toHaveClass('bg-accent')
     })
   })
 
@@ -24,7 +24,7 @@ describe('Button', () => {
     it('secondaryバリアントのスタイルが適用される', () => {
       render(<Button variant="secondary">セカンダリ</Button>)
       const button = screen.getByRole('button')
-      expect(button).toHaveClass('bg-dark-700')
+      expect(button).toHaveClass('bg-surface')
     })
 
     it('ghostバリアントのスタイルが適用される', () => {
@@ -36,7 +36,7 @@ describe('Button', () => {
     it('dangerバリアントのスタイルが適用される', () => {
       render(<Button variant="danger">削除</Button>)
       const button = screen.getByRole('button')
-      expect(button).toHaveClass('bg-red-500')
+      expect(button).toHaveClass('bg-danger')
     })
   })
 
@@ -44,19 +44,19 @@ describe('Button', () => {
     it('smサイズのスタイルが適用される', () => {
       render(<Button size="sm">小</Button>)
       const button = screen.getByRole('button')
-      expect(button).toHaveClass('py-2', 'px-4', 'text-sm')
+      expect(button).toHaveClass('min-h-tap', 'px-4', 'text-sm')
     })
 
     it('mdサイズがデフォルトで適用される', () => {
       render(<Button>中</Button>)
       const button = screen.getByRole('button')
-      expect(button).toHaveClass('py-3', 'px-6', 'text-base')
+      expect(button).toHaveClass('h-12', 'px-5', 'text-base')
     })
 
     it('lgサイズのスタイルが適用される', () => {
       render(<Button size="lg">大</Button>)
       const button = screen.getByRole('button')
-      expect(button).toHaveClass('py-4', 'px-8', 'text-lg')
+      expect(button).toHaveClass('h-[50px]', 'px-6', 'text-base')
     })
   })
 

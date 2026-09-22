@@ -73,7 +73,7 @@ describe('MemberSummaryCard', () => {
         />
       )
       const avatar = screen.getByAltText('太郎').closest('div')
-      expect(avatar).toHaveClass('from-coral-400')
+      expect(avatar).toHaveClass('bg-accent')
     })
 
     it('子役割のメンバーにchild variantが適用される', () => {
@@ -86,7 +86,7 @@ describe('MemberSummaryCard', () => {
       )
       const avatar = screen.getByAltText('太郎').closest('div')
       // 子役割のアバターはcoral以外の色
-      expect(avatar?.className).not.toMatch(/from-coral/)
+      expect(avatar).not.toHaveClass('bg-accent')
     })
 
     it('lgサイズのアバターが表示される', () => {

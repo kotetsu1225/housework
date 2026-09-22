@@ -33,16 +33,16 @@ describe('RoleSelector', () => {
   })
 
   describe('選択状態', () => {
-    it('選択中の役割にcoral系のスタイルが適用される', () => {
+    it('選択中の役割にaccentの枠とfamilyの塗りが適用される', () => {
       render(<RoleSelector {...defaultProps} value="FATHER" />)
-      const fatherButton = screen.getByRole('button', { name: /父/ })
-      expect(fatherButton).toHaveClass('border-coral-500', 'bg-coral-500/10')
+      const fatherButton = screen.getByRole('radio', { name: /父/ })
+      expect(fatherButton).toHaveClass('border-accent', 'bg-family')
     })
 
-    it('非選択の役割にdark系のスタイルが適用される', () => {
+    it('非選択の役割に白い面と薄い枠が適用される', () => {
       render(<RoleSelector {...defaultProps} value="FATHER" />)
-      const motherButton = screen.getByRole('button', { name: /母/ })
-      expect(motherButton).toHaveClass('border-dark-700', 'bg-dark-800')
+      const motherButton = screen.getByRole('radio', { name: /母/ })
+      expect(motherButton).toHaveClass('border-line', 'bg-surface')
     })
   })
 
@@ -50,21 +50,21 @@ describe('RoleSelector', () => {
     it('クリックでonChangeが呼ばれる', () => {
       const onChange = vi.fn()
       render(<RoleSelector {...defaultProps} onChange={onChange} />)
-      fireEvent.click(screen.getByRole('button', { name: /母/ }))
+      fireEvent.click(screen.getByRole('radio', { name: /母/ }))
       expect(onChange).toHaveBeenCalledWith('MOTHER')
     })
 
     it('兄をクリックするとBROTHERが渡される', () => {
       const onChange = vi.fn()
       render(<RoleSelector {...defaultProps} onChange={onChange} />)
-      fireEvent.click(screen.getByRole('button', { name: /兄/ }))
+      fireEvent.click(screen.getByRole('radio', { name: /兄/ }))
       expect(onChange).toHaveBeenCalledWith('BROTHER')
     })
 
     it('妹をクリックするとSISTERが渡される', () => {
       const onChange = vi.fn()
       render(<RoleSelector {...defaultProps} onChange={onChange} />)
-      fireEvent.click(screen.getByRole('button', { name: /妹/ }))
+      fireEvent.click(screen.getByRole('radio', { name: /妹/ }))
       expect(onChange).toHaveBeenCalledWith('SISTER')
     })
   })
@@ -72,7 +72,7 @@ describe('RoleSelector', () => {
   describe('disabled状態', () => {
     it('disabled時にopacity-50クラスが適用される', () => {
       render(<RoleSelector {...defaultProps} disabled />)
-      const buttons = screen.getAllByRole('button')
+      const buttons = screen.getAllByRole('radio')
       buttons.forEach((button) => {
         expect(button).toHaveClass('opacity-50')
       })
@@ -80,7 +80,7 @@ describe('RoleSelector', () => {
 
     it('disabled時にボタンがdisabledになる', () => {
       render(<RoleSelector {...defaultProps} disabled />)
-      const buttons = screen.getAllByRole('button')
+      const buttons = screen.getAllByRole('radio')
       buttons.forEach((button) => {
         expect(button).toBeDisabled()
       })
@@ -89,7 +89,7 @@ describe('RoleSelector', () => {
     it('disabled時にonChangeが呼ばれない', () => {
       const onChange = vi.fn()
       render(<RoleSelector {...defaultProps} onChange={onChange} disabled />)
-      fireEvent.click(screen.getByRole('button', { name: /母/ }))
+      fireEvent.click(screen.getByRole('radio', { name: /母/ }))
       expect(onChange).not.toHaveBeenCalled()
     })
   })

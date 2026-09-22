@@ -34,6 +34,7 @@
 | `cycle` / `cycle-ink` | `#E1ECFA` / `#1D4E89` | 定期の周期チップ（毎日、平日毎日、毎週火曜） |
 | `once` / `once-ink` | `#FDECD2` / `#8A4B08` | 単発の期日チップ（9/22） |
 | `danger` | `#B42318` | 削除、担当者なしの注意文 |
+| `danger-soft` | `#FDE3E0` | エラーアラートの背景 |
 | `placeholder` | `#8E8E96` | 入力欄のプレースホルダー |
 | `icon-muted` | `#B0B0B8` | 行末の chevron |
 

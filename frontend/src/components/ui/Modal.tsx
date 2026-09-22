@@ -1,4 +1,5 @@
-import { ReactNode, useEffect, useCallback, useRef } from 'react'
+import { ReactNode } from 'react'
+import * as Dialog from '@radix-ui/react-dialog'
 import { X } from 'lucide-react'
 import { clsx } from 'clsx'
 
@@ -22,7 +23,10 @@ export interface ModalProps {
 }
 
 /**
- * 再利用可能なモーダルコンポーネント
+ * 下から出るシート型のモーダル（Radix Dialog ベース）
+ *
+ * フォーカスの閉じ込め、Esc で閉じる、背景スクロールの固定、
+ * aria 属性は Radix に任せ、見た目だけをここで決める（frontend/DESIGN.md §4）。
  *
  * @example
  * ```tsx
@@ -51,85 +55,67 @@ export function Modal({
   closeOnOverlayClick = false,
   className,
 }: ModalProps) {
-  const containerRef = useRef<HTMLDivElement>(null)
-
-  // ESCキーで閉じる
-  const handleKeyDown = useCallback(
-    (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        onClose()
-      }
-    },
-    [onClose]
-  )
-
-  useEffect(() => {
-    if (isOpen) {
-      document.addEventListener('keydown', handleKeyDown)
-      // スクロールを無効化
-      document.body.style.overflow = 'hidden'
-
-      // オープン時に先頭へスクロール（SPで「上が見切れる」体感の原因になりやすい）
-      requestAnimationFrame(() => {
-        containerRef.current?.scrollTo({ top: 0 })
-      })
-    }
-
-    return () => {
-      document.removeEventListener('keydown', handleKeyDown)
-      document.body.style.overflow = ''
-    }
-  }, [isOpen, handleKeyDown])
-
-  if (!isOpen) return null
-
-  const handleOverlayClick = () => {
-    if (closeOnOverlayClick) {
-      onClose()
-    }
-  }
-
   return (
-    <div
-      className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-end justify-center z-[60]"
-      onClick={handleOverlayClick}
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="modal-title"
+    <Dialog.Root
+      open={isOpen}
+      onOpenChange={(open) => {
+        if (!open) onClose()
+      }}
     >
-      <div
-        ref={containerRef}
-        className={clsx(
-          'bg-dark-900 w-full max-w-lg rounded-t-3xl p-6 safe-top safe-bottom animate-slide-up max-h-[85dvh] overflow-y-auto overscroll-contain',
-          className
-        )}
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* ヘッダー */}
-        <div className="flex items-center justify-between mb-6">
-          <h2 id="modal-title" className="text-xl font-bold text-white pt-4">
-            {title}
-          </h2>
-          {showCloseButton && (
-            <button
-              onClick={onClose}
-              className="p-2 hover:bg-dark-800 rounded-full transition-colors"
-              aria-label="閉じる"
-            >
-              <X className="w-5 h-5 text-dark-400" />
-            </button>
+      <Dialog.Portal>
+        <Dialog.Overlay
+          data-testid="modal-overlay"
+          className="fixed inset-0 z-[60] bg-black/40"
+          onClick={closeOnOverlayClick ? onClose : undefined}
+        />
+        <Dialog.Content
+          aria-modal="true"
+          aria-labelledby="modal-title"
+          aria-describedby={undefined}
+          onPointerDownOutside={(e) => {
+            if (!closeOnOverlayClick) e.preventDefault()
+          }}
+          onInteractOutside={(e) => {
+            if (!closeOnOverlayClick) e.preventDefault()
+          }}
+          className={clsx(
+            'fixed bottom-0 left-1/2 -translate-x-1/2 z-[61] w-full max-w-lg',
+            'bg-surface rounded-t-box px-4 pt-3 pb-4 safe-bottom',
+            'max-h-[85dvh] overflow-y-auto overscroll-contain',
+            'focus:outline-none',
+            className
           )}
-        </div>
+        >
+          {/* つまみ */}
+          <div className="mx-auto mb-2 h-1 w-9 rounded-full bg-control" aria-hidden="true" />
 
-        {/* コンテンツ */}
-        <div className="space-y-4">{children}</div>
+          {/* ヘッダー */}
+          <div className="flex items-center justify-between gap-2 mb-4">
+            <Dialog.Title id="modal-title" className="text-[20px] font-bold text-ink">
+              {title}
+            </Dialog.Title>
+            {showCloseButton && (
+              <Dialog.Close asChild>
+                <button
+                  type="button"
+                  className="w-11 h-11 -mr-2 flex items-center justify-center rounded-full text-ink-muted hover:bg-control transition-colors"
+                  aria-label="閉じる"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </Dialog.Close>
+            )}
+          </div>
 
-        {/* フッター */}
-        {footer && <div className="flex gap-3 mt-8">{footer}</div>}
-      </div>
-    </div>
+          {/* コンテンツ */}
+          <div className="space-y-4">{children}</div>
+
+          {/* フッター */}
+          {footer && <div className="flex gap-3 mt-6">{footer}</div>}
+        </Dialog.Content>
+      </Dialog.Portal>
+    </Dialog.Root>
   )
 }
 
 Modal.displayName = 'Modal'
-

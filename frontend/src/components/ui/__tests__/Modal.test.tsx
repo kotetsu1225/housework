@@ -64,8 +64,8 @@ describe('Modal', () => {
       const onClose = vi.fn()
       render(<Modal {...defaultProps} onClose={onClose} closeOnOverlayClick={true} />)
       // オーバーレイ部分（dialog要素自体）をクリック
-      const dialog = screen.getByRole('dialog')
-      fireEvent.click(dialog)
+      fireEvent.pointerDown(screen.getByTestId('modal-overlay'))
+      fireEvent.click(screen.getByTestId('modal-overlay'))
       expect(onClose).toHaveBeenCalledTimes(1)
     })
 

@@ -7,21 +7,28 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   loading?: boolean
 }
 
+/**
+ * ボタン（frontend/DESIGN.md §4, §5）
+ *
+ * - すべてのサイズでタップ領域 44px 以上
+ * - 影・グラデーション・拡大アニメーションは使わない
+ */
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, variant = 'primary', size = 'md', loading, disabled, children, ...props }, ref) => {
-    const baseStyles = 'inline-flex items-center justify-center font-semibold rounded-xl transition-all duration-200 active:scale-95 disabled:opacity-50 disabled:pointer-events-none'
+    const baseStyles =
+      'inline-flex items-center justify-center gap-1.5 font-bold rounded-[10px] transition-colors duration-150 disabled:opacity-50 disabled:pointer-events-none'
 
     const variants = {
-      primary: 'bg-coral-500 hover:bg-coral-600 text-white',
-      secondary: 'bg-dark-700 hover:bg-dark-600 text-white border border-dark-600',
-      ghost: 'bg-transparent hover:bg-dark-800 text-white',
-      danger: 'bg-red-500 hover:bg-red-600 text-white',
+      primary: 'bg-accent hover:bg-accent-strong active:bg-accent-strong text-white',
+      secondary: 'bg-surface hover:bg-canvas active:bg-canvas text-ink border border-line-strong',
+      ghost: 'bg-transparent hover:bg-control active:bg-control text-accent',
+      danger: 'bg-danger hover:opacity-90 text-white',
     }
 
     const sizes = {
-      sm: 'py-2 px-4 text-sm',
-      md: 'py-3 px-6 text-base',
-      lg: 'py-4 px-8 text-lg',
+      sm: 'min-h-tap px-4 text-sm',
+      md: 'min-h-tap h-12 px-5 text-base',
+      lg: 'h-[50px] px-6 text-base',
     }
 
     return (

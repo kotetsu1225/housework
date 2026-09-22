@@ -79,7 +79,7 @@ describe('ProgressSummaryCard', () => {
       const { container } = render(
         <ProgressSummaryCard completedCount={0} totalCount={0} />
       )
-      const card = container.querySelector('.bg-gradient-to-br')
+      const card = container.querySelector('.bg-surface')
       expect(card).toBeInTheDocument()
     })
   })

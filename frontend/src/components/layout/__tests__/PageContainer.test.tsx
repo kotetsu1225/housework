@@ -37,13 +37,13 @@ describe('PageContainer', () => {
       expect(screen.getByRole('main')).toHaveClass('min-h-screen')
     })
 
-    it('pb-20クラスが適用される（BottomNavの余白）', () => {
+    it('pb-24クラスが適用される（BottomNavの余白）', () => {
       render(
         <PageContainer>
           <div>コンテンツ</div>
         </PageContainer>
       )
-      expect(screen.getByRole('main')).toHaveClass('pb-20')
+      expect(screen.getByRole('main')).toHaveClass('pb-24')
     })
 
     it('max-w-lgクラスが適用される', () => {

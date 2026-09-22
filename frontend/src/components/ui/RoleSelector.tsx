@@ -16,7 +16,8 @@ export interface RoleSelectorProps {
 /**
  * 役割選択コンポーネント
  *
- * 4つの役割（父、母、兄、妹）から選択するUIを提供
+ * 4つの役割（父、母、兄、妹）を横一列のタイルから選ぶ。
+ * 選択中は accent の枠と family の塗り。
  *
  * @example
  * ```tsx
@@ -34,39 +35,50 @@ export function RoleSelector({
   disabled = false,
 }: RoleSelectorProps) {
   return (
-    <div>
-      <label className="block text-sm font-medium text-white/70 mb-2">
+    <div role="radiogroup" aria-label={label}>
+      <p className="block text-[13px] font-medium text-ink-soft mb-2">
         {label}
-      </label>
-      <div className="grid grid-cols-2 gap-2">
-        {ROLE_OPTIONS.map((role) => (
-          <button
-            key={role.value}
-            type="button"
-            onClick={() => !disabled && onChange(role.value)}
-            disabled={disabled}
-            className={clsx(
-              'p-3 rounded-xl border-2 transition-all duration-200',
-              value === role.value
-                ? 'border-coral-500 bg-coral-500/10'
-                : 'border-dark-700 bg-dark-800 hover:border-dark-600',
-              disabled && 'opacity-50 cursor-not-allowed'
-            )}
-          >
-            <div className="flex flex-col items-center gap-2">
-              <img
-                src={role.icon}
-                alt={role.label}
-                className="w-10 h-10 rounded-full object-cover"
-              />
-              <span className="text-white font-medium text-sm">{role.label}</span>
-            </div>
-          </button>
-        ))}
+      </p>
+      <div className="grid grid-cols-4 gap-2">
+        {ROLE_OPTIONS.map((role) => {
+          const selected = value === role.value
+          return (
+            <button
+              key={role.value}
+              type="button"
+              role="radio"
+              aria-checked={selected}
+              onClick={() => !disabled && onChange(role.value)}
+              disabled={disabled}
+              className={clsx(
+                'py-2.5 px-1 min-h-tap rounded-xl border-2 transition-colors duration-150',
+                selected
+                  ? 'border-accent bg-family'
+                  : 'border-line bg-surface',
+                disabled && 'opacity-50 cursor-not-allowed'
+              )}
+            >
+              <div className="flex flex-col items-center gap-1.5">
+                <img
+                  src={role.icon}
+                  alt={role.label}
+                  className="w-[52px] h-[52px] rounded-full object-cover"
+                />
+                <span
+                  className={clsx(
+                    'text-[13px]',
+                    selected ? 'font-bold text-family-ink' : 'font-medium text-ink-soft'
+                  )}
+                >
+                  {role.label}
+                </span>
+              </div>
+            </button>
+          )
+        })}
       </div>
     </div>
   )
 }
 
 RoleSelector.displayName = 'RoleSelector'
-

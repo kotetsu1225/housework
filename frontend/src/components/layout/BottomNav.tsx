@@ -9,7 +9,9 @@ const navItems = [
 ]
 
 /**
- * ボトムナビゲーション
+ * ボトムナビゲーション（frontend/DESIGN.md §5）
+ *
+ * 白い面・上に線・高さ 63px + セーフエリア。選択中は accent。
  *
  * レスポンシブ対応:
  * - モバイル: max-w-lg
@@ -17,31 +19,25 @@ const navItems = [
  */
 export function BottomNav() {
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-dark-900/90 backdrop-blur-lg border-t border-dark-800 safe-bottom z-50">
-      <div className="flex items-center justify-around h-16 max-w-lg md:max-w-2xl lg:max-w-4xl mx-auto px-4 md:px-6 lg:px-8">
+    <nav
+      aria-label="メイン"
+      className="fixed bottom-0 left-0 right-0 bg-surface border-t border-line-strong safe-bottom z-50"
+    >
+      <div className="flex items-stretch justify-around h-[63px] max-w-lg md:max-w-2xl lg:max-w-4xl mx-auto px-2 md:px-6 lg:px-8">
         {navItems.map(({ to, icon: Icon, label }) => (
           <NavLink
             key={to}
             to={to}
             className={({ isActive }) =>
               clsx(
-                'flex flex-col items-center justify-center gap-1 w-16 py-2 rounded-xl transition-all duration-200',
-                isActive
-                  ? 'text-coral-400'
-                  : 'text-dark-400 hover:text-dark-200'
+                'flex-1 flex flex-col items-center justify-center gap-[3px] min-w-tap transition-colors duration-150',
+                isActive ? 'text-accent' : 'text-ink-muted'
               )
             }
           >
             {({ isActive }) => (
               <>
-                <div
-                  className={clsx(
-                    'p-2 rounded-xl transition-all duration-200',
-                    isActive && 'bg-coral-500/20'
-                  )}
-                >
-                  <Icon className="w-5 h-5" />
-                </div>
+                <Icon className="w-[26px] h-[26px]" strokeWidth={isActive ? 2.2 : 2} />
                 <span className="text-[10px] font-medium">{label}</span>
               </>
             )}

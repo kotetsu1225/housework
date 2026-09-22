@@ -10,6 +10,8 @@ export interface PageContainerProps {
 /**
  * ページコンテナ
  *
+ * 左右 16px、下は BottomNav ぶんの余白（frontend/DESIGN.md §4）。
+ *
  * レスポンシブ対応:
  * - モバイル: max-w-lg (512px)
  * - タブレット: max-w-2xl (672px)
@@ -19,7 +21,7 @@ export function PageContainer({ children, className, noPadding = false }: PageCo
   return (
     <main
       className={clsx(
-        'min-h-screen pb-20 mx-auto',
+        'min-h-screen pb-24 mx-auto',
         // レスポンシブ幅
         'max-w-lg md:max-w-2xl lg:max-w-4xl',
         !noPadding && 'px-4 md:px-6 lg:px-8',

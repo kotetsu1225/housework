@@ -80,10 +80,10 @@ describe('Header', () => {
       expect(header).toHaveClass('bg-transparent')
     })
 
-    it('transparent=falseでbackdrop-blur-lgクラスが適用される', () => {
+    it('transparent=falseでbg-canvasクラスが適用される', () => {
       const { container } = renderWithRouter(<Header title="タイトル" transparent={false} />)
       const header = container.querySelector('header')
-      expect(header).toHaveClass('backdrop-blur-lg')
+      expect(header).toHaveClass('bg-canvas')
     })
   })
 })

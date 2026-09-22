@@ -54,18 +54,17 @@ describe('Avatar', () => {
   })
 
   describe('variant', () => {
-    it('parentバリアントでcoral系のグラデーションが適用される', () => {
+    it('parentバリアントでaccentの塗りが適用される', () => {
       render(<Avatar name="父" variant="parent" />)
       const avatar = screen.getByText('父')
-      expect(avatar).toHaveClass('from-coral-400', 'to-coral-500')
+      expect(avatar).toHaveClass('bg-accent')
     })
 
     it('childバリアントがデフォルトで適用される', () => {
       render(<Avatar name="太郎" />)
       const avatar = screen.getByText('太')
-      // childバリアントは名前に基づいて色が決まる
-      expect(avatar.className).toMatch(/from-/)
-      expect(avatar.className).not.toMatch(/from-coral/)
+      expect(avatar).toHaveClass('bg-personal-ink')
+      expect(avatar).not.toHaveClass('bg-accent')
     })
   })
 

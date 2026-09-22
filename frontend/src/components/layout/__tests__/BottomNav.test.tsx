@@ -58,28 +58,28 @@ describe('BottomNav', () => {
   })
 
   describe('アクティブ状態', () => {
-    it('現在のルートに対応するリンクにcoral系の色が適用される', () => {
+    it('現在のルートに対応するリンクにaccentの色が適用される', () => {
       renderWithRouter('/')
       const homeLink = screen.getByText('ホーム').closest('a')
-      expect(homeLink).toHaveClass('text-coral-400')
+      expect(homeLink).toHaveClass('text-accent')
     })
 
     it('/tasksでタスクリンクがアクティブになる', () => {
       renderWithRouter('/tasks')
       const tasksLink = screen.getByText('タスク').closest('a')
-      expect(tasksLink).toHaveClass('text-coral-400')
+      expect(tasksLink).toHaveClass('text-accent')
     })
 
     it('/membersでメンバーリンクがアクティブになる', () => {
       renderWithRouter('/members')
       const membersLink = screen.getByText('メンバー').closest('a')
-      expect(membersLink).toHaveClass('text-coral-400')
+      expect(membersLink).toHaveClass('text-accent')
     })
 
-    it('非アクティブなリンクにdark系の色が適用される', () => {
+    it('非アクティブなリンクにink-mutedの色が適用される', () => {
       renderWithRouter('/')
       const tasksLink = screen.getByText('タスク').closest('a')
-      expect(tasksLink).toHaveClass('text-dark-400')
+      expect(tasksLink).toHaveClass('text-ink-muted')
     })
   })
 

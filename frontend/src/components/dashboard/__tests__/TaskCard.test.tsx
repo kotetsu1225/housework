@@ -118,7 +118,7 @@ describe('TaskCard', () => {
       const onClick = vi.fn()
       render(<TaskCard task={mockTask} onClick={onClick} />)
       // Card要素をクリック
-      fireEvent.click(screen.getByText('お風呂掃除').closest('div[class*="rounded-2xl"]')!)
+      fireEvent.click(screen.getByText('お風呂掃除').closest('div[class*="rounded-xl"]')!)
       expect(onClick).toHaveBeenCalledWith(mockTask)
     })
 
@@ -145,16 +145,16 @@ describe('TaskCard', () => {
     it('親役割の担当者にparent variantが適用される', () => {
       const parentMember: Member = { ...mockMember, role: 'FATHER' }
       render(<TaskCard task={mockTask} assignee={parentMember} />)
-      // 親役割のアバターはcoral系の色を持つ
+      // 親役割のアバターは accent の塗り
       const avatar = screen.getByAltText('太郎').closest('div')
-      expect(avatar).toHaveClass('from-coral-400')
+      expect(avatar).toHaveClass('bg-accent')
     })
 
     it('子役割の担当者にchild variantが適用される', () => {
       render(<TaskCard task={mockTask} assignee={mockMember} />)
       const avatar = screen.getByAltText('太郎').closest('div')
-      // 子役割のアバターはcoral以外の色
-      expect(avatar?.className).not.toMatch(/from-coral/)
+      // 子役割のアバターは accent 以外の塗り
+      expect(avatar).not.toHaveClass('bg-accent')
     })
   })
 })

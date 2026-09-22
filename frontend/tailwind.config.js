@@ -44,7 +44,10 @@ export default {
           DEFAULT: '#FDECD2',
           ink: '#8A4B08',
         },
-        danger: '#B42318',
+        danger: {
+          DEFAULT: '#B42318',
+          soft: '#FDE3E0',
+        },
         placeholder: '#8E8E96',
         'icon-muted': '#B0B0B8',
 
@@ -98,6 +101,20 @@ export default {
       },
       minWidth: {
         tap: '44px',
+      },
+      keyframes: {
+        'toast-in': {
+          from: { opacity: '0', transform: 'translateY(-8px)' },
+          to: { opacity: '1', transform: 'translateY(0)' },
+        },
+        'toast-out': {
+          from: { opacity: '1', transform: 'translateY(0)' },
+          to: { opacity: '0', transform: 'translateY(-8px)' },
+        },
+      },
+      animation: {
+        'toast-in': 'toast-in 150ms ease-out',
+        'toast-out': 'toast-out 150ms ease-in',
       },
     },
   },

@@ -11,7 +11,7 @@ interface SkeletonProps {
   variant?: 'text' | 'circular' | 'rectangular'
   width?: string | number
   height?: string | number
-  animation?: 'pulse' | 'wave' | 'none'
+  animation?: 'pulse' | 'none'
 }
 
 /**
@@ -44,15 +44,15 @@ export function Skeleton({
   return (
     <div
       className={clsx(
-        'bg-dark-700',
+        'bg-control',
         animation === 'pulse' && 'animate-pulse',
-        animation === 'wave' && 'animate-shimmer',
         variant === 'text' && 'h-4 rounded',
         variant === 'circular' && 'rounded-full',
-        variant === 'rectangular' && 'rounded-xl',
+        variant === 'rectangular' && 'rounded-card',
         className
       )}
       style={style}
+      aria-hidden="true"
     />
   )
 }
@@ -62,25 +62,23 @@ export function Skeleton({
  */
 export function TaskCardSkeleton() {
   return (
-    <div className="bg-dark-800/50 border border-dark-700 rounded-2xl p-4">
-      <div className="flex items-start gap-3">
-        {/* ステータスアイコン */}
-        <Skeleton variant="circular" width={40} height={40} />
+    <div className="bg-surface rounded-card p-3.5">
+      <div className="flex items-center gap-3">
+        {/* ステータスの輪 */}
+        <Skeleton variant="circular" width={28} height={28} />
 
         <div className="flex-1 min-w-0">
-          {/* タスク名 */}
-          <Skeleton variant="text" width="70%" className="mb-2" />
-          {/* 説明 */}
-          <Skeleton variant="text" width="50%" className="h-3 mb-3" />
-          {/* バッジ */}
-          <div className="flex gap-2">
-            <Skeleton variant="rectangular" width={60} height={20} />
-            <Skeleton variant="rectangular" width={48} height={20} />
+          {/* チップ + タスク名 */}
+          <div className="flex items-center gap-2 mb-2">
+            <Skeleton variant="rectangular" width={44} height={20} />
+            <Skeleton variant="text" width="55%" />
           </div>
+          {/* 時刻 */}
+          <Skeleton variant="text" width="35%" className="h-3" />
         </div>
 
-        {/* 担当者アバター */}
-        <Skeleton variant="circular" width={32} height={32} />
+        {/* pt */}
+        <Skeleton variant="text" width={36} />
       </div>
     </div>
   )
@@ -91,22 +89,22 @@ export function TaskCardSkeleton() {
  */
 export function MemberCardSkeleton() {
   return (
-    <div className="bg-dark-800/50 border border-dark-700 rounded-2xl p-4 flex items-center gap-4">
+    <div className="bg-surface rounded-xl p-3.5 flex items-center gap-3.5">
+      <Skeleton variant="circular" width={28} height={28} />
       {/* アバター */}
       <Skeleton variant="circular" width={56} height={56} />
 
       <div className="flex-1">
         {/* 名前 */}
-        <Skeleton variant="text" width="60%" className="mb-2" />
-        {/* 役割 */}
-        <Skeleton variant="text" width="40%" className="h-3" />
+        <Skeleton variant="text" width="50%" className="mb-2" />
+        {/* 件数 */}
+        <Skeleton variant="text" width="70%" className="h-3 mb-2" />
+        {/* バー */}
+        <Skeleton variant="rectangular" height={6} />
       </div>
 
-      {/* 統計 */}
-      <div className="text-right">
-        <Skeleton variant="text" width={48} className="mb-1" />
-        <Skeleton variant="text" width={32} className="h-3" />
-      </div>
+      {/* pt */}
+      <Skeleton variant="text" width={40} />
     </div>
   )
 }
@@ -116,15 +114,12 @@ export function MemberCardSkeleton() {
  */
 export function ProgressSummarySkeleton() {
   return (
-    <div className="bg-gradient-to-br from-dark-800/80 to-dark-900/80 border border-dark-700 rounded-2xl p-6">
-      <div className="flex items-center justify-between">
-        <div className="flex-1">
-          <Skeleton variant="text" width="40%" className="mb-3" />
-          <Skeleton variant="text" width="60%" className="h-8 mb-2" />
-          <Skeleton variant="text" width="30%" className="h-3" />
-        </div>
-        <Skeleton variant="circular" width={80} height={80} />
+    <div className="bg-surface rounded-xl p-4">
+      <div className="flex items-baseline justify-between mb-3">
+        <Skeleton variant="text" width="40%" />
+        <Skeleton variant="text" width={48} />
       </div>
+      <Skeleton variant="rectangular" height={8} />
     </div>
   )
 }
@@ -140,7 +135,7 @@ export function ListSkeleton({
   ItemSkeleton?: React.ComponentType
 }) {
   return (
-    <div className="space-y-3">
+    <div className="space-y-2">
       {Array.from({ length: count }).map((_, i) => (
         <ItemSkeleton key={i} />
       ))}

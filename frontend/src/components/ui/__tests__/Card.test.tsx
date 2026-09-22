@@ -18,19 +18,19 @@ describe('Card', () => {
     it('defaultバリアントのスタイルが適用される', () => {
       const { container } = render(<Card variant="default">デフォルト</Card>)
       const card = container.firstChild as HTMLElement
-      expect(card).toHaveClass('bg-dark-800')
+      expect(card).toHaveClass('bg-surface')
     })
 
     it('glassバリアントのスタイルが適用される', () => {
       const { container } = render(<Card variant="glass">ガラス</Card>)
       const card = container.firstChild as HTMLElement
-      expect(card).toHaveClass('backdrop-blur-lg')
+      expect(card).toHaveClass('bg-surface')
     })
 
     it('gradientバリアントのスタイルが適用される', () => {
       const { container } = render(<Card variant="gradient">グラデーション</Card>)
       const card = container.firstChild as HTMLElement
-      expect(card).toHaveClass('bg-gradient-to-br')
+      expect(card).toHaveClass('bg-surface')
     })
   })
 
@@ -58,10 +58,10 @@ describe('Card', () => {
   })
 
   describe('共通スタイル', () => {
-    it('rounded-2xlクラスが適用される', () => {
+    it('rounded-xlクラスが適用される', () => {
       const { container } = render(<Card>テスト</Card>)
       const card = container.firstChild as HTMLElement
-      expect(card).toHaveClass('rounded-2xl')
+      expect(card).toHaveClass('rounded-xl')
     })
 
     it('p-4クラスが適用される', () => {
@@ -98,7 +98,7 @@ describe('CardTitle', () => {
   it('適切なスタイルが適用される', () => {
     render(<CardTitle>タイトル</CardTitle>)
     const title = screen.getByText('タイトル')
-    expect(title).toHaveClass('text-lg', 'font-bold', 'text-white')
+    expect(title).toHaveClass('font-bold', 'text-ink')
   })
 })
 
@@ -108,9 +108,9 @@ describe('CardContent', () => {
     expect(screen.getByText('コンテンツ')).toBeInTheDocument()
   })
 
-  it('text-dark-300クラスが適用される', () => {
+  it('text-ink-mutedクラスが適用される', () => {
     render(<CardContent>コンテンツ</CardContent>)
-    expect(screen.getByText('コンテンツ')).toHaveClass('text-dark-300')
+    expect(screen.getByText('コンテンツ')).toHaveClass('text-ink-muted')
   })
 })
 

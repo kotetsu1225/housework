@@ -1,5 +1,5 @@
 /**
- * Toast通知コンポーネント
+ * Toast通知コンポーネント（Radix Toast ベース）
  *
  * API成功/エラー時の通知を表示する
  */
@@ -11,6 +11,7 @@ import {
   useCallback,
   ReactNode,
 } from 'react'
+import * as RadixToast from '@radix-ui/react-toast'
 import { clsx } from 'clsx'
 import { CheckCircle, XCircle, AlertCircle, Info, X } from 'lucide-react'
 
@@ -36,31 +37,12 @@ const ToastContext = createContext<ToastContextType | null>(null)
 /** Toast自動消去時間（ミリ秒） */
 const TOAST_DURATION = 4000
 
-/** バリアントごとのアイコンとスタイル */
-const variantConfig: Record<
-  ToastVariant,
-  { icon: typeof CheckCircle; bgClass: string; iconClass: string }
-> = {
-  success: {
-    icon: CheckCircle,
-    bgClass: 'bg-green-500/20 border-green-500/50',
-    iconClass: 'text-green-400',
-  },
-  error: {
-    icon: XCircle,
-    bgClass: 'bg-red-500/20 border-red-500/50',
-    iconClass: 'text-red-400',
-  },
-  warning: {
-    icon: AlertCircle,
-    bgClass: 'bg-yellow-500/20 border-yellow-500/50',
-    iconClass: 'text-yellow-400',
-  },
-  info: {
-    icon: Info,
-    bgClass: 'bg-blue-500/20 border-blue-500/50',
-    iconClass: 'text-blue-400',
-  },
+/** バリアントごとのアイコン（暗い面の上なので明るい色） */
+const variantConfig: Record<ToastVariant, { icon: typeof CheckCircle; iconClass: string }> = {
+  success: { icon: CheckCircle, iconClass: 'text-[#7BD3A5]' },
+  error: { icon: XCircle, iconClass: 'text-[#F5A19A]' },
+  warning: { icon: AlertCircle, iconClass: 'text-[#F3C56B]' },
+  info: { icon: Info, iconClass: 'text-[#9EC5F5]' },
 }
 
 /**
@@ -77,47 +59,30 @@ function ToastItem({
   const Icon = config.icon
 
   return (
-    <div
+    <RadixToast.Root
+      duration={TOAST_DURATION}
+      onOpenChange={(open) => {
+        if (!open) onRemove(toast.id)
+      }}
       className={clsx(
-        'flex items-center gap-3 px-4 py-3 rounded-xl border backdrop-blur-lg',
-        'animate-in slide-in-from-top-2 fade-in duration-200',
-        config.bgClass
+        'flex items-center gap-3 pl-4 pr-1 py-1 min-h-tap rounded-xl bg-ink text-white',
+        'data-[state=open]:animate-toast-in data-[swipe=end]:animate-toast-out'
       )}
-      role="alert"
     >
-      <Icon className={clsx('w-5 h-5 flex-shrink-0', config.iconClass)} />
-      <p className="text-white text-sm flex-1">{toast.message}</p>
-      <button
-        onClick={() => onRemove(toast.id)}
-        className="p-1 hover:bg-white/10 rounded-lg transition-colors"
-        aria-label="閉じる"
-      >
-        <X className="w-4 h-4 text-white/60" />
-      </button>
-    </div>
-  )
-}
-
-/**
- * Toastコンテナ（画面右上に固定表示）
- */
-function ToastContainer({
-  toasts,
-  onRemove,
-}: {
-  toasts: Toast[]
-  onRemove: (id: string) => void
-}) {
-  if (toasts.length === 0) return null
-
-  return (
-    <div className="fixed top-4 right-4 z-[100] flex flex-col gap-2 max-w-sm w-full pointer-events-none">
-      {toasts.map((toast) => (
-        <div key={toast.id} className="pointer-events-auto">
-          <ToastItem toast={toast} onRemove={onRemove} />
-        </div>
-      ))}
-    </div>
+      <Icon className={clsx('w-5 h-5 flex-shrink-0', config.iconClass)} aria-hidden="true" />
+      <RadixToast.Description className="text-sm font-medium flex-1 py-2">
+        {toast.message}
+      </RadixToast.Description>
+      <RadixToast.Close asChild>
+        <button
+          type="button"
+          className="w-11 h-11 flex items-center justify-center rounded-lg text-white/70 hover:text-white"
+          aria-label="閉じる"
+        >
+          <X className="w-4 h-4" />
+        </button>
+      </RadixToast.Close>
+    </RadixToast.Root>
   )
 }
 
@@ -143,22 +108,20 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   const showToast = useCallback(
     (message: string, variant: ToastVariant = 'info') => {
       const id = `toast-${Date.now()}-${Math.random().toString(36).slice(2)}`
-      const newToast: Toast = { id, message, variant }
-
-      setToasts((prev) => [...prev, newToast])
-
-      // 自動消去
-      setTimeout(() => {
-        removeToast(id)
-      }, TOAST_DURATION)
+      setToasts((prev) => [...prev, { id, message, variant }])
     },
-    [removeToast]
+    []
   )
 
   return (
     <ToastContext.Provider value={{ toasts, showToast, removeToast }}>
-      {children}
-      <ToastContainer toasts={toasts} onRemove={removeToast} />
+      <RadixToast.Provider swipeDirection="up" label="通知">
+        {children}
+        {toasts.map((toast) => (
+          <ToastItem key={toast.id} toast={toast} onRemove={removeToast} />
+        ))}
+        <RadixToast.Viewport className="fixed top-4 left-4 right-4 z-[100] flex flex-col gap-2 max-w-sm mx-auto outline-none safe-top" />
+      </RadixToast.Provider>
     </ToastContext.Provider>
   )
 }

@@ -50,14 +50,14 @@ describe('Input', () => {
       expect(screen.getByText('入力必須です')).toBeInTheDocument()
     })
 
-    it('エラー時にborder-red-500クラスが適用される', () => {
+    it('エラー時にborder-dangerクラスが適用される', () => {
       render(<Input error="エラー" />)
-      expect(screen.getByRole('textbox')).toHaveClass('border-red-500')
+      expect(screen.getByRole('textbox')).toHaveClass('border-danger')
     })
 
-    it('エラーがない場合はborder-dark-700クラスが適用される', () => {
+    it('エラーがない場合はborder-line-strongクラスが適用される', () => {
       render(<Input />)
-      expect(screen.getByRole('textbox')).toHaveClass('border-dark-700')
+      expect(screen.getByRole('textbox')).toHaveClass('border-line-strong')
     })
   })
 
@@ -101,9 +101,9 @@ describe('Input', () => {
       expect(screen.getByRole('textbox')).toHaveClass('w-full')
     })
 
-    it('rounded-xlクラスが適用される', () => {
+    it('rounded-[10px]クラスが適用される', () => {
       render(<Input />)
-      expect(screen.getByRole('textbox')).toHaveClass('rounded-xl')
+      expect(screen.getByRole('textbox')).toHaveClass('rounded-[10px]')
     })
   })
 

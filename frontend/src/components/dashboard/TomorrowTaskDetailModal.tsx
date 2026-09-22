@@ -4,12 +4,13 @@
  * - 明日のタスク一覧からクリックしたタスクを、読みやすいレイアウトで表示する
  * - 状態変更（開始/完了/割り当て）は行わない
  */
-import { AlertCircle, Calendar, Clock, User, Users } from 'lucide-react'
+import { AlertCircle } from 'lucide-react'
 import { Modal } from '../ui/Modal'
 import { Badge } from '../ui/Badge'
-import { Card } from '../ui/Card'
+import { Button } from '../ui/Button'
 import { Avatar } from '../ui/Avatar'
 import { formatJa, formatTimeFromISO, isParentRole } from '../../utils'
+import { formatShortDate, scheduleBadgeVariant } from '../../utils/scheduleLabel'
 import type { TodayTaskDto } from '../../api/dashboard'
 import type { Member } from '../../types'
 
@@ -19,19 +20,8 @@ export interface TomorrowTaskDetailModalProps {
   members: Member[]
   onClose: () => void
   onBackToList: () => void
-}
-
-function getScheduleBadge(scheduleType: TodayTaskDto['scheduleType']) {
-  switch (scheduleType) {
-    case 'ONE_TIME':
-      return <Badge variant="warning">単発</Badge>
-    default:
-      return <Badge variant="default">定期</Badge>
-  }
-}
-
-function getScopeBadge(scope: TodayTaskDto['scope']) {
-  return scope === 'FAMILY' ? <Badge variant="default">家族</Badge> : <Badge variant="default">個人</Badge>
+  /** 周期の文言（毎日、毎週火曜など） */
+  scheduleLabel?: string
 }
 
 function toDisplayDate(dateStr: string) {
@@ -40,18 +30,30 @@ function toDisplayDate(dateStr: string) {
   return new Date(`${dateStr}T00:00:00`)
 }
 
+function Row({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="flex items-start gap-3 py-2.5 border-b border-line last:border-b-0">
+      <p className="w-16 flex-shrink-0 text-[13px] text-ink-muted pt-0.5">{label}</p>
+      <div className="flex-1 min-w-0 text-[15px] font-medium text-ink">{children}</div>
+    </div>
+  )
+}
+
 export function TomorrowTaskDetailModal({
   isOpen,
   task,
   members,
   onClose,
   onBackToList,
+  scheduleLabel,
 }: TomorrowTaskDetailModalProps) {
   if (!task) return null
 
   const assignees = task.assigneeMemberIds
     .map((id) => members.find((m) => m.id === id))
     .filter(Boolean) as Member[]
+  const label =
+    scheduleLabel ?? (task.scheduleType === 'ONE_TIME' ? formatShortDate(task.scheduledDate) : '定期')
 
   return (
     <Modal
@@ -60,31 +62,23 @@ export function TomorrowTaskDetailModal({
       title="タスク詳細"
       footer={
         <>
-          <button
-            type="button"
-            onClick={onBackToList}
-            className="flex-1 bg-dark-800 hover:bg-dark-700 text-white rounded-lg py-3 font-medium transition-colors"
-          >
+          <Button variant="secondary" size="lg" onClick={onBackToList} className="flex-1">
             一覧に戻る
-          </button>
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex-1 bg-dark-800 hover:bg-dark-700 text-white rounded-lg py-3 font-medium transition-colors"
-          >
+          </Button>
+          <Button variant="secondary" size="lg" onClick={onClose} className="flex-1">
             閉じる
-          </button>
+          </Button>
         </>
       }
     >
       <div className="space-y-4">
         {/* SCHEDULED ステータスの場合は注意書きを表示 */}
         {task.status === 'SCHEDULED' && (
-          <div className="flex items-start gap-2 p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg">
-            <AlertCircle className="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" />
-            <div className="text-sm text-amber-200">
-              <p className="font-medium">予定タスク</p>
-              <p className="text-amber-200/70 mt-0.5">
+          <div className="flex items-start gap-2 p-3 bg-once rounded-card">
+            <AlertCircle className="w-5 h-5 text-once-ink flex-shrink-0 mt-0.5" />
+            <div className="text-sm text-once-ink">
+              <p className="font-bold">予定タスク</p>
+              <p className="mt-0.5">
                 このタスクはまだ実行が作成されていません。当日の朝に自動で作成されます。
               </p>
             </div>
@@ -92,79 +86,57 @@ export function TomorrowTaskDetailModal({
         )}
 
         <div>
-          <h3 className="text-lg font-bold text-white leading-snug">{task.taskName}</h3>
+          <h3 className="text-[17px] font-bold text-ink leading-snug">{task.taskName}</h3>
           <div className="mt-2 flex flex-wrap items-center gap-2">
-            {getScheduleBadge(task.scheduleType)}
-            {getScopeBadge(task.scope)}
-            {task.status === 'SCHEDULED' && <Badge variant="warning">予定</Badge>}
+            <Badge variant={scheduleBadgeVariant(task.scheduleType)} size="sm">
+              {label}
+            </Badge>
+            <Badge variant={task.scope === 'FAMILY' ? 'success' : 'personal'} size="sm">
+              {task.scope === 'FAMILY' ? '家族' : '個人'}
+            </Badge>
+            {task.status === 'SCHEDULED' && <Badge variant="default" size="sm">予定</Badge>}
           </div>
         </div>
 
-        <Card variant="glass" className="p-4 space-y-3">
-          <div className="flex items-start gap-2 text-white/80">
-            <Calendar className="w-4 h-4 mt-0.5 text-shazam-400" />
-            <div className="flex-1">
-              <p className="text-sm text-white/60">日付</p>
-              <p className="font-medium">{formatJa(toDisplayDate(task.scheduledDate), 'M月d日（E）')}</p>
-            </div>
-          </div>
-
-          <div className="flex items-start gap-2 text-white/80">
-            <Clock className="w-4 h-4 mt-0.5 text-white/60" />
-            <div className="flex-1">
-              <p className="text-sm text-white/60">時間</p>
-              <p className="font-medium">
-                {formatTimeFromISO(task.scheduledStartTime)} - {formatTimeFromISO(task.scheduledEndTime)}
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-start gap-2 text-white/80">
-            {task.scope === 'FAMILY' ? (
-              <Users className="w-4 h-4 mt-0.5 text-white/60" />
+        <div className="bg-canvas rounded-card px-3.5">
+          <Row label="日付">{formatJa(toDisplayDate(task.scheduledDate), 'M月d日（E）')}</Row>
+          <Row label="時間">
+            <span className="tabular">
+              {formatTimeFromISO(task.scheduledStartTime)}–{formatTimeFromISO(task.scheduledEndTime)}
+            </span>
+          </Row>
+          <Row label="種別">{task.scope === 'FAMILY' ? '家族タスク' : '個人タスク'}</Row>
+          <Row label="担当者">
+            {task.assigneeMemberNames.length > 0 ? (
+              <div className="flex flex-wrap items-center gap-2">
+                {assignees.map((assignee) => (
+                  <div key={assignee.id} className="flex items-center gap-1.5">
+                    <Avatar
+                      name={assignee.name}
+                      size="sm"
+                      role={assignee.role}
+                      variant={isParentRole(assignee.role) ? 'parent' : 'child'}
+                      className="w-6 h-6"
+                    />
+                    <span>{assignee.name}</span>
+                  </div>
+                ))}
+              </div>
             ) : (
-              <User className="w-4 h-4 mt-0.5 text-white/60" />
+              <span className="text-danger">担当者がいません</span>
             )}
-            <div className="flex-1">
-              <p className="text-sm text-white/60">種別</p>
-              <p className="font-medium">{task.scope === 'FAMILY' ? '家族タスク' : '個人タスク'}</p>
-            </div>
-          </div>
-
-          <div className="flex items-start gap-2 text-white/80">
-            <User className="w-4 h-4 mt-0.5 text-coral-400" />
-            <div className="flex-1">
-              <p className="text-sm text-white/60">担当者</p>
-              {task.assigneeMemberNames.length > 0 ? (
-                <div className="mt-1 flex flex-wrap items-center gap-2">
-                  {assignees.map((assignee) => (
-                    <div key={assignee.id} className="flex items-center gap-2">
-                      <Avatar
-                        name={assignee.name}
-                        size="sm"
-                        role={assignee.role}
-                        variant={isParentRole(assignee.role) ? 'parent' : 'child'}
-                      />
-                      <span className="font-medium text-white">{assignee.name}</span>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="font-medium text-white/50">未割り当て</p>
-              )}
-            </div>
-          </div>
-        </Card>
+          </Row>
+        </div>
 
         {task.taskDescription ? (
-          <div className="space-y-2">
-            <p className="text-sm text-white/70 font-medium">説明</p>
-            <div className="bg-dark-800/50 rounded-lg p-4 text-white/80 leading-relaxed whitespace-pre-wrap">
+          <div className="space-y-1.5">
+            <p className="text-[13px] font-medium text-ink-soft">説明</p>
+            <div className="bg-canvas rounded-card p-3.5 text-ink text-sm leading-relaxed whitespace-pre-wrap">
               {task.taskDescription}
             </div>
           </div>
         ) : (
-          <div className="text-sm text-white/40">説明はありません</div>
+          <p className="text-[13px] text-ink-muted">説明はありません</p>
         )}
       </div>
     </Modal>
@@ -172,5 +144,3 @@ export function TomorrowTaskDetailModal({
 }
 
 TomorrowTaskDetailModal.displayName = 'TomorrowTaskDetailModal'
-
-

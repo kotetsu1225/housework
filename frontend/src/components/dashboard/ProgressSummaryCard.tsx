@@ -1,12 +1,12 @@
 /**
  * 進捗サマリーカードコンポーネント
  *
- * 今日のタスク進捗状況を表示するカード
+ * 今日のタスク進捗状況を表示するカード（frontend/DESIGN.md §5）
  */
 
-import { Sparkles } from 'lucide-react'
+import { ReactNode } from 'react'
 import { Card } from '../ui/Card'
-import { ProgressRing } from '../ui/ProgressRing'
+import { ProgressBar } from '../ui/ProgressBar'
 
 /**
  * ProgressSummaryCardコンポーネントのProps
@@ -18,6 +18,8 @@ export interface ProgressSummaryCardProps {
   totalCount: number
   /** カスタムラベル（デフォルト: "今日の進捗"） */
   label?: string
+  /** カード下部の行（明日のタスクへのリンクなど） */
+  footer?: ReactNode
 }
 
 /**
@@ -37,38 +39,36 @@ export function ProgressSummaryCard({
   completedCount,
   totalCount,
   label = '今日の進捗',
+  footer,
 }: ProgressSummaryCardProps) {
-  const progress = totalCount > 0 ? (completedCount / totalCount) * 100 : 0
+  const progress = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0
   const remainingCount = totalCount - completedCount
 
   return (
-    <Card variant="gradient" className="relative overflow-hidden">
-      {/* 装飾的な背景エフェクト */}
-      <div className="absolute top-0 right-0 w-32 h-32 bg-shazam-500/20 rounded-full blur-3xl" />
-
-      <div className="flex items-center gap-6">
-        {/* プログレスリング */}
-        <ProgressRing progress={progress} size="lg" />
-
-        {/* テキスト情報 */}
-        <div className="flex-1">
-          <div className="flex items-center gap-2 mb-1">
-            <Sparkles className="w-4 h-4 text-shazam-400" />
-            <span className="text-sm text-white/60">{label}</span>
-          </div>
-          <p className="text-2xl font-bold text-white">
+    <Card className="p-0 overflow-hidden">
+      <div className="px-4 pt-3.5 pb-3 flex flex-col gap-2.5">
+        <div className="flex items-baseline justify-between gap-3">
+          <span className="text-[15px] font-medium text-ink">{label}</span>
+          <span className="text-[17px] font-bold text-ink tabular">
             {completedCount} / {totalCount}
-          </p>
-          <p className="text-sm text-white/50 mt-1">
+          </span>
+        </div>
+
+        <ProgressBar completed={completedCount} total={totalCount} />
+
+        <div className="flex items-baseline justify-between gap-3 text-[13px] text-ink-muted tabular">
+          <span>
             {remainingCount > 0
               ? `${remainingCount}件のタスクが残っています`
               : totalCount > 0
                 ? 'すべてのタスクが完了しました！'
                 : 'タスクはありません'}
-          </p>
+          </span>
+          <span>{progress}%</span>
         </div>
       </div>
+
+      {footer && <div className="border-t border-line">{footer}</div>}
     </Card>
   )
 }
-

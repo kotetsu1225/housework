@@ -53,16 +53,16 @@ export function NotificationPermissionModal({
     >
       <div className="space-y-4">
         <div className="flex items-center justify-center py-4">
-          <div className="bg-coral-500/20 rounded-full p-6">
-            <Bell className="w-12 h-12 text-coral-400" />
+          <div className="bg-family rounded-full p-6">
+            <Bell className="w-12 h-12 text-accent" />
           </div>
         </div>
 
         <div className="space-y-2 text-center">
-          <p className="text-white text-base">
+          <p className="text-ink text-base font-medium">
             未完了のタスクがあるとき、通知でお知らせします。
           </p>
-          <p className="text-dark-400 text-sm">
+          <p className="text-ink-muted text-sm">
             毎日19時に未完了の毎日タスクを通知します。
           </p>
         </div>
@@ -70,6 +70,7 @@ export function NotificationPermissionModal({
         <div className="flex flex-col gap-3 pt-4">
           <Button
             variant="primary"
+            size="lg"
             onClick={handleAllow}
             disabled={isRegistering}
             loading={isRegistering}
@@ -79,6 +80,7 @@ export function NotificationPermissionModal({
           </Button>
           <Button
             variant="secondary"
+            size="lg"
             onClick={handleDismiss}
             disabled={isRegistering}
             className="w-full"

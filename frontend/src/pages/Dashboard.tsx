@@ -5,22 +5,23 @@
  * CQRSパターン: DashboardQueryServiceを使用して一括データ取得
  */
 import { useState, useCallback, useMemo, useEffect } from 'react'
-import { RefreshCw, ListTodo, CheckCircle2, ChevronDown, Calendar } from 'lucide-react'
+import { RefreshCw, ChevronDown, ChevronRight, Check } from 'lucide-react'
 import { addDays } from 'date-fns'
 import { useNavigate } from 'react-router-dom'
+import { clsx } from 'clsx'
 import { Header } from '../components/layout/Header'
 import { PageContainer } from '../components/layout/PageContainer'
 import { Button } from '../components/ui/Button'
 import { Alert } from '../components/ui/Alert'
-import { Card } from '../components/ui/Card'
+import { SectionBox } from '../components/ui/Card'
 import { Modal } from '../components/ui/Modal'
 import { ProgressSummaryCard, TaskGroupsSection, TodayTaskCard, TomorrowTaskDetailModal } from '../components/dashboard'
 import { TaskActionModal } from '../components/dashboard/TaskActionModal'
 import { NotificationPermissionModal } from '../components/push/NotificationPermissionModal'
 import { useDashboard, useMembers, usePushSubscription } from '../hooks'
 import { useAuth } from '../contexts'
-import { formatJa, toISODateString } from '../utils'
-import { getDashboardData, ApiError } from '../api'
+import { formatJa, toISODateString, formatScheduleDtoLabel } from '../utils'
+import { getDashboardData, getTaskDefinitions, ApiError } from '../api'
 import type { TodayTaskDto } from '../api/dashboard'
 
 /**
@@ -62,6 +63,27 @@ export function Dashboard() {
 
   // メンバー一覧取得（モーダルの担当者選択用）
   const { members, fetchMembers } = useMembers()
+
+  // 周期チップの文言（タスク定義ID → 毎日／毎週火曜／9/22）
+  const [scheduleLabels, setScheduleLabels] = useState<Record<string, string>>({})
+  useEffect(() => {
+    let cancelled = false
+    getTaskDefinitions()
+      .then((res) => {
+        if (cancelled) return
+        const labels: Record<string, string> = {}
+        for (const def of res.taskDefinitions) {
+          labels[def.id] = formatScheduleDtoLabel(def.schedule)
+        }
+        setScheduleLabels(labels)
+      })
+      .catch(() => {
+        // 文言が取れなくてもカードは日付／「定期」で表示できるので握りつぶす
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   // Push通知購読
   const {
@@ -241,16 +263,17 @@ export function Dashboard() {
     <>
       <Header
         title="ホーム"
-        subtitle={formatJa(today, 'M月d日（E）')}
+        subtitle={formatJa(today, 'M月d日 EEEE')}
         action={
-          <Button
-            variant="secondary"
-            size="sm"
+          <button
+            type="button"
             onClick={handleRefresh}
             disabled={loading}
+            aria-label="最新の状態に更新"
+            className="w-11 h-11 rounded-full bg-surface text-accent flex items-center justify-center disabled:opacity-50"
           >
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-          </Button>
+            <RefreshCw className={clsx('w-5 h-5', loading && 'animate-spin')} />
+          </button>
         }
       />
       <PageContainer>
@@ -262,99 +285,92 @@ export function Dashboard() {
         )}
 
         {/* 進捗サマリー（家族タスクのみ） */}
-        <section className="py-6">
+        <section className="pt-1 pb-4">
           <ProgressSummaryCard
             completedCount={completedCount}
             totalCount={totalCount}
-            label="今日の家族タスク進捗"
+            label="今日の家族タスク"
+            footer={
+              <button
+                type="button"
+                onClick={() => {
+                  setShowTomorrowModal(true)
+                  if (!tomorrowFetched && !tomorrowLoading) {
+                    void fetchTomorrow()
+                  }
+                }}
+                className="w-full flex items-center justify-between min-h-tap px-4 text-[15px] text-ink"
+              >
+                <span>明日のタスクを見る</span>
+                <ChevronRight className="w-[18px] h-[18px] text-icon-muted" />
+              </button>
+            }
           />
         </section>
 
         {/* 今日のタスク一覧 */}
         <section>
-          <div className="flex items-center justify-between gap-3 mb-4">
-            <h2 className="text-lg font-bold text-white flex items-center gap-2">
-              <ListTodo className="w-5 h-5 text-coral-400" />
-              今日のタスク
-            </h2>
-
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => {
-                setShowTomorrowModal(true)
-                if (!tomorrowFetched && !tomorrowLoading) {
-                  void fetchTomorrow()
-                }
-              }}
-            >
-              明日のタスクを確認する
-            </Button>
-          </div>
-
-          <div className="space-y-3">
-            {loading ? (
-              <div className="text-center py-8">
-                <p className="text-white/50">読み込み中...</p>
-              </div>
-            ) : (
-              <TaskGroupsSection
-                tasks={todayActiveTasks}
-                members={members}
-                currentUserId={user?.id}
-                onTaskClick={handleTaskClick}
-                emptyTitle="今日のタスクはありません"
-                emptyDescription="タスク設定画面でタスクを作成してください"
-              />
-            )}
-          </div>
+          {loading ? (
+            <div className="bg-surface rounded-box py-8 text-center">
+              <p className="text-ink-muted">読み込み中...</p>
+            </div>
+          ) : (
+            <TaskGroupsSection
+              tasks={todayActiveTasks}
+              members={members}
+              currentUserId={user?.id}
+              onTaskClick={handleTaskClick}
+              scheduleLabels={scheduleLabels}
+              emptyTitle="今日のタスクはありません"
+              emptyDescription="タスク設定画面でタスクを作成してください"
+              familyFooter={
+                <>
+                  {completedTasks.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setShowCompleted(!showCompleted)}
+                      aria-expanded={showCompleted}
+                      className="w-full flex items-center gap-2.5 min-h-tap px-3.5 rounded-card text-[15px] text-ink-muted"
+                    >
+                      <Check className="w-[22px] h-[22px] text-accent" strokeWidth={2.5} />
+                      <span className="flex-1 text-left tabular">完了 {completedTasks.length} 件</span>
+                      <ChevronDown
+                        className={clsx('w-[18px] h-[18px] text-icon-muted transition-transform', showCompleted && 'rotate-180')}
+                      />
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => navigate('/executions/completed')}
+                    className="w-full flex items-center justify-between min-h-tap px-3.5 rounded-card text-[15px] text-ink"
+                  >
+                    <span>完了したタスクを見る</span>
+                    <ChevronRight className="w-[18px] h-[18px] text-icon-muted" />
+                  </button>
+                </>
+              }
+            />
+          )}
         </section>
 
-        {/* 完了済みタスク */}
-          <section className="mt-8">
-            <div className="flex items-center justify-between gap-3 mb-4">
-              {completedTasks.length > 0 && (
-                <button
-                  onClick={() => setShowCompleted(!showCompleted)}
-                  className="flex items-center gap-2 text-lg font-bold text-white/50 hover:text-white/70 transition-colors"
-                  type="button"
-                >
-                  <CheckCircle2 className="w-5 h-5 text-emerald-400/50" />
-                  完了済み家族タスク ({completedTasks.length})
-                  <ChevronDown className={`w-4 h-4 transition-transform ${showCompleted ? 'rotate-180' : ''}`} />
-                </button>
-              )}
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => navigate('/executions/completed')}
-              >
-                完了タスク一覧を見る
-              </Button>
-            </div>
-            
-            {completedTasks.length > 0 && showCompleted && (
-              <div className="opacity-60">
-                <TaskGroupsSection
-                  tasks={completedTasks}
-                  members={members}
-                  currentUserId={user?.id}
-                  onTaskClick={handleTaskClick}
-                  emptyTitle="完了済みタスクはありません"
-                />
-              </div>
-            )}
+        {/* 完了済みタスク（展開時） */}
+        {completedTasks.length > 0 && showCompleted && (
+          <section className="mt-3">
+            <TaskGroupsSection
+              tasks={completedTasks}
+              members={members}
+              currentUserId={user?.id}
+              onTaskClick={handleTaskClick}
+              scheduleLabels={scheduleLabels}
+              emptyTitle="完了済みタスクはありません"
+            />
           </section>
+        )}
 
         {/* 将来の単発タスク（存在する場合のみ表示） */}
         {futureTasks.length > 0 && (
-          <section className="mt-8">
-            <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-              <Calendar className="w-5 h-5 text-shazam-400" />
-              今後の単発タスク
-            </h2>
-            
-            <div className="space-y-3">
+          <section className="mt-3">
+            <SectionBox title="今後の単発タスク" meta={`${futureTasks.length} 件`}>
               {futureTasks.map((task) => (
                 <TodayTaskCard
                   key={task.taskExecutionId}
@@ -362,9 +378,10 @@ export function Dashboard() {
                   onClick={handleTaskClick}
                   showDate
                   members={members}
+                  scheduleLabel={scheduleLabels[task.taskDefinitionId]}
                 />
               ))}
-            </div>
+            </SectionBox>
           </section>
         )}
 
@@ -378,6 +395,7 @@ export function Dashboard() {
           onStart={handleStartTask}
           onComplete={handleCompleteTask}
           onAssign={handleAssignTask}
+          scheduleLabel={selectedTask ? scheduleLabels[selectedTask.taskDefinitionId] : undefined}
         />
 
         <NotificationPermissionModal
@@ -393,27 +411,26 @@ export function Dashboard() {
           isOpen={showTomorrowModal}
           onClose={() => setShowTomorrowModal(false)}
           title={`明日のタスク（${formatJa(tomorrowDate, 'M月d日（E）')}）`}
-          className=""
           footer={
-            <Button variant="secondary" onClick={() => setShowTomorrowModal(false)} className="flex-1">
+            <Button variant="secondary" size="lg" onClick={() => setShowTomorrowModal(false)} className="flex-1">
               閉じる
             </Button>
           }
         >
           {tomorrowError && (
             <Alert variant="error">
-              <div className="space-y-3">
-                <p>{tomorrowError}</p>
+              <span className="flex flex-wrap items-center gap-3">
+                <span>{tomorrowError}</span>
                 <Button variant="secondary" size="sm" onClick={() => void fetchTomorrow()}>
                   再取得
                 </Button>
-              </div>
+              </span>
             </Alert>
           )}
 
           {tomorrowLoading ? (
             <div className="text-center py-8">
-              <p className="text-white/50">読み込み中...</p>
+              <p className="text-ink-muted">読み込み中...</p>
             </div>
           ) : (
             <TaskGroupsSection
@@ -426,6 +443,7 @@ export function Dashboard() {
                 setShowTomorrowDetailModal(true)
               }}
               showDate={false}
+              scheduleLabels={scheduleLabels}
               emptyTitle="明日のタスクはありません"
             />
           )}
@@ -436,6 +454,7 @@ export function Dashboard() {
           isOpen={showTomorrowDetailModal}
           task={selectedTomorrowTask}
           members={members}
+          scheduleLabel={selectedTomorrowTask ? scheduleLabels[selectedTomorrowTask.taskDefinitionId] : undefined}
           onClose={() => {
             setShowTomorrowDetailModal(false)
             setSelectedTomorrowTask(null)

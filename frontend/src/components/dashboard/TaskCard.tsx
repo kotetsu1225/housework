@@ -32,13 +32,13 @@ export interface TaskCardProps {
 function getStatusIcon(status: ExecutionStatus) {
   switch (status) {
     case 'COMPLETED':
-      return <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+      return <CheckCircle2 className="w-6 h-6 text-accent" />
     case 'IN_PROGRESS':
-      return <PlayCircle className="w-5 h-5 text-shazam-400" />
+      return <PlayCircle className="w-6 h-6 text-accent" />
     case 'CANCELLED':
-      return <XCircle className="w-5 h-5 text-red-400/50" />
+      return <XCircle className="w-6 h-6 text-icon-muted" />
     default:
-      return <Circle className="w-5 h-5 text-white/30" />
+      return <Circle className="w-6 h-6 text-line-strong" />
   }
 }
 
@@ -90,14 +90,14 @@ export function TaskCard({ task, assignee, onClick, onStatusClick }: TaskCardPro
 
   return (
     <Card
-      variant="glass"
       hoverable
-      className="flex items-center gap-4 cursor-pointer"
+      className="flex items-center gap-3 cursor-pointer p-3.5"
       onClick={handleCardClick}
     >
       {/* ステータスアイコン（クリック可能） */}
       <button
-        className="flex-shrink-0 hover:scale-110 transition-transform"
+        type="button"
+        className="flex-shrink-0 w-11 h-11 -m-2 flex items-center justify-center rounded-full"
         onClick={handleStatusClick}
         aria-label={`ステータス: ${task.status}`}
       >
@@ -110,17 +110,17 @@ export function TaskCard({ task, assignee, onClick, onStatusClick }: TaskCardPro
           <span
             className={`font-medium truncate ${
               task.status === 'COMPLETED'
-                ? 'text-white/50 line-through'
+                ? 'text-ink-muted line-through'
                 : task.status === 'CANCELLED'
-                  ? 'text-white/30 line-through'
-                  : 'text-white'
+                  ? 'text-ink-muted line-through'
+                  : 'text-ink'
             }`}
           >
             {taskName}
           </span>
           {getStatusBadge(task.status)}
         </div>
-        <div className="flex items-center gap-3 text-sm text-white/50">
+        <div className="flex items-center gap-3 text-[13px] text-ink-muted tabular">
           {scheduledStartTime && scheduledEndTime && (
             <span>
               {formatTimeFromISO(scheduledStartTime)} - {formatTimeFromISO(scheduledEndTime)}

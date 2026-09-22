@@ -5,12 +5,14 @@
  */
 
 import { useState, useEffect } from 'react'
-import { Clock, Users, User, Play, CheckCircle2, Star } from 'lucide-react'
+import { Clock, Play, Check } from 'lucide-react'
+import { clsx } from 'clsx'
 import { Modal } from '../ui/Modal'
 import { Button } from '../ui/Button'
 import { Badge } from '../ui/Badge'
 import { Avatar } from '../ui/Avatar'
 import { isParentRole, formatTimeFromISO } from '../../utils'
+import { formatShortDate, scheduleBadgeVariant } from '../../utils/scheduleLabel'
 import type { TodayTaskDto } from '../../api/dashboard'
 import type { Member } from '../../types'
 
@@ -31,6 +33,8 @@ export interface TaskActionModalProps {
   onComplete: (taskExecutionId: string) => Promise<boolean>
   /** 担当者割り当て時のコールバック */
   onAssign: (taskExecutionId: string, memberIds: string[]) => Promise<boolean>
+  /** 周期の文言（毎日、毎週火曜など） */
+  scheduleLabel?: string
 }
 
 /**
@@ -65,6 +69,7 @@ export function TaskActionModal({
   onStart,
   onComplete,
   onAssign,
+  scheduleLabel,
 }: TaskActionModalProps) {
   const [loading, setLoading] = useState(false)
   const [selectedAssignees, setSelectedAssignees] = useState<string[]>([])
@@ -81,7 +86,9 @@ export function TaskActionModal({
   const isCompleted = task.status === 'COMPLETED'
 
   const scopeLabel = task.scope === 'FAMILY' ? '家族タスク' : '個人タスク'
-  const scopeIcon = task.scope === 'FAMILY' ? <Users className="w-4 h-4" /> : <User className="w-4 h-4" />
+  const label =
+    scheduleLabel ?? (task.scheduleType === 'ONE_TIME' ? formatShortDate(task.scheduledDate) : '定期')
+  const point = task.frozenPoint ?? task.point ?? 0
 
   /**
    * 実行に使用するメンバーIDsを決定
@@ -155,7 +162,7 @@ export function TaskActionModal({
   const renderActionButtons = () => {
     if (isCompleted) {
       return (
-        <Button variant="secondary" onClick={onClose} className="flex-1">
+        <Button variant="secondary" size="lg" onClick={onClose} className="flex-1">
           閉じる
         </Button>
       )
@@ -164,16 +171,17 @@ export function TaskActionModal({
     if (isInProgress) {
       return (
         <>
-          <Button variant="secondary" onClick={onClose} className="flex-1">
+          <Button variant="secondary" size="lg" onClick={onClose} className="flex-1">
             閉じる
           </Button>
           <Button
             variant="primary"
+            size="lg"
             onClick={handleComplete}
             loading={loading}
-            className="flex-1 bg-emerald-500 hover:bg-emerald-600"
+            className="flex-1"
           >
-            <CheckCircle2 className="w-5 h-5 mr-2" />
+            <Check className="w-5 h-5" strokeWidth={2.5} />
             完了する
           </Button>
         </>
@@ -183,16 +191,17 @@ export function TaskActionModal({
     // NOT_STARTED
     return (
       <>
-        <Button variant="secondary" onClick={onClose} className="flex-1">
+        <Button variant="secondary" size="lg" onClick={onClose} className="flex-1">
           あとで
         </Button>
         <Button
           variant="primary"
+          size="lg"
           onClick={handleStart}
           loading={loading}
           className="flex-1"
         >
-          <Play className="w-5 h-5 mr-2" />
+          <Play className="w-5 h-5" />
           取り掛かる
         </Button>
       </>
@@ -209,46 +218,34 @@ export function TaskActionModal({
       {/* タスク情報 */}
       <div className="space-y-4">
         {/* メタ情報 */}
-        <div className="flex flex-wrap items-center gap-3 text-sm text-white/70">
-          <div className="flex items-center gap-1">
-            <Clock className="w-4 h-4" />
-            <span>{formatTimeFromISO(task.scheduledStartTime)} - {formatTimeFromISO(task.scheduledEndTime)}</span>
-          </div>
-          <div className="flex items-center gap-1">
-            {scopeIcon}
-            <span className="whitespace-nowrap">{scopeLabel}</span>
-          </div>
-          <Badge
-            variant={
-              isCompleted
-                ? 'success'
-                : isInProgress
-                  ? 'info'
-                  : 'default'
-            }
-          >
-            {isCompleted ? '完了' : isInProgress ? '進行中' : '未'}
+        <div className="flex flex-wrap items-center gap-2 text-[13px] text-ink-muted">
+          <Badge variant={scheduleBadgeVariant(task.scheduleType)} size="sm">
+            {label}
           </Badge>
-          {/* ポイント表示 */}
-          {((task.frozenPoint ?? task.point ?? 0) > 0) && (
-            <span className="flex items-center gap-1 text-amber-400 font-bold">
-              <Star className="w-4 h-4 fill-amber-400" />
-              +{task.frozenPoint ?? task.point}pt
-            </span>
-          )}
+          <Badge variant={task.scope === 'FAMILY' ? 'success' : 'personal'} size="sm">
+            {scopeLabel}
+          </Badge>
+          <span className="flex items-center gap-1 tabular">
+            <Clock className="w-4 h-4" />
+            {formatTimeFromISO(task.scheduledStartTime)}–{formatTimeFromISO(task.scheduledEndTime)}
+          </span>
+          <span className="ml-auto font-bold text-accent tabular">
+            {isCompleted ? '完了 ' : isInProgress ? '進行中 ' : ''}
+            {point > 0 && `+${point}pt`}
+          </span>
         </div>
 
         {/* 説明 */}
         {task.taskDescription && (
-          <p className="text-white/60 text-sm bg-dark-800/50 rounded-lg p-3">
+          <p className="text-ink text-sm bg-canvas rounded-card p-3 leading-relaxed whitespace-pre-wrap">
             {task.taskDescription}
           </p>
         )}
 
         {/* 担当者選択（未着手または進行中の場合） */}
         {(isNotStarted || isInProgress) && members.length > 0 && (
-          <div className="space-y-3">
-            <p className="text-sm text-white/70 font-medium">
+          <div className="space-y-2">
+            <p className="text-[13px] font-medium text-ink-soft">
               担当者を選択（複数可）
             </p>
             <div className="flex flex-wrap gap-2">
@@ -259,17 +256,15 @@ export function TaskActionModal({
                 return (
                   <button
                     key={member.id}
+                    type="button"
                     onClick={() => handleAssign(member.id)}
                     disabled={loading}
-                    className={`
-                      flex items-center gap-2 px-3 py-2 rounded-lg transition-all
-                      ${
-                        isSelected
-                          ? 'bg-coral-500/20 border-2 border-coral-500'
-                          : 'bg-dark-800 border-2 border-transparent hover:border-dark-600'
-                      }
-                      ${loading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
-                    `}
+                    aria-pressed={isSelected}
+                    className={clsx(
+                      'flex items-center gap-2 pl-1.5 pr-3.5 min-h-tap rounded-full border-2 transition-colors',
+                      isSelected ? 'bg-family border-accent' : 'bg-surface border-line',
+                      loading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
+                    )}
                   >
                     <Avatar
                       name={member.name}
@@ -277,7 +272,7 @@ export function TaskActionModal({
                       role={member.role}
                       variant={isParentRole(member.role) ? 'parent' : 'child'}
                     />
-                    <span className="text-sm text-white">
+                    <span className={clsx('text-sm', isSelected ? 'font-bold text-family-ink' : 'font-medium text-ink')}>
                       {isCurrent ? '自分' : member.name}
                     </span>
                   </button>
@@ -289,7 +284,7 @@ export function TaskActionModal({
 
         {/* 現在の担当者（完了の場合のみ表示。進行中は上の選択UIで表示されるため） */}
         {isCompleted && task.assigneeMemberNames.length > 0 && (
-          <div className="flex items-center gap-2 text-sm text-white/70">
+          <div className="flex items-center gap-2 text-[13px] text-ink-muted">
             <span>担当:</span>
             <div className="flex flex-wrap items-center gap-2">
               {task.assigneeMemberIds.map((memberId, idx) => {
@@ -299,7 +294,7 @@ export function TaskActionModal({
                 return (
                   <div
                     key={memberId}
-                    className="flex items-center gap-2 bg-dark-800/50 px-3 py-1.5 rounded-full"
+                    className="flex items-center gap-2 bg-canvas pl-1 pr-3 py-1 rounded-full"
                   >
                     {assignee ? (
                       <Avatar
@@ -307,13 +302,14 @@ export function TaskActionModal({
                         size="sm"
                         role={assignee.role}
                         variant={isParentRole(assignee.role) ? 'parent' : 'child'}
+                        className="w-6 h-6"
                       />
                     ) : (
-                      <span className="w-6 h-6 rounded-full bg-coral-500/20 flex items-center justify-center text-[10px]">
+                      <span className="w-6 h-6 rounded-full bg-control flex items-center justify-center text-[10px]">
                         ?
                       </span>
                     )}
-                    <span className="text-white font-medium">{name}</span>
+                    <span className="text-ink font-medium">{name}</span>
                   </div>
                 )
               })}
@@ -326,4 +322,3 @@ export function TaskActionModal({
 }
 
 TaskActionModal.displayName = 'TaskActionModal'
-

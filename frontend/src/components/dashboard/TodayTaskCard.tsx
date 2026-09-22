@@ -3,18 +3,17 @@
  *
  * Dashboard CQRSの TodayTaskDto を表示するためのカード。
  * - 今日/明日など日付別の一覧で再利用する想定
+ * - 家族／個人はカードの色、周期・期日はカード内のチップで表す（frontend/DESIGN.md §5）
  */
-import { Calendar, CheckCircle2, Circle, Clock, PlayCircle, Star } from 'lucide-react'
+import { CalendarClock, Check, X } from 'lucide-react'
 import { clsx } from 'clsx'
-import { Badge, BadgeProps } from '../ui/Badge'
+import { Badge } from '../ui/Badge'
 import { Avatar } from '../ui/Avatar'
 import { formatJa, formatTimeFromISO, isParentRole } from '../../utils'
+import { formatShortDate, scheduleBadgeVariant } from '../../utils/scheduleLabel'
 import type { TodayTaskDto } from '../../api/dashboard'
 import type { Member } from '../../types'
 
-/**
- * 今日のタスクカードコンポーネント
- */
 export interface TodayTaskCardProps {
   task: TodayTaskDto
   onClick: (task: TodayTaskDto) => void
@@ -22,93 +21,67 @@ export interface TodayTaskCardProps {
   showDate?: boolean
   /** メンバー一覧（アバター表示用） */
   members: Member[]
+  /** 周期の文言（毎日、毎週火曜など）。無ければ単発は日付、定期は「定期」 */
+  scheduleLabel?: string
 }
 
 /**
- * カードスタイルを決定する
- * scope と scheduleType に基づいて、バッジとカード背景色を決定
+ * 左端の状態マーク
+ * - 未着手: 薄いグレーの輪
+ * - 進行中: accent の輪と中の丸
+ * - 完了: accent のチェック
+ * - 予定（実行未生成）: カレンダーアイコン
  */
-interface CardStyle {
-  cardClass: string
-  badgeVariant: BadgeProps['variant']
-  badgeText: string
-}
-
-function getCardStyle(task: TodayTaskDto): CardStyle {
-  // カード背景色はscopeで決定（個人タスクは緑系、家族タスクは青系）
-  const cardClass = task.scope === 'PERSONAL'
-    ? 'bg-emerald-950/30 border-emerald-700/50'
-    : 'bg-blue-950/30 border-blue-700/50'
-
-  // バッジはscheduleTypeで決定（常に「定期」か「単発」を表示）
-  if (task.scheduleType === 'ONE_TIME') {
-    return {
-      cardClass,
-      badgeVariant: 'onetime',
-      badgeText: '単発',
-    }
-  }
-  // 定期タスク
-  return {
-    cardClass,
-    badgeVariant: 'recurring',
-    badgeText: '定期',
-  }
-}
-
-/**
- * ステータスに応じたアイコンを取得
- */
-function getStatusIcon(status: TodayTaskDto['status']) {
+function StatusMark({ status }: { status: TodayTaskDto['status'] }) {
   switch (status) {
-    case 'COMPLETED':
-      return <CheckCircle2 className="w-5 h-5 text-emerald-400" />
     case 'IN_PROGRESS':
-      return <PlayCircle className="w-5 h-5 text-shazam-400" />
+      return (
+        <span
+          aria-label="進行中"
+          className="w-7 h-7 box-border rounded-full border-[2.5px] border-accent bg-surface flex items-center justify-center flex-shrink-0"
+        >
+          <span className="w-[13px] h-[13px] rounded-full bg-accent" />
+        </span>
+      )
+    case 'COMPLETED':
+      return (
+        <span aria-label="完了" className="w-7 h-7 flex items-center justify-center flex-shrink-0 text-accent">
+          <Check className="w-6 h-6" strokeWidth={2.5} />
+        </span>
+      )
+    case 'CANCELLED':
+      return (
+        <span aria-label="キャンセル" className="w-7 h-7 flex items-center justify-center flex-shrink-0 text-icon-muted">
+          <X className="w-6 h-6" />
+        </span>
+      )
     case 'SCHEDULED':
-      return <Calendar className="w-5 h-5 text-white/40" />
+      return (
+        <span aria-label="予定" className="w-7 h-7 flex items-center justify-center flex-shrink-0 text-ink-muted">
+          <CalendarClock className="w-6 h-6" />
+        </span>
+      )
     default:
-      return <Circle className="w-5 h-5 text-white/30" />
+      return (
+        <span
+          aria-label="未着手"
+          className="w-7 h-7 box-border rounded-full border-2 border-line-strong bg-surface flex-shrink-0"
+        />
+      )
   }
 }
 
 /**
- * ステータスに応じたバッジを取得
- */
-function getStatusBadge(status: TodayTaskDto['status']) {
-  switch (status) {
-    case 'COMPLETED':
-      return <Badge variant="success" size="sm">完了</Badge>
-    case 'IN_PROGRESS':
-      return <Badge variant="info" size="sm">進行中</Badge>
-    case 'SCHEDULED':
-      return <Badge variant="default" size="sm">予定</Badge>
-    default:
-      return <Badge variant="default" size="sm">未</Badge>
-  }
-}
-
-/**
- * ポイント表示コンポーネント
+ * ポイント表示
  * - 未実行: taskDefinition.point
  * - 進行中/完了: taskExecution.frozenPoint（スナップショット時のポイント）
  */
-function PointDisplay({ task }: { task: TodayTaskDto }) {
-  // 進行中または完了の場合はfrozenPointを使用、それ以外はpointを使用
+function displayPoint(task: TodayTaskDto): number {
   const isStarted = task.status === 'IN_PROGRESS' || task.status === 'COMPLETED'
-  const displayPoint = isStarted ? (task.frozenPoint ?? task.point ?? 0) : (task.point ?? 0)
-  
-  if (!displayPoint || displayPoint <= 0) return null
-  
-  return (
-    <span className="flex items-center gap-1 text-amber-400 font-bold text-sm">
-      <Star className="w-3.5 h-3.5 fill-amber-400" />
-      +{displayPoint}pt
-    </span>
-  )
+  return isStarted ? (task.frozenPoint ?? task.point ?? 0) : (task.point ?? 0)
 }
 
-export function TodayTaskCard({ task, onClick, showDate = false, members }: TodayTaskCardProps) {
+export function TodayTaskCard({ task, onClick, showDate = false, members, scheduleLabel }: TodayTaskCardProps) {
   const handleClick = () => onClick(task)
 
   // 担当者情報を取得（複数対応）
@@ -116,89 +89,84 @@ export function TodayTaskCard({ task, onClick, showDate = false, members }: Toda
     .map((id) => members.find((m) => m.id === id))
     .filter(Boolean) as Member[]
 
-  const cardStyle = getCardStyle(task)
+  const label =
+    scheduleLabel ?? (task.scheduleType === 'ONE_TIME' ? formatShortDate(task.scheduledDate) : '定期')
+  const point = displayPoint(task)
+  const isDone = task.status === 'COMPLETED' || task.status === 'CANCELLED'
 
   return (
-    <div className="relative mt-4">
-      {/* 左上バッジ（カードの枠の外側、上部に配置） */}
-      <div className="absolute -top-3 left-2 z-10">
-        <Badge variant={cardStyle.badgeVariant} size="sm">
-          {cardStyle.badgeText}
-        </Badge>
-      </div>
+    <button
+      type="button"
+      onClick={handleClick}
+      className={clsx(
+        'w-full text-left flex items-center gap-3 px-3.5 py-3 min-h-tap rounded-card transition-colors',
+        task.scope === 'PERSONAL' ? 'bg-personal active:bg-personal-chip' : 'bg-family active:bg-family-chip'
+      )}
+    >
+      <StatusMark status={task.status} />
 
-      <div
-        className={clsx(
-          'rounded-2xl p-4 pt-3 border cursor-pointer transition-all hover:scale-[1.02] hover:shadow-lg',
-          cardStyle.cardClass
-        )}
-        onClick={handleClick}
-      >
-        <div className="flex items-start gap-3">
-        {/* ステータスアイコン */}
-        <div className="flex-shrink-0 mt-0.5">{getStatusIcon(task.status)}</div>
-
-        {/* タスク情報 */}
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1.5">
-            <span
-              className={clsx(
-                'font-medium truncate flex-1',
-                task.status === 'COMPLETED' ? 'text-white/50 line-through' : 'text-white'
-              )}
-            >
-              {task.taskName}
+      <span className="flex-1 min-w-0 flex flex-col gap-1.5">
+        {/* 1行目: 周期チップ + タスク名 + pt */}
+        <span className="flex items-center gap-2">
+          <Badge variant={scheduleBadgeVariant(task.scheduleType)} size="sm">
+            {label}
+          </Badge>
+          <span
+            className={clsx(
+              'flex-1 min-w-0 text-[17px] font-medium truncate',
+              isDone ? 'text-ink-muted line-through' : 'text-ink'
+            )}
+          >
+            {task.taskName}
+          </span>
+          {point > 0 && (
+            <span className="text-[15px] font-bold text-accent tabular flex-shrink-0">
+              {task.status === 'COMPLETED' ? '+' : ''}
+              {point}pt
             </span>
-            {getStatusBadge(task.status)}
-          </div>
+          )}
+        </span>
 
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-white/50">
-            {/* 期限が今日じゃない場合は日付を表示 */}
-            {showDate && task.scheduledDate && (
-              <span className="flex items-center gap-1 text-shazam-400 whitespace-nowrap">
-                <Calendar className="w-3.5 h-3.5" />
-                {formatJa(new Date(task.scheduledDate), 'M月d日')}
-              </span>
-            )}
+        {/* 2行目: 日付・時刻 + 担当者 */}
+        <span className="flex items-center gap-2 text-[13px] text-ink-muted tabular">
+          {showDate && task.scheduledDate && (
+            <span className="whitespace-nowrap">{formatJa(new Date(`${task.scheduledDate}T00:00:00`), 'M月d日')}</span>
+          )}
+          {task.scheduledStartTime && task.scheduledEndTime && (
+            <span className="whitespace-nowrap">
+              {formatTimeFromISO(task.scheduledStartTime)}–{formatTimeFromISO(task.scheduledEndTime)}
+            </span>
+          )}
 
-            {task.scheduledStartTime && task.scheduledEndTime && (
-              <span className="flex items-center gap-1 whitespace-nowrap">
-                <Clock className="w-3.5 h-3.5" />
-                {formatTimeFromISO(task.scheduledStartTime)} - {formatTimeFromISO(task.scheduledEndTime)}
-              </span>
-            )}
-
-            {/* ポイント表示 */}
-            <PointDisplay task={task} />
-          </div>
-
-          {/* 担当者表示 */}
-          {assignees.length > 0 && (
-            <div className="flex items-center gap-1.5 mt-2 text-sm text-coral-400 font-medium">
-              {assignees.slice(0, 3).map((assignee, idx) => (
-                <span key={assignee.id} className="flex items-center gap-1">
-                  {idx > 0 && <span className="text-white/30">,</span>}
+          {assignees.length > 0 ? (
+            <span className="ml-auto flex items-center gap-1 min-w-0">
+              <span className="flex items-center">
+                {assignees.slice(0, 3).map((assignee, idx) => (
                   <Avatar
+                    key={assignee.id}
                     name={assignee.name}
-                    size="sm"
+                    size="xs"
                     role={assignee.role}
                     variant={isParentRole(assignee.role) ? 'parent' : 'child'}
+                    className={clsx('w-5 h-5', idx > 0 && '-ml-2 ring-[1.5px] ring-surface')}
                   />
-                  <span className="text-white/70">{assignee.name}</span>
-                </span>
-              ))}
-              {assignees.length > 3 && (
-                <span className="text-white/50">他{assignees.length - 3}名</span>
-              )}
-            </div>
+                ))}
+              </span>
+              <span className="truncate">
+                {assignees.slice(0, 3).map((a) => a.name).join('、')}
+                {assignees.length > 3 && ` 他${assignees.length - 3}名`}
+              </span>
+            </span>
+          ) : (
+            task.scope === 'FAMILY' &&
+            !isDone && (
+              <span className="ml-auto text-danger font-medium whitespace-nowrap">担当者がいません</span>
+            )
           )}
-        </div>
-      </div>
-      </div>
-    </div>
+        </span>
+      </span>
+    </button>
   )
 }
 
 TodayTaskCard.displayName = 'TodayTaskCard'
-
-

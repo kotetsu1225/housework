@@ -12,6 +12,7 @@ import * as api from '../../api'
 // APIをモック
 vi.mock('../../api', () => ({
   getTaskExecutions: vi.fn(),
+  getTaskDefinitions: vi.fn(() => Promise.resolve({ taskDefinitions: [], total: 0, hasMore: false })),
   getMembers: vi.fn(),
   getStoredToken: vi.fn(),
   ApiError: class ApiError extends Error {

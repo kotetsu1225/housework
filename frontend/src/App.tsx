@@ -22,10 +22,10 @@ const Landing = lazy(() => import('./pages/Landing').then(m => ({ default: m.Lan
  */
 function AppLoading() {
   return (
-    <div className="min-h-screen bg-dark-950 flex items-center justify-center">
+    <div className="min-h-screen bg-canvas flex items-center justify-center">
       <div className="text-center">
-        <div className="w-12 h-12 border-4 border-coral-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-        <p className="text-white/50">読み込み中...</p>
+        <div className="w-12 h-12 border-4 border-accent border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+        <p className="text-ink-muted">読み込み中...</p>
       </div>
     </div>
   )
@@ -40,7 +40,7 @@ function AppContent() {
   }
 
   return (
-    <div className="min-h-screen bg-dark-950">
+    <div className="min-h-screen bg-canvas">
       <Routes>
         {/* Public routes */}
         <Route path="/landing" element={

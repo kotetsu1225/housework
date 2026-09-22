@@ -7,7 +7,50 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Structured-inspired color palette (dark theme)
+        // ==========================================
+        // アプリ画面のトークン（frontend/DESIGN.md §2）
+        // ==========================================
+        canvas: '#F2F2F5',
+        surface: '#FFFFFF',
+        ink: {
+          DEFAULT: '#111114',
+          muted: '#5C5C66',
+          soft: '#3C3C44',
+        },
+        line: {
+          DEFAULT: '#E5E5EA',
+          strong: '#D8D8DE',
+        },
+        control: '#E3E3E8',
+        accent: {
+          DEFAULT: '#1F7A4D',
+          strong: '#175C3A',
+        },
+        family: {
+          DEFAULT: '#EDF5F0',
+          ink: '#1F5C3A',
+          chip: '#D9EBDF',
+        },
+        personal: {
+          DEFAULT: '#E9EEF8',
+          ink: '#2B4C7E',
+          chip: '#DCE4F4',
+        },
+        cycle: {
+          DEFAULT: '#E1ECFA',
+          ink: '#1D4E89',
+        },
+        once: {
+          DEFAULT: '#FDECD2',
+          ink: '#8A4B08',
+        },
+        danger: '#B42318',
+        placeholder: '#8E8E96',
+        'icon-muted': '#B0B0B8',
+
+        // ==========================================
+        // LP（/landing）専用の旧パレット。アプリ画面では使わない
+        // ==========================================
         coral: {
           50: '#fff5f4',
           100: '#ffeae9',
@@ -21,13 +64,6 @@ export default {
           900: '#8a3939',
           950: '#5c2525',
         },
-        // Accent colors
-        accent: {
-          blue: '#6185a8',
-          green: '#69a859',
-          teal: '#4ec757',
-        },
-        // Dark background colors (Structured style)
         dark: {
           50: '#f7f7f8',
           100: '#eeeef0',
@@ -44,7 +80,6 @@ export default {
       },
       fontFamily: {
         sans: [
-          'Inter',
           '-apple-system',
           'BlinkMacSystemFont',
           '"Hiragino Sans"',
@@ -53,25 +88,16 @@ export default {
           'sans-serif',
         ],
       },
-      animation: {
-        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-        'gradient': 'gradient 3s ease infinite',
-      },
-      keyframes: {
-        gradient: {
-          '0%, 100%': {
-            'background-size': '200% 200%',
-            'background-position': 'left center',
-          },
-          '50%': {
-            'background-size': '200% 200%',
-            'background-position': 'right center',
-          },
-        },
-      },
       borderRadius: {
-        '2xl': '1rem',
-        '3xl': '1.5rem',
+        box: '14px',
+        card: '10px',
+        chip: '6px',
+      },
+      minHeight: {
+        tap: '44px',
+      },
+      minWidth: {
+        tap: '44px',
       },
     },
   },

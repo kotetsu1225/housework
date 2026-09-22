@@ -54,7 +54,7 @@ function LandingNav() {
 
 export function Landing() {
   return (
-    <div className="min-h-screen bg-dark-950 overflow-x-hidden">
+    <div className="lp-dark min-h-screen overflow-x-hidden">
       <LandingNav />
       <HeroSection />
 

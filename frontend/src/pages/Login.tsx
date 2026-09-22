@@ -7,12 +7,10 @@
 
 import { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { LogIn, Eye, EyeOff } from 'lucide-react'
-import { Header } from '../components/layout/Header'
 import { PageContainer } from '../components/layout/PageContainer'
-import { Card } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
+import { PasswordInput } from '../components/ui/PasswordInput'
 import { Alert } from '../components/ui/Alert'
 import { useAuth } from '../contexts/AuthContext'
 
@@ -27,7 +25,6 @@ export function Login() {
   const { login, loading, error, clearError } = useAuth()
   const [name, setName] = useState('')
   const [password, setPassword] = useState('')
-  const [showPassword, setShowPassword] = useState(false)
   const [localError, setLocalError] = useState('')
 
   const from = (location.state as { from?: { pathname: string } })?.from?.pathname || '/'
@@ -85,85 +82,60 @@ export function Login() {
   const displayError = localError || error
 
   return (
-    <>
-      <Header title="ログイン" />
-      <PageContainer>
-        <section className="py-6">
-          <Card variant="gradient" className="relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-coral-500/20 rounded-full blur-3xl" />
-            <div className="relative">
-              <div className="flex items-center gap-2 mb-6">
-                <LogIn className="w-5 h-5 text-coral-400" />
-                <h2 className="text-lg font-bold text-white">ログイン</h2>
-              </div>
+    <PageContainer className="safe-top">
+      {/* 見出し */}
+      <section className="pt-20 px-2 flex flex-col gap-1.5">
+        <span className="text-[15px] font-bold text-accent tracking-wide">Housework</span>
+        <h1 className="text-[34px] font-bold leading-tight tracking-tight text-ink">ログイン</h1>
+        <p className="text-[15px] text-ink-muted">登録した名前とパスワードを入力してください</p>
+      </section>
 
-              {displayError && (
-                <Alert variant="error" className="mb-4">
-                  {displayError}
-                </Alert>
-              )}
+      {/* フォーム */}
+      <form onSubmit={handleSubmit} className="mt-7 bg-surface rounded-xl px-4 py-5 flex flex-col gap-[18px]">
+        {displayError && <Alert variant="error">{displayError}</Alert>}
 
-              <form onSubmit={handleSubmit} className="space-y-6">
-                <Input
-                  label="名前"
-                  placeholder="登録した名前を入力"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  disabled={loading}
-                  autoComplete="username"
-                />
+        <Input
+          label="名前"
+          placeholder="登録した名前を入力"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          disabled={loading}
+          autoComplete="username"
+        />
 
-                <div className="relative">
-                  <Input
-                    label="パスワード"
-                    type={showPassword ? 'text' : 'password'}
-                    placeholder="パスワードを入力"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    disabled={loading}
-                    autoComplete="current-password"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-9 text-dark-400 hover:text-dark-300"
-                    disabled={loading}
-                  >
-                    {showPassword ? (
-                      <EyeOff className="w-5 h-5" />
-                    ) : (
-                      <Eye className="w-5 h-5" />
-                    )}
-                  </button>
-                </div>
+        <PasswordInput
+          label="パスワード"
+          placeholder="パスワードを入力"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          disabled={loading}
+          autoComplete="current-password"
+        />
 
-                <Button
-                  type="submit"
-                  variant="primary"
-                  className="w-full"
-                  loading={loading}
-                  disabled={!isFormValid}
-                >
-                  ログイン
-                </Button>
+        <Button
+          type="submit"
+          variant="primary"
+          size="lg"
+          className="w-full mt-1"
+          loading={loading}
+          disabled={!isFormValid}
+        >
+          ログイン
+        </Button>
+      </form>
 
-                <p className="text-center text-dark-400 text-sm">
-                  アカウントをお持ちでないですか？{' '}
-                  <button
-                    type="button"
-                    onClick={() => navigate('/register')}
-                    className="text-coral-400 hover:text-coral-300"
-                    disabled={loading}
-                  >
-                    新規登録
-                  </button>
-                </p>
-
-              </form>
-            </div>
-          </Card>
-        </section>
-      </PageContainer>
-    </>
+      {/* 新規登録への導線 */}
+      <p className="mt-5 flex items-center justify-center gap-1 text-sm text-ink-muted">
+        アカウントをお持ちでないですか？
+        <button
+          type="button"
+          onClick={() => navigate('/register')}
+          className="inline-flex items-center min-h-tap px-1.5 font-bold text-accent active:text-accent-strong"
+          disabled={loading}
+        >
+          新規登録
+        </button>
+      </p>
+    </PageContainer>
   )
 }

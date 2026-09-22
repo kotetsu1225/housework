@@ -7,16 +7,14 @@
 
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { UserPlus, Eye, EyeOff } from 'lucide-react'
-import { clsx } from 'clsx'
-import { Header } from '../components/layout/Header'
+import { ChevronLeft } from 'lucide-react'
 import { PageContainer } from '../components/layout/PageContainer'
-import { Card } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
+import { PasswordInput } from '../components/ui/PasswordInput'
 import { Alert } from '../components/ui/Alert'
+import { RoleSelector } from '../components/ui/RoleSelector'
 import { useAuth } from '../contexts/AuthContext'
-import { ROLE_OPTIONS } from '../constants'
 import type { FamilyRole } from '../types'
 
 /** パスワードの最小文字数（バックエンドと同期） */
@@ -32,11 +30,7 @@ export function Register() {
   const [selectedRole, setSelectedRole] = useState<FamilyRole>('FATHER')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
-  const [showPassword, setShowPassword] = useState(false)
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [localError, setLocalError] = useState('')
-
-  const selectedRoleOption = ROLE_OPTIONS.find((r) => r.value === selectedRole)
 
   // コンポーネントマウント時にエラーをクリア
   useEffect(() => {
@@ -110,23 +104,6 @@ export function Register() {
     }
   }
 
-  // パスワードの強度インジケーター
-  const getPasswordStrength = (): { label: string; color: string } | null => {
-    if (!password) return null
-    if (password.length < PASSWORD_MIN_LENGTH) {
-      return { label: '短すぎます', color: 'text-red-400' }
-    }
-    if (password.length < 8) {
-      return { label: '弱い', color: 'text-yellow-400' }
-    }
-    if (password.length < 12) {
-      return { label: '普通', color: 'text-blue-400' }
-    }
-    return { label: '強い', color: 'text-green-400' }
-  }
-
-  const passwordStrength = getPasswordStrength()
-
   // フォームが有効かどうか
   const isEmailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())
   const isFormValid =
@@ -135,180 +112,102 @@ export function Register() {
     password.length >= PASSWORD_MIN_LENGTH &&
     password === confirmPassword
 
+  // 確認用パスワードの状態（入力済みのときだけ表示）
+  const confirmError =
+    confirmPassword && password !== confirmPassword ? 'パスワードが一致しません' : undefined
+
   // エラーメッセージ（ローカルエラーまたはAPIエラー）
   const displayError = localError || error
 
   return (
-    <>
-      <Header title="新規登録" />
-      <PageContainer>
-        <section className="py-6">
-          <Card variant="gradient" className="relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-coral-500/20 rounded-full blur-3xl" />
-            <div className="relative">
-              <div className="flex items-center gap-2 mb-6">
-                <UserPlus className="w-5 h-5 text-coral-400" />
-                <h2 className="text-lg font-bold text-white">アカウント作成</h2>
-              </div>
+    <PageContainer className="safe-top">
+      {/* 見出し（ログインへ戻る） */}
+      <header className="pt-3 flex items-center gap-1">
+        <button
+          type="button"
+          onClick={() => navigate('/login')}
+          aria-label="ログインに戻る"
+          className="w-11 h-11 -ml-3 flex items-center justify-center rounded-full text-accent active:bg-control"
+        >
+          <ChevronLeft className="w-[26px] h-[26px]" strokeWidth={2.2} />
+        </button>
+        <h1 className="text-[22px] font-bold leading-tight text-ink">アカウント作成</h1>
+      </header>
 
-              {displayError && (
-                <Alert variant="error" className="mb-4">
-                  {displayError}
-                </Alert>
-              )}
+      {/* フォーム */}
+      <form onSubmit={handleSubmit} className="mt-3.5 bg-surface rounded-xl px-4 py-5 flex flex-col gap-[18px]">
+        {displayError && <Alert variant="error">{displayError}</Alert>}
 
-              <form onSubmit={handleSubmit} className="space-y-6">
-                <Input
-                  label="名前"
-                  placeholder="名前を入力"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  disabled={loading}
-                  autoComplete="username"
-                />
+        <Input
+          label="名前"
+          placeholder="名前を入力"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          disabled={loading}
+          autoComplete="username"
+        />
 
-                <Input
-                  label="メールアドレス"
-                  type="email"
-                  placeholder="example@mail.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  disabled={loading}
-                  autoComplete="email"
-                />
+        <Input
+          label="メールアドレス"
+          type="email"
+          placeholder="example@mail.com"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          disabled={loading}
+          autoComplete="email"
+        />
 
-                <div>
-                  <label className="block text-sm font-medium text-dark-300 mb-3">
-                    家族の役割
-                  </label>
-                  <div className="grid grid-cols-2 gap-3">
-                    {ROLE_OPTIONS.map((role) => (
-                      <button
-                        key={role.value}
-                        type="button"
-                        onClick={() => setSelectedRole(role.value)}
-                        disabled={loading}
-                        className={clsx(
-                          'p-4 rounded-xl border-2 transition-all duration-200',
-                          selectedRole === role.value
-                            ? 'border-coral-500 bg-coral-500/10'
-                            : 'border-dark-700 bg-dark-800 hover:border-dark-600',
-                          loading && 'opacity-50 cursor-not-allowed'
-                        )}
-                      >
-                        <div className="flex flex-col items-center gap-2">
-                          <img
-                            src={role.icon}
-                            alt={role.label}
-                            className="w-12 h-12 rounded-full object-cover"
-                          />
-                          <span className="text-white font-medium">{role.label}</span>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                </div>
+        <RoleSelector
+          label="役割（アイコンになります）"
+          value={selectedRole}
+          onChange={setSelectedRole}
+          disabled={loading}
+        />
 
-                <div className="flex flex-col items-center py-4">
-                  <p className="text-sm text-dark-400 mb-3">選択中のアイコン</p>
-                  <img
-                    src={selectedRoleOption?.icon}
-                    alt="Selected role"
-                    className="w-24 h-24 rounded-full object-cover border-4 border-coral-500/50"
-                  />
-                </div>
+        <PasswordInput
+          label="パスワード"
+          placeholder={`${PASSWORD_MIN_LENGTH}文字以上`}
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          disabled={loading}
+          autoComplete="new-password"
+        />
 
-                <div className="space-y-1">
-                  <div className="relative">
-                    <Input
-                      label="パスワード"
-                      type={showPassword ? 'text' : 'password'}
-                      placeholder="パスワードを入力（5文字以上）"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      disabled={loading}
-                      autoComplete="new-password"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-9 text-dark-400 hover:text-dark-300"
-                      disabled={loading}
-                    >
-                      {showPassword ? (
-                        <EyeOff className="w-5 h-5" />
-                      ) : (
-                        <Eye className="w-5 h-5" />
-                      )}
-                    </button>
-                  </div>
-                  {passwordStrength && (
-                    <p className={clsx('text-xs', passwordStrength.color)}>
-                      パスワード強度: {passwordStrength.label}
-                    </p>
-                  )}
-                </div>
+        <Input
+          label="パスワード（確認）"
+          type="password"
+          placeholder="もう一度入力"
+          value={confirmPassword}
+          onChange={(e) => setConfirmPassword(e.target.value)}
+          disabled={loading}
+          autoComplete="new-password"
+          error={confirmError}
+        />
 
-                <div className="relative">
-                  <Input
-                    label="パスワード（確認）"
-                    type={showConfirmPassword ? 'text' : 'password'}
-                    placeholder="パスワードを再入力"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    disabled={loading}
-                    autoComplete="new-password"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className="absolute right-3 top-9 text-dark-400 hover:text-dark-300"
-                    disabled={loading}
-                  >
-                    {showConfirmPassword ? (
-                      <EyeOff className="w-5 h-5" />
-                    ) : (
-                      <Eye className="w-5 h-5" />
-                    )}
-                  </button>
-                  {confirmPassword && password !== confirmPassword && (
-                    <p className="text-xs text-red-400 mt-1">
-                      パスワードが一致しません
-                    </p>
-                  )}
-                  {confirmPassword && password === confirmPassword && password.length >= PASSWORD_MIN_LENGTH && (
-                    <p className="text-xs text-green-400 mt-1">
-                      パスワードが一致しました
-                    </p>
-                  )}
-                </div>
+        <Button
+          type="submit"
+          variant="primary"
+          size="lg"
+          className="w-full mt-1"
+          loading={loading}
+          disabled={!isFormValid}
+        >
+          登録する
+        </Button>
+      </form>
 
-                <Button
-                  type="submit"
-                  variant="primary"
-                  className="w-full"
-                  loading={loading}
-                  disabled={!isFormValid}
-                >
-                  登録する
-                </Button>
-
-                <p className="text-center text-dark-400 text-sm">
-                  すでにアカウントをお持ちですか？{' '}
-                  <button
-                    type="button"
-                    onClick={() => navigate('/login')}
-                    className="text-coral-400 hover:text-coral-300"
-                    disabled={loading}
-                  >
-                    ログイン
-                  </button>
-                </p>
-              </form>
-            </div>
-          </Card>
-        </section>
-      </PageContainer>
-    </>
+      {/* ログインへの導線 */}
+      <p className="mt-5 flex items-center justify-center gap-1 text-sm text-ink-muted">
+        すでにアカウントがありますか？
+        <button
+          type="button"
+          onClick={() => navigate('/login')}
+          className="inline-flex items-center min-h-tap px-1.5 font-bold text-accent active:text-accent-strong"
+          disabled={loading}
+        >
+          ログイン
+        </button>
+      </p>
+    </PageContainer>
   )
 }

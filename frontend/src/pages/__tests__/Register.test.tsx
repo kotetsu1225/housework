@@ -81,17 +81,17 @@ describe('Register', () => {
   describe('役割選択', () => {
     it('デフォルトで父が選択されている', () => {
       renderRegisterPage()
-      const fatherButton = screen.getByRole('button', { name: /父/ })
-      expect(fatherButton).toHaveClass('border-coral-500')
+      const fatherButton = screen.getByRole('radio', { name: /父/ })
+      expect(fatherButton).toHaveClass('border-accent')
     })
 
     it('役割を変更できる', async () => {
       renderRegisterPage()
-      fireEvent.click(screen.getByRole('button', { name: /母/ }))
+      fireEvent.click(screen.getByRole('radio', { name: /母/ }))
       
       await waitFor(() => {
-        const motherButton = screen.getByRole('button', { name: /母/ })
-        expect(motherButton).toHaveClass('border-coral-500')
+        const motherButton = screen.getByRole('radio', { name: /母/ })
+        expect(motherButton).toHaveClass('border-accent')
       })
     })
   })

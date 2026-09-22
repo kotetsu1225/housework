@@ -4,32 +4,33 @@
  * 2つのモードで動作:
  * - ホームモード (/executions/completed): 全員の完了タスクを表示
  * - メンバーモード (/members/:memberId/completed): 特定メンバーの全履歴を表示
+ *
+ * どちらも家族／個人の箱に分けて表示する（frontend/DESIGN.md §1）。
  */
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
-import { CheckCircle2, RefreshCw, User, Users, ChevronDown, ArrowLeft, Trophy } from 'lucide-react'
+import { useParams } from 'react-router-dom'
+import { RefreshCw, ChevronDown } from 'lucide-react'
+import { clsx } from 'clsx'
 import { Header } from '../components/layout/Header'
 import { PageContainer } from '../components/layout/PageContainer'
-import { Card } from '../components/ui/Card'
+import { SectionBox } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
 import { Alert } from '../components/ui/Alert'
 import { Avatar } from '../components/ui/Avatar'
+import { Segmented } from '../components/ui/Segmented'
 import { CompletedTaskCard } from '../components/dashboard'
-import { useCompletedTasks, useMembers } from '../hooks'
+import { useCompletedTasks, useMembers, useScheduleLabels } from '../hooks'
 import { useAuth } from '../contexts'
 import { toISODateString, formatJa, isParentRole } from '../utils'
 import { getRoleLabel } from '../constants'
 import type { CompletedTaskDto } from '../api/completedTasks'
-
-type FilterTab = 'all' | 'family' | 'personal'
 
 /**
  * 完了済みタスク一覧ページ
  */
 export function CompletedExecutions() {
   const { memberId } = useParams<{ memberId?: string }>()
-  const navigate = useNavigate()
   const today = new Date()
   const todayStr = toISODateString(today)
 
@@ -39,9 +40,6 @@ export function CompletedExecutions() {
   // ホームモード用の表示切替
   const [homeMode, setHomeMode] = useState<'today' | 'all'>('today')
   const [showOtherMembers, setShowOtherMembers] = useState(false)
-
-  // メンバーモード用のフィルタータブ
-  const [filterTab, setFilterTab] = useState<FilterTab>('all')
 
   const { user } = useAuth()
 
@@ -57,6 +55,9 @@ export function CompletedExecutions() {
     fetchCompletedTasks,
     loadMore,
   } = useCompletedTasks()
+
+  // 周期チップの文言
+  const scheduleLabels = useScheduleLabels()
 
   const loading = tasksLoading || membersLoading
 
@@ -92,32 +93,14 @@ export function CompletedExecutions() {
     fetchData()
   }, [fetchData])
 
-  // メンバーモード: フィルタリングされたタスク
-  const filteredTasks = useMemo(() => {
-    if (!isMemberMode) return completedTasks
-    switch (filterTab) {
-      case 'family':
-        return completedTasks.filter((task) => task.scope === 'FAMILY')
-      case 'personal':
-        return completedTasks.filter((task) => task.scope === 'PERSONAL')
-      default:
-        return completedTasks
-    }
-  }, [isMemberMode, completedTasks, filterTab])
-
   // メンバーモード: 累計ポイント計算
   const totalPoints = useMemo(() => {
     return completedTasks.reduce((sum, task) => sum + (task.frozenPoint ?? 0), 0)
   }, [completedTasks])
 
-  // メンバーモード: スコープ別カウント
-  const familyCount = useMemo(() => {
-    return completedTasks.filter((t) => t.scope === 'FAMILY').length
-  }, [completedTasks])
-
-  const personalCount = useMemo(() => {
-    return completedTasks.filter((t) => t.scope === 'PERSONAL').length
-  }, [completedTasks])
+  // メンバーモード: 家族／個人
+  const memberFamilyTasks = useMemo(() => completedTasks.filter((t) => t.scope === 'FAMILY'), [completedTasks])
+  const memberPersonalTasks = useMemo(() => completedTasks.filter((t) => t.scope === 'PERSONAL'), [completedTasks])
 
   // ホームモード: グループ分け
   const grouped = useMemo(() => {
@@ -161,9 +144,13 @@ export function CompletedExecutions() {
   const sortedOtherOwners = useMemo(() => {
     if (!grouped) return []
     const entries = Array.from(grouped.otherByOwner.entries())
-    entries.sort(([aId], [bId]) => aId.localeCompare(bId))
+    entries.sort(([aId], [bId]) => {
+      const a = members.find((m) => m.id === aId)?.name ?? aId
+      const b = members.find((m) => m.id === bId)?.name ?? bId
+      return a.localeCompare(b, 'ja')
+    })
     return entries
-  }, [grouped])
+  }, [grouped, members])
 
   // 追加読み込み
   const handleLoadMore = useCallback(() => {
@@ -180,6 +167,44 @@ export function CompletedExecutions() {
     }
   }, [isMemberMode, memberId, homeMode, todayStr, loadMore])
 
+  const showDate = isMemberMode || homeMode === 'all'
+
+  const renderCard = (task: CompletedTaskDto) => (
+    <CompletedTaskCard
+      key={task.taskExecutionId}
+      task={task}
+      members={members}
+      scheduleLabel={scheduleLabels[task.taskDefinitionId]}
+      showDate={showDate}
+    />
+  )
+
+  const refreshButton = (
+    <button
+      type="button"
+      onClick={fetchData}
+      disabled={loading}
+      aria-label="最新の状態に更新"
+      className="w-11 h-11 rounded-full bg-surface text-accent flex items-center justify-center disabled:opacity-50"
+    >
+      <RefreshCw className={clsx('w-5 h-5', loading && 'animate-spin')} />
+    </button>
+  )
+
+  const loadMoreButton = (
+    <section className="mt-3">
+      <Button variant="secondary" size="lg" className="w-full" onClick={handleLoadMore}>
+        もっと読み込む
+      </Button>
+    </section>
+  )
+
+  const emptyBox = (message: string) => (
+    <div className="bg-surface rounded-box py-10 text-center">
+      <p className="text-ink-muted font-medium">{message}</p>
+    </div>
+  )
+
   // =========================================
   // メンバーモードのレンダリング
   // =========================================
@@ -187,14 +212,10 @@ export function CompletedExecutions() {
     return (
       <>
         <Header
-          title={targetMember ? `${targetMember.name}の完了履歴` : '完了履歴'}
-          subtitle={targetMember ? getRoleLabel(targetMember.role) : undefined}
-          action={
-            <Button variant="secondary" size="sm" onClick={() => navigate(`/members/${memberId}`)}>
-              <ArrowLeft className="w-4 h-4 mr-1" />
-              戻る
-            </Button>
-          }
+          title="完了履歴"
+          subtitle={targetMember ? `${targetMember.name}（${getRoleLabel(targetMember.role)}）` : undefined}
+          showBack
+          action={refreshButton}
         />
         <PageContainer>
           {error && (
@@ -205,84 +226,52 @@ export function CompletedExecutions() {
 
           {/* プロフィール + 累計ポイント */}
           {targetMember && (
-            <Card variant="glass" className="mb-6">
-              <div className="flex items-center gap-4">
-                <Avatar
-                  name={targetMember.name}
-                  size="lg"
-                  role={targetMember.role}
-                  variant={isParentRole(targetMember.role) ? 'parent' : 'child'}
-                />
-                <div className="flex-1">
-                  <h2 className="text-lg font-bold text-white">{targetMember.name}</h2>
-                  <p className="text-white/50 text-sm">{getRoleLabel(targetMember.role)}</p>
-                </div>
-                <div className="text-right">
-                  <div className="flex items-center gap-1 text-amber-400">
-                    <Trophy className="w-5 h-5" />
-                    <span className="text-2xl font-bold">{totalPoints}</span>
-                    <span className="text-sm">pt</span>
-                  </div>
-                  <p className="text-xs text-white/50">累計獲得ポイント</p>
-                </div>
+            <div className="bg-surface rounded-xl p-4 flex items-center gap-4 mb-3">
+              <Avatar
+                name={targetMember.name}
+                size="xl"
+                role={targetMember.role}
+                variant={isParentRole(targetMember.role) ? 'parent' : 'child'}
+                className="w-14 h-14"
+              />
+              <div className="flex-1 min-w-0">
+                <h2 className="text-[17px] font-bold text-ink truncate">{targetMember.name}</h2>
+                <p className="text-[13px] text-ink-muted">{getRoleLabel(targetMember.role)}</p>
               </div>
-            </Card>
+              <div className="text-right">
+                <p className="text-2xl font-bold text-accent tabular leading-none">
+                  {totalPoints}
+                  <span className="text-[13px]">pt</span>
+                </p>
+                <p className="text-xs text-ink-muted mt-1">累計獲得ポイント</p>
+              </div>
+            </div>
           )}
 
-          {/* フィルタータブ */}
-          <section className="mb-4">
-            <div className="flex gap-2">
-              {(['all', 'family', 'personal'] as FilterTab[]).map((tab) => (
-                <button
-                  key={tab}
-                  onClick={() => setFilterTab(tab)}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                    filterTab === tab
-                      ? 'bg-coral-500/20 text-coral-400 border border-coral-500/30'
-                      : 'bg-dark-800/50 text-white/50 border border-transparent hover:border-dark-600'
-                  }`}
-                >
-                  {tab === 'all' ? 'すべて' : tab === 'family' ? '家族' : '個人'}
-                  <span className="ml-1 text-xs">
-                    ({tab === 'all'
-                      ? completedTasks.length
-                      : tab === 'family'
-                      ? familyCount
-                      : personalCount})
-                  </span>
-                </button>
-              ))}
-            </div>
-          </section>
-
           {/* タスク一覧 */}
-          <section>
+          <section className="space-y-3">
             {loading && completedTasks.length === 0 ? (
-              <div className="text-center py-10">
-                <p className="text-white/50">読み込み中...</p>
-              </div>
-            ) : filteredTasks.length > 0 ? (
-              <div className="space-y-2">
-                {filteredTasks.map((task) => (
-                  <CompletedTaskCard key={task.taskExecutionId} task={task} members={members} />
-                ))}
-              </div>
+              emptyBox('読み込み中...')
+            ) : completedTasks.length === 0 ? (
+              emptyBox('完了したタスクはありません')
             ) : (
-              <div className="text-center py-10 text-white/50">
-                <CheckCircle2 className="w-12 h-12 mx-auto mb-2 opacity-30" />
-                <p>完了したタスクはありません</p>
-              </div>
+              <>
+                {memberFamilyTasks.length > 0 && (
+                  <SectionBox title="家族のタスク" meta={`${memberFamilyTasks.length}件`}>
+                    {memberFamilyTasks.map(renderCard)}
+                  </SectionBox>
+                )}
+                {memberPersonalTasks.length > 0 && (
+                  <SectionBox title="個人のタスク" meta={`${memberPersonalTasks.length}件`}>
+                    {memberPersonalTasks.map(renderCard)}
+                  </SectionBox>
+                )}
+              </>
             )}
           </section>
 
           {/* もっと読み込む */}
-          {!loading && completedTasks.length > 0 && hasMore && (
-            <section className="mt-6">
-              <Button variant="secondary" className="w-full" onClick={handleLoadMore}>
-                もっと読み込む
-              </Button>
-            </section>
-          )}
+          {!loading && completedTasks.length > 0 && hasMore && loadMoreButton}
         </PageContainer>
       </>
     )
@@ -295,17 +284,9 @@ export function CompletedExecutions() {
     <>
       <Header
         title="完了したタスク"
-        subtitle={homeMode === 'all' ? '全て' : formatJa(today, 'M月d日（E）')}
-        action={
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={fetchData}
-            disabled={loading}
-          >
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-          </Button>
-        }
+        subtitle={homeMode === 'all' ? 'すべて' : formatJa(today, 'M月d日（E）')}
+        showBack
+        action={refreshButton}
       />
       <PageContainer>
         {error && (
@@ -314,133 +295,103 @@ export function CompletedExecutions() {
           </Alert>
         )}
 
-        <section className="py-4">
-          <label className="block text-sm text-white/70 mb-2">表示</label>
-          <div className="grid grid-cols-2 gap-2">
-            <Button
-              variant={homeMode === 'today' ? 'primary' : 'secondary'}
-              size="sm"
-              className="w-full"
-              onClick={() => setHomeMode('today')}
-            >
-              今日
-            </Button>
-            <Button
-              variant={homeMode === 'all' ? 'primary' : 'secondary'}
-              size="sm"
-              className="w-full"
-              onClick={() => setHomeMode('all')}
-            >
-              全て
-            </Button>
-          </div>
+        <section className="pb-4">
+          <Segmented
+            label="表示する範囲"
+            value={homeMode}
+            onChange={(mode) => setHomeMode(mode)}
+            options={[
+              { value: 'today', label: '今日' },
+              { value: 'all', label: 'すべて' },
+            ]}
+          />
         </section>
 
         <section className="space-y-3">
           {loading && completedTasks.length === 0 ? (
-            <div className="text-center py-10">
-              <p className="text-white/50">読み込み中...</p>
-            </div>
+            emptyBox('読み込み中...')
           ) : completedTasks.length > 0 && grouped ? (
-            <div className="space-y-6">
+            <>
               {/* 家族タスク */}
               {grouped.family.length > 0 && (
-                <div className="space-y-3">
-                  <h3 className="text-white/70 font-bold flex items-center gap-2">
-                    <Users className="w-4 h-4 text-blue-400" />
-                    家族のタスク
-                  </h3>
-                  <div className="space-y-2">
-                    {grouped.family.map((task) => (
-                      <CompletedTaskCard key={task.taskExecutionId} task={task} members={members} />
-                    ))}
-                  </div>
-                </div>
+                <SectionBox title="家族のタスク" meta={`${grouped.family.length}件`}>
+                  {grouped.family.map(renderCard)}
+                </SectionBox>
               )}
 
               {/* 自分のタスク */}
               {grouped.myPersonal.length > 0 && (
-                <div className="space-y-3">
-                  <h3 className="text-white/70 font-bold flex items-center gap-2">
-                    <User className="w-4 h-4 text-emerald-400" />
-                    自分のタスク
-                  </h3>
-                  <div className="space-y-2">
-                    {grouped.myPersonal.map((task) => (
-                      <CompletedTaskCard key={task.taskExecutionId} task={task} members={members} />
-                    ))}
-                  </div>
-                </div>
+                <SectionBox title="自分のタスク" meta={`${grouped.myPersonal.length}件`}>
+                  {grouped.myPersonal.map(renderCard)}
+                </SectionBox>
               )}
 
               {/* 他メンバーのタスク */}
               {otherCount > 0 && (
-                <div className="space-y-3">
+                <section className="bg-surface rounded-box p-3 flex flex-col gap-2">
                   <button
+                    type="button"
                     onClick={() => setShowOtherMembers((v) => !v)}
-                    className="flex items-center gap-2 text-white/60 hover:text-white/80 transition-colors font-bold"
+                    aria-expanded={showOtherMembers}
+                    className="flex items-center justify-between gap-2 px-1 min-h-tap text-[15px] font-bold text-ink"
                   >
-                    <Users className="w-4 h-4 text-white/40" />
-                    他のメンバーのタスク ({otherCount})
-                    <ChevronDown className={`w-4 h-4 transition-transform ${showOtherMembers ? 'rotate-180' : ''}`} />
+                    <span>他のメンバーのタスク</span>
+                    <span className="flex items-center gap-1 text-[13px] font-normal text-ink-muted tabular">
+                      {otherCount}件
+                      <ChevronDown
+                        className={clsx('w-5 h-5 text-icon-muted transition-transform', showOtherMembers && 'rotate-180')}
+                      />
+                    </span>
                   </button>
 
                   {showOtherMembers && (
-                    <div className="space-y-6">
+                    <div className="space-y-3">
                       {sortedOtherOwners.map(([ownerId, tasks]) => {
-                        const ownerName = tasks[0]?.assigneeMembers.find(a => a.id === ownerId)?.name ?? '不明なメンバー'
+                        const owner = members.find((m) => m.id === ownerId)
+                        const ownerName =
+                          owner?.name ?? tasks[0]?.assigneeMembers.find((a) => a.id === ownerId)?.name ?? '不明なメンバー'
                         return (
-                          <div key={ownerId} className="space-y-3">
-                            <div className="flex items-center gap-2 text-white/70 font-bold">
+                          <div key={ownerId} className="space-y-2">
+                            <div className="flex items-center gap-2 px-1 text-[13px] font-medium text-ink-muted">
+                              {owner ? (
+                                <Avatar
+                                  name={owner.name}
+                                  size="sm"
+                                  role={owner.role}
+                                  variant={isParentRole(owner.role) ? 'parent' : 'child'}
+                                  className="w-6 h-6"
+                                />
+                              ) : (
+                                <span className="w-6 h-6 rounded-full bg-control flex items-center justify-center text-xs">?</span>
+                              )}
                               <span className="truncate">{ownerName}</span>
                             </div>
-                            <div className="space-y-2">
-                              {tasks.map((task) => (
-                                <CompletedTaskCard key={task.taskExecutionId} task={task} members={members} />
-                              ))}
-                            </div>
+                            {tasks.map(renderCard)}
                           </div>
                         )
                       })}
 
                       {grouped.otherUnknownOwner.length > 0 && (
-                        <div className="space-y-3">
-                          <div className="flex items-center gap-2 text-white/70 font-bold">
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2 px-1 text-[13px] font-medium text-ink-muted">
+                            <span className="w-6 h-6 rounded-full bg-control flex items-center justify-center text-xs">?</span>
                             <span className="truncate">不明なメンバー</span>
                           </div>
-                          <div className="space-y-2">
-                            {grouped.otherUnknownOwner.map((task) => (
-                              <CompletedTaskCard key={task.taskExecutionId} task={task} members={members} />
-                            ))}
-                          </div>
+                          {grouped.otherUnknownOwner.map(renderCard)}
                         </div>
                       )}
                     </div>
                   )}
-                </div>
+                </section>
               )}
-            </div>
+            </>
           ) : (
-            <Card variant="glass" className="text-center py-10">
-              <p className="text-white/50">
-                {homeMode === 'today' ? '今日の完了タスクはありません' : '完了タスクはありません'}
-              </p>
-            </Card>
+            emptyBox(homeMode === 'today' ? '今日の完了タスクはありません' : '完了タスクはありません')
           )}
         </section>
 
         {/* もっと読み込むボタン */}
-        {homeMode === 'all' && !loading && completedTasks.length > 0 && hasMore && (
-          <section className="mt-6">
-            <Button
-              variant="secondary"
-              className="w-full"
-              onClick={handleLoadMore}
-            >
-              もっと読み込む
-            </Button>
-          </section>
-        )}
+        {homeMode === 'all' && !loading && completedTasks.length > 0 && hasMore && loadMoreButton}
       </PageContainer>
     </>
   )

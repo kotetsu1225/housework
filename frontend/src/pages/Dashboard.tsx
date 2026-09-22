@@ -18,10 +18,10 @@ import { Modal } from '../components/ui/Modal'
 import { ProgressSummaryCard, TaskGroupsSection, TodayTaskCard, TomorrowTaskDetailModal } from '../components/dashboard'
 import { TaskActionModal } from '../components/dashboard/TaskActionModal'
 import { NotificationPermissionModal } from '../components/push/NotificationPermissionModal'
-import { useDashboard, useMembers, usePushSubscription } from '../hooks'
+import { useDashboard, useMembers, usePushSubscription, useScheduleLabels } from '../hooks'
 import { useAuth } from '../contexts'
-import { formatJa, toISODateString, formatScheduleDtoLabel } from '../utils'
-import { getDashboardData, getTaskDefinitions, ApiError } from '../api'
+import { formatJa, toISODateString } from '../utils'
+import { getDashboardData, ApiError } from '../api'
 import type { TodayTaskDto } from '../api/dashboard'
 
 /**
@@ -65,25 +65,7 @@ export function Dashboard() {
   const { members, fetchMembers } = useMembers()
 
   // 周期チップの文言（タスク定義ID → 毎日／毎週火曜／9/22）
-  const [scheduleLabels, setScheduleLabels] = useState<Record<string, string>>({})
-  useEffect(() => {
-    let cancelled = false
-    getTaskDefinitions()
-      .then((res) => {
-        if (cancelled) return
-        const labels: Record<string, string> = {}
-        for (const def of res.taskDefinitions) {
-          labels[def.id] = formatScheduleDtoLabel(def.schedule)
-        }
-        setScheduleLabels(labels)
-      })
-      .catch(() => {
-        // 文言が取れなくてもカードは日付／「定期」で表示できるので握りつぶす
-      })
-    return () => {
-      cancelled = true
-    }
-  }, [])
+  const scheduleLabels = useScheduleLabels()
 
   // Push通知購読
   const {

@@ -19,6 +19,7 @@ vi.mock('../../hooks', () => ({
   useDashboard: mockUseDashboard,
   useMembers: mockUseMembers,
   usePushSubscription: mockUsePushSubscription,
+  useScheduleLabels: () => ({}),
 }))
 
 vi.mock('../../contexts', () => ({

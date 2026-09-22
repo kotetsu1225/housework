@@ -26,7 +26,7 @@ export interface MemberSummaryCardProps {
 /**
  * メンバーサマリーカードコンポーネント
  *
- * Dashboard画面の下部に横スクロールで表示されるメンバー一覧
+ * 横スクロールで並べるメンバー一覧のカード
  *
  * @example
  * ```tsx
@@ -50,8 +50,8 @@ export function MemberSummaryCard({
 
   return (
     <Card
-      variant="glass"
-      className="flex-shrink-0 w-28 text-center cursor-pointer hover:bg-dark-700/50 transition-colors"
+      hoverable
+      className="flex-shrink-0 w-28 text-center cursor-pointer"
       onClick={handleClick}
     >
       <div className="flex flex-col items-center gap-2">
@@ -61,12 +61,11 @@ export function MemberSummaryCard({
           role={member.role}
           variant={isParentRole(member.role) ? 'parent' : 'child'}
         />
-        <span className="font-medium text-white truncate w-full">{member.name}</span>
-        <span className="text-xs text-white/50">
+        <span className="font-medium text-ink truncate w-full">{member.name}</span>
+        <span className="text-xs text-ink-muted tabular">
           {totalCount > 0 ? `${completedCount}/${totalCount}完了` : 'タスクなし'}
         </span>
       </div>
     </Card>
   )
 }
-

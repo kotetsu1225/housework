@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { UserPlus, RefreshCw, Trophy, Star, ChevronRight, CheckCircle2, Users, User } from 'lucide-react'
+import { UserPlus, RefreshCw, ChevronRight } from 'lucide-react'
+import { clsx } from 'clsx'
 import { Header } from '../components/layout/Header'
 import { PageContainer } from '../components/layout/PageContainer'
 import { Button } from '../components/ui/Button'
@@ -9,26 +10,17 @@ import { Input } from '../components/ui/Input'
 import { Modal } from '../components/ui/Modal'
 import { Alert } from '../components/ui/Alert'
 import { RoleSelector } from '../components/ui/RoleSelector'
-import { ProgressRing } from '../components/ui/ProgressRing'
+import { ProgressBar } from '../components/ui/ProgressBar'
 import { useMembers } from '../hooks/useMembers'
-import { isParentRole } from '../utils'
+import { isParentRole, formatJa } from '../utils'
 import { getRoleLabel } from '../constants'
 import type { FamilyRole, Member } from '../types'
 
 /**
- * ランキングメダルを取得
+ * ランキングの表示文言（絵文字は使わない: frontend/DESIGN.md §6）
  */
 export function getRankingMedal(rank: number): string {
-  switch (rank) {
-    case 1:
-      return '🥇'
-    case 2:
-      return '🥈'
-    case 3:
-      return '🥉'
-    default:
-      return `${rank}`
-  }
+  return `${rank}位`
 }
 
 /**
@@ -53,69 +45,59 @@ interface MemberRankingCardProps {
 
 function MemberRankingCard({ member, rank, familyCompletionRate, onClick }: MemberRankingCardProps) {
   // 今日の完了数（個人タスク含む）
-  const todayPersonalCompleted = member.todayPersonalTaskCompleted
+  const todayPersonalCompleted = Math.max(0, member.todayPersonalTaskCompleted)
   const todayCompletedCount = member.todayFamilyTaskCompleted + todayPersonalCompleted
 
   return (
-    <div
+    <button
+      type="button"
       onClick={onClick}
-      className="bg-dark-800/50 backdrop-blur-sm rounded-2xl p-4 border border-dark-700/50 cursor-pointer transition-all hover:border-coral-500/30 hover:scale-[1.01]"
+      aria-label={`${member.name}の詳細を見る`}
+      className="w-full text-left bg-surface rounded-xl pl-4 pr-3 py-3.5 flex items-center gap-3.5 active:bg-canvas transition-colors"
     >
-      <div className="flex items-center gap-3">
-        {/* ランキング */}
-        <div className="flex-shrink-0 w-8 text-center">
-          <span className={`text-xl ${rank <= 3 ? '' : 'text-white/50 text-base'}`}>
-            {getRankingMedal(rank)}
-          </span>
-        </div>
+      {/* 順位 */}
+      <span
+        className={clsx(
+          'w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 tabular',
+          rank === 1 ? 'bg-accent text-white' : 'bg-control text-ink-soft'
+        )}
+      >
+        {rank}
+      </span>
 
-        {/* アバター */}
-        <Avatar
-          name={member.name}
-          size="lg"
-          role={member.role}
-          variant={isParentRole(member.role) ? 'parent' : 'child'}
-        />
+      {/* アバター */}
+      <Avatar
+        name={member.name}
+        size="xl"
+        role={member.role}
+        variant={isParentRole(member.role) ? 'parent' : 'child'}
+        className="w-14 h-14"
+      />
 
-        {/* メンバー情報 */}
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1">
-            <span className="font-bold text-white truncate">{member.name}</span>
-            <span className="text-xs text-white/50">({getRoleLabel(member.role)})</span>
-          </div>
-          
-          {/* 今日の獲得ポイント */}
-          <div className="flex items-center gap-1 text-amber-400 font-bold text-sm mb-2">
-            <Star className="w-3.5 h-3.5 fill-amber-400" />
-            <span>{member.todayEarnedPoint}pt</span>
-          </div>
+      {/* メンバー情報 */}
+      <span className="flex-1 min-w-0 flex flex-col gap-1">
+        <span className="text-[17px] font-bold text-ink truncate">
+          {member.name}{' '}
+          <span className="text-[13px] font-normal text-ink-muted">{getRoleLabel(member.role)}</span>
+        </span>
+        <span className="text-[13px] text-ink-muted tabular">
+          今日 {todayCompletedCount}件 · 家族 {member.todayFamilyTaskCompleted} · 個人 {todayPersonalCompleted}
+        </span>
+        <span className="flex items-center gap-2">
+          <ProgressBar completed={familyCompletionRate} total={100} variant="bar" size="sm" className="flex-1" />
+          <span className="text-xs text-ink-muted tabular whitespace-nowrap">家族タスク {familyCompletionRate}%</span>
+        </span>
+      </span>
 
-          {/* 完了数の内訳 */}
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-white/50">
-            <span className="flex items-center gap-1">
-              <CheckCircle2 className="w-3 h-3 text-emerald-400" />
-              今日 {todayCompletedCount}件
-            </span>
-            <span className="flex items-center gap-1">
-              <Users className="w-3 h-3 text-blue-400" />
-              家族 {member.todayFamilyTaskCompleted}件
-            </span>
-            <span className="flex items-center gap-1">
-              <User className="w-3 h-3 text-emerald-400" />
-              個人 {todayPersonalCompleted > 0 ? todayPersonalCompleted : 0}件
-            </span>
-          </div>
-        </div>
-
-        {/* 家族タスク完了率（円グラフ） */}
-        <div className="flex-shrink-0 flex flex-col items-center">
-          <ProgressRing progress={familyCompletionRate} size="sm" />
-          <span className="text-[10px] text-white/50 mt-1">家族タスク</span>
-        </div>
-
-        <ChevronRight className="w-5 h-5 text-white/30 flex-shrink-0" />
-      </div>
-    </div>
+      {/* 今日の獲得ポイント */}
+      <span className="flex flex-col items-end gap-0.5 flex-shrink-0">
+        <span className="text-xl font-bold text-accent tabular">
+          {member.todayEarnedPoint}
+          <span className="text-xs">pt</span>
+        </span>
+        <ChevronRight className="w-[18px] h-[18px] text-icon-muted" />
+      </span>
+    </button>
   )
 }
 
@@ -124,7 +106,7 @@ function MemberRankingCard({ member, rank, familyCompletionRate, onClick }: Memb
  */
 export function Members() {
   const navigate = useNavigate()
-  
+
   // メンバー管理フック
   const { members, loading, error, fetchMembers, addMember, clearError } = useMembers()
 
@@ -137,10 +119,10 @@ export function Members() {
   const familyCompletionTotal = useMemo(() => {
     return members.reduce((total, member) => total + (member.todayFamilyTaskCompleted || 0), 0)
   }, [members])
-  
+
   // ランキング順に並んだメンバーごとの完了割合
   const familyCompletionRate = useMemo(() => {
-    return rankedMembers.map((member) => 
+    return rankedMembers.map((member) =>
       familyCompletionTotal > 0
         ? Math.round((member.todayFamilyTaskCompleted / familyCompletionTotal) * 100)
         : 0
@@ -210,20 +192,25 @@ export function Members() {
         title="メンバー"
         subtitle={`${members.length}人の家族`}
         action={
-          <div className="flex gap-2">
-            <Button
-              variant="secondary"
-              size="sm"
+          <>
+            <button
+              type="button"
               onClick={fetchMembers}
               disabled={loading}
+              aria-label="最新の状態に更新"
+              className="w-11 h-11 rounded-full bg-surface text-accent flex items-center justify-center disabled:opacity-50"
             >
-              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-            </Button>
-            <Button variant="primary" size="sm" onClick={() => setShowAddModal(true)}>
-              <UserPlus className="w-4 h-4 mr-1" />
+              <RefreshCw className={clsx('w-5 h-5', loading && 'animate-spin')} />
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowAddModal(true)}
+              className="h-11 pl-3 pr-4 rounded-full bg-accent text-white text-[15px] font-bold flex items-center gap-1.5 active:bg-accent-strong"
+            >
+              <UserPlus className="w-[18px] h-[18px]" />
               追加
-            </Button>
-          </div>
+            </button>
+          </>
         }
       />
       <PageContainer>
@@ -236,11 +223,11 @@ export function Members() {
 
         {/* 今日のランキング */}
         <section>
-          <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-            <Trophy className="w-5 h-5 text-amber-400" />
-            今日のランキング
-          </h2>
-          <div className="space-y-3">
+          <div className="flex items-baseline justify-between px-1 pt-2 pb-2">
+            <h2 className="text-[13px] font-medium text-ink-muted">今日のランキング</h2>
+            <span className="text-[13px] text-ink-muted tabular">{formatJa(new Date(), 'M月d日')}</span>
+          </div>
+          <div className="space-y-2.5">
             {rankedMembers.map((member, index) => (
               <MemberRankingCard
                 key={member.id}
@@ -263,6 +250,7 @@ export function Members() {
             <>
               <Button
                 variant="secondary"
+                size="lg"
                 className="flex-1"
                 onClick={handleCloseModal}
                 disabled={loading}
@@ -271,6 +259,7 @@ export function Members() {
               </Button>
               <Button
                 variant="primary"
+                size="lg"
                 className="flex-1"
                 onClick={handleAddMember}
                 loading={loading}
@@ -283,7 +272,7 @@ export function Members() {
         >
           {/* モーダル内エラー表示 */}
           {error && (
-            <Alert variant="error" className="mb-4">
+            <Alert variant="error">
               {error}
             </Alert>
           )}

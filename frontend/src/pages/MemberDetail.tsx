@@ -6,24 +6,23 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Trophy, CheckCircle2, Users, User, Star, Clock, History } from 'lucide-react'
+import { ChevronRight } from 'lucide-react'
 import { Header } from '../components/layout/Header'
 import { PageContainer } from '../components/layout/PageContainer'
-import { Card } from '../components/ui/Card'
+import { SectionBox } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
 import { Badge } from '../components/ui/Badge'
 import { Avatar } from '../components/ui/Avatar'
 import { Alert } from '../components/ui/Alert'
 import { Modal } from '../components/ui/Modal'
 import { CompletedTaskCard } from '../components/dashboard'
-import { useMembers, useCompletedTasks } from '../hooks'
+import { useMembers, useCompletedTasks, useScheduleLabels } from '../hooks'
 import { isParentRole, formatTimeFromISO, toISODateString } from '../utils'
+import { formatShortDate, scheduleBadgeVariant } from '../utils/scheduleLabel'
 import { getRoleLabel } from '../constants'
 import { getRankingMedal, calculateMemberRank } from './Members'
 import type { CompletedTaskDto } from '../api/completedTasks'
 import type { Member } from '../types'
-
-type FilterTab = 'all' | 'family' | 'personal'
 
 /**
  * タスク詳細モーダルコンポーネント
@@ -33,9 +32,10 @@ interface TaskDetailModalProps {
   isOpen: boolean
   onClose: () => void
   members: Member[]
+  scheduleLabel?: string
 }
 
-function TaskDetailModal({ task, isOpen, onClose, members }: TaskDetailModalProps) {
+function TaskDetailModal({ task, isOpen, onClose, members, scheduleLabel }: TaskDetailModalProps) {
   if (!task) return null
 
   // 担当者情報にroleを追加
@@ -46,6 +46,8 @@ function TaskDetailModal({ task, isOpen, onClose, members }: TaskDetailModalProp
       role: memberInfo?.role,
     }
   })
+  const label =
+    scheduleLabel ?? (task.scheduleType === 'ONE_TIME' ? formatShortDate(task.scheduledDate) : '定期')
 
   return (
     <Modal
@@ -53,43 +55,37 @@ function TaskDetailModal({ task, isOpen, onClose, members }: TaskDetailModalProp
       onClose={onClose}
       title={task.name}
       footer={
-        <Button variant="secondary" onClick={onClose} className="flex-1">
+        <Button variant="secondary" size="lg" onClick={onClose} className="flex-1">
           閉じる
         </Button>
       }
     >
       <div className="space-y-4">
         {/* メタ情報 */}
-        <div className="flex flex-wrap items-center gap-3 text-sm text-white/70">
-          <Badge
-            variant={task.scheduleType === 'ONE_TIME' ? 'onetime' : 'recurring'}
-            size="sm"
-          >
-            {task.scheduleType === 'ONE_TIME' ? '単発' : '定期'}
+        <div className="flex flex-wrap items-center gap-2 text-[13px] text-ink-muted">
+          <Badge variant={scheduleBadgeVariant(task.scheduleType)} size="sm">
+            {label}
           </Badge>
-          <Badge
-            variant={task.scope === 'FAMILY' ? 'info' : 'personal'}
-            size="sm"
-          >
+          <Badge variant={task.scope === 'FAMILY' ? 'success' : 'personal'} size="sm">
             {task.scope === 'FAMILY' ? '家族' : '個人'}
           </Badge>
-          <span className="flex items-center gap-1">
-            <Clock className="w-4 h-4" />
-            {formatTimeFromISO(task.scheduledStartTime)} - {formatTimeFromISO(task.scheduledEndTime)}
+          <span className="tabular">
+            {formatTimeFromISO(task.scheduledStartTime)}–{formatTimeFromISO(task.scheduledEndTime)}
           </span>
           {task.frozenPoint > 0 && (
-            <span className="flex items-center gap-1 text-amber-400 font-bold">
-              <Star className="w-4 h-4 fill-amber-400" />
-              +{task.frozenPoint}pt
-            </span>
+            <span className="ml-auto font-bold text-accent tabular">+{task.frozenPoint}pt</span>
           )}
         </div>
 
+        <p className="text-[13px] text-ink-muted tabular">
+          {formatShortDate(task.scheduledDate)} {formatTimeFromISO(task.completedAt)} に完了
+        </p>
+
         {/* 説明文 */}
         {task.description && (
-          <div>
-            <p className="text-sm text-white/50 mb-1">説明</p>
-            <p className="text-white/80 text-sm bg-dark-800/50 rounded-lg p-3">
+          <div className="space-y-1.5">
+            <p className="text-[13px] font-medium text-ink-soft">説明</p>
+            <p className="text-ink text-sm bg-canvas rounded-card p-3.5 leading-relaxed whitespace-pre-wrap">
               {task.description}
             </p>
           </div>
@@ -97,21 +93,22 @@ function TaskDetailModal({ task, isOpen, onClose, members }: TaskDetailModalProp
 
         {/* 担当者 */}
         {assigneesWithRole.length > 0 && (
-          <div>
-            <p className="text-sm text-white/50 mb-2">担当者</p>
+          <div className="space-y-1.5">
+            <p className="text-[13px] font-medium text-ink-soft">担当者</p>
             <div className="flex flex-wrap gap-2">
               {assigneesWithRole.map((assignee) => (
                 <div
                   key={assignee.id}
-                  className="flex items-center gap-2 bg-dark-800/50 px-3 py-1.5 rounded-full"
+                  className="flex items-center gap-2 bg-canvas pl-1 pr-3 py-1 rounded-full"
                 >
                   <Avatar
                     name={assignee.name}
                     size="sm"
                     role={assignee.role}
                     variant={assignee.role && isParentRole(assignee.role) ? 'parent' : 'child'}
+                    className="w-6 h-6"
                   />
-                  <span className="text-white text-sm">{assignee.name}</span>
+                  <span className="text-ink text-sm font-medium">{assignee.name}</span>
                 </div>
               ))}
             </div>
@@ -143,8 +140,8 @@ export function MemberDetail() {
     fetchCompletedTasks,
   } = useCompletedTasks()
 
-  // フィルタータブ
-  const [filterTab, setFilterTab] = useState<FilterTab>('all')
+  // 周期チップの文言
+  const scheduleLabels = useScheduleLabels()
 
   // タスク詳細モーダル
   const [selectedTask, setSelectedTask] = useState<CompletedTaskDto | null>(null)
@@ -180,26 +177,14 @@ export function MemberDetail() {
     return members.find((m) => m.id === memberId)
   }, [members, memberId])
 
-  // フィルタリングされた完了タスク
-  const filteredTasks = useMemo(() => {
-    switch (filterTab) {
-      case 'family':
-        return completedTasks.filter((task) => task.scope === 'FAMILY')
-      case 'personal':
-        return completedTasks.filter((task) => task.scope === 'PERSONAL')
-      default:
-        return completedTasks
-    }
-  }, [completedTasks, filterTab])
-
-  // 完了数の集計
-  const familyCompleted = completedTasks.filter((t) => t.scope === 'FAMILY').length
-  const personalCompleted = completedTasks.filter((t) => t.scope === 'PERSONAL').length
+  // 家族／個人に分けた完了タスク
+  const familyTasks = useMemo(() => completedTasks.filter((t) => t.scope === 'FAMILY'), [completedTasks])
+  const personalTasks = useMemo(() => completedTasks.filter((t) => t.scope === 'PERSONAL'), [completedTasks])
 
   // 今日のサマリー（メンバー統計を優先）
   const todayEarnedPoints = member?.todayEarnedPoint ?? 0
-  const todayFamilyCompleted = member?.todayFamilyTaskCompleted ?? familyCompleted
-  const todayPersonalCompleted = member?.todayPersonalTaskCompleted ?? personalCompleted
+  const todayFamilyCompleted = member?.todayFamilyTaskCompleted ?? familyTasks.length
+  const todayPersonalCompleted = member?.todayPersonalTaskCompleted ?? personalTasks.length
   const todayCompletedCount = member
     ? todayFamilyCompleted + todayPersonalCompleted
     : completedTasks.length
@@ -215,10 +200,10 @@ export function MemberDetail() {
   if (loading && !member) {
     return (
       <>
-        <Header title="メンバー詳細" />
+        <Header title="メンバー詳細" showBack />
         <PageContainer>
           <div className="flex items-center justify-center py-12">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-coral-500" />
+            <div className="animate-spin rounded-full h-8 w-8 border-[3px] border-accent border-t-transparent" />
           </div>
         </PageContainer>
       </>
@@ -228,30 +213,30 @@ export function MemberDetail() {
   if (!member) {
     return (
       <>
-        <Header title="メンバー詳細" />
+        <Header title="メンバー詳細" showBack />
         <PageContainer>
           <Alert variant="error">メンバーが見つかりませんでした</Alert>
-          <Button variant="secondary" onClick={() => navigate('/members')} className="mt-4">
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            戻る
+          <Button variant="secondary" onClick={() => navigate('/members')} className="mt-4 w-full">
+            メンバー一覧へ
           </Button>
         </PageContainer>
       </>
     )
   }
 
+  const renderCard = (task: CompletedTaskDto) => (
+    <CompletedTaskCard
+      key={task.taskExecutionId}
+      task={task}
+      onClick={handleTaskClick}
+      members={members}
+      scheduleLabel={scheduleLabels[task.taskDefinitionId]}
+    />
+  )
+
   return (
     <>
-      <Header
-        title={member.name}
-        subtitle={getRoleLabel(member.role)}
-        action={
-          <Button variant="secondary" size="sm" onClick={() => navigate('/members')}>
-            <ArrowLeft className="w-4 h-4 mr-1" />
-            戻る
-          </Button>
-        }
-      />
+      <Header title="メンバー詳細" showBack />
       <PageContainer>
         {error && (
           <Alert variant="error" className="mb-4">
@@ -260,133 +245,93 @@ export function MemberDetail() {
         )}
 
         {/* プロフィールカード */}
-        <Card variant="glass" className="mb-6">
-          <div className="flex items-center gap-4">
-            <Avatar
-              name={member.name}
-              size="xl"
-              role={member.role}
-              variant={isParentRole(member.role) ? 'parent' : 'child'}
-            />
-            <div className="flex-1">
-              <h2 className="text-xl font-bold text-white mb-1">{member.name}</h2>
-              <p className="text-white/50">{getRoleLabel(member.role)}</p>
-            </div>
+        <div className="bg-surface rounded-xl p-4 flex items-center gap-4">
+          <Avatar
+            name={member.name}
+            size="xl"
+            role={member.role}
+            variant={isParentRole(member.role) ? 'parent' : 'child'}
+            className="w-[72px] h-[72px]"
+          />
+          <div className="flex-1 min-w-0">
+            <h2 className="text-[22px] font-bold text-ink truncate">{member.name}</h2>
+            <p className="text-sm text-ink-muted">{getRoleLabel(member.role)}</p>
           </div>
-        </Card>
+        </div>
 
         {/* 今日のサマリー */}
-        <section className="mb-6">
-          <h3 className="text-lg font-bold text-white mb-3 flex items-center gap-2">
-            <Trophy className="w-5 h-5 text-amber-400" />
-            今日の成果
-          </h3>
-          <div className="grid grid-cols-3 gap-3">
-            {/* 獲得ポイント */}
-            <Card variant="glass" className="p-3">
-              <div className="text-center">
-                <div className="flex items-center justify-center gap-1 text-amber-400 mb-1">
-                  <Star className="w-5 h-5 fill-amber-400" />
-                </div>
-                <p className="text-2xl font-bold text-white">{todayEarnedPoints}</p>
-                <p className="text-xs text-white/50">今日の獲得pt</p>
-              </div>
-            </Card>
-            {/* 完了数 */}
-            <Card variant="glass" className="p-3">
-              <div className="text-center">
-                <div className="flex items-center justify-center gap-1 text-emerald-400 mb-1">
-                  <CheckCircle2 className="w-5 h-5" />
-                </div>
-                <p className="text-2xl font-bold text-white">{todayCompletedCount}</p>
-                <p className="text-xs text-white/50">今日の完了タスク</p>
-              </div>
-            </Card>
-            {/* ランキング */}
-            <Card variant="glass" className="p-3">
-              <div className="text-center">
-                <div className="flex items-center justify-center gap-1 text-amber-400 mb-1">
-                  <Trophy className="w-5 h-5" />
-                </div>
-                <p className="text-2xl font-bold text-white">
-                  {currentRank !== null ? getRankingMedal(currentRank) : '-'}
-                </p>
-                <p className="text-xs text-white/50">現在のランキング</p>
-              </div>
-            </Card>
+        <section>
+          <h3 className="px-1 pt-5 pb-2 text-[13px] font-medium text-ink-muted">今日の成果</h3>
+          <div className="grid grid-cols-3 gap-2.5">
+            <div className="bg-surface rounded-xl px-3 py-3.5 flex flex-col gap-1">
+              <span className="text-2xl font-bold text-accent tabular leading-none">
+                {todayEarnedPoints}
+                <span className="text-[13px]">pt</span>
+              </span>
+              <span className="text-xs text-ink-muted">今日の獲得</span>
+            </div>
+            <div className="bg-surface rounded-xl px-3 py-3.5 flex flex-col gap-1">
+              <span className="text-2xl font-bold text-ink tabular leading-none">
+                {todayCompletedCount}
+                <span className="text-[13px] font-medium">件</span>
+              </span>
+              <span className="text-xs text-ink-muted">今日の完了</span>
+            </div>
+            <div className="bg-surface rounded-xl px-3 py-3.5 flex flex-col gap-1">
+              <span className="text-2xl font-bold text-ink tabular leading-none">
+                {currentRank !== null ? getRankingMedal(currentRank) : '-'}
+              </span>
+              <span className="text-xs text-ink-muted">今日の順位</span>
+            </div>
           </div>
         </section>
 
         {/* 完了数内訳 */}
-        <section className="mb-6">
-          <h3 className="text-sm font-medium text-white/70 mb-2">完了数内訳</h3>
-          <div className="flex gap-4 text-sm">
-            <div className="flex items-center gap-2">
-              <Users className="w-4 h-4 text-blue-400" />
-              <span className="text-white/70">家族タスク:</span>
-              <span className="text-white font-bold">{todayFamilyCompleted}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <User className="w-4 h-4 text-emerald-400" />
-              <span className="text-white/70">個人タスク:</span>
-              <span className="text-white font-bold">{todayPersonalCompleted}</span>
-            </div>
-          </div>
-        </section>
+        <div className="mt-2.5 bg-surface rounded-xl px-4 py-3 flex items-center gap-4 text-sm">
+          <span className="text-ink-muted">完了の内訳</span>
+          <span className="flex items-center gap-1.5">
+            <span className="w-3.5 h-3.5 rounded bg-family border border-family-chip" />
+            家族 <strong className="tabular">{todayFamilyCompleted}</strong>
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="w-3.5 h-3.5 rounded bg-personal border border-personal-chip" />
+            個人 <strong className="tabular">{todayPersonalCompleted}</strong>
+          </span>
+        </div>
 
-        {/* 完了タスク一覧 */}
+        {/* 完了タスク一覧（家族／個人の箱） */}
         <section>
-          <h3 className="text-lg font-bold text-white mb-3">今日完了したタスク</h3>
-
-          {/* フィルタータブ */}
-          <div className="flex gap-2 mb-4">
-            {(['all', 'family', 'personal'] as FilterTab[]).map((tab) => (
-              <button
-                key={tab}
-                onClick={() => setFilterTab(tab)}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                  filterTab === tab
-                    ? 'bg-coral-500/20 text-coral-400 border border-coral-500/30'
-                    : 'bg-dark-800/50 text-white/50 border border-transparent hover:border-dark-600'
-                }`}
-              >
-                {tab === 'all' ? 'すべて' : tab === 'family' ? '家族' : '個人'}
-                <span className="ml-1 text-xs">
-                  ({tab === 'all'
-                    ? completedTasks.length
-                    : tab === 'family'
-                    ? familyCompleted
-                    : personalCompleted})
-                </span>
-              </button>
-            ))}
-          </div>
-
-          {/* タスクリスト */}
-          {filteredTasks.length > 0 ? (
-            <div className="space-y-2">
-              {filteredTasks.map((task) => (
-                <CompletedTaskCard key={task.taskExecutionId} task={task} onClick={handleTaskClick} members={members} />
-              ))}
+          <h3 className="px-1 pt-5 pb-1 text-[13px] font-medium text-ink-muted">今日完了したタスク</h3>
+          {completedTasks.length === 0 ? (
+            <div className="bg-surface rounded-box py-8 text-center">
+              <p className="text-ink-muted font-medium">完了したタスクはありません</p>
             </div>
           ) : (
-            <div className="text-center py-8 text-white/50">
-              <CheckCircle2 className="w-12 h-12 mx-auto mb-2 opacity-30" />
-              <p>完了したタスクはありません</p>
+            <div className="space-y-3">
+              {familyTasks.length > 0 && (
+                <SectionBox title="家族のタスク" meta={`${familyTasks.length}件`}>
+                  {familyTasks.map(renderCard)}
+                </SectionBox>
+              )}
+              {personalTasks.length > 0 && (
+                <SectionBox title="自分のタスク" meta={`${personalTasks.length}件`}>
+                  {personalTasks.map(renderCard)}
+                </SectionBox>
+              )}
             </div>
           )}
         </section>
 
-        {/* 完了履歴を見るボタン（ページ最下部） */}
-        <section className="mt-6">
-          <Button
-            variant="secondary"
-            className="w-full"
+        {/* 完了履歴を見る */}
+        <section className="mt-3">
+          <button
+            type="button"
             onClick={() => navigate(`/members/${memberId}/completed`)}
+            className="w-full h-12 rounded-xl bg-surface text-accent text-[15px] font-bold flex items-center justify-center gap-2"
           >
-            <History className="w-4 h-4 mr-2" />
             完了履歴を見る
-          </Button>
+            <ChevronRight className="w-[18px] h-[18px]" />
+          </button>
         </section>
 
         {/* タスク詳細モーダル */}
@@ -395,6 +340,7 @@ export function MemberDetail() {
           isOpen={showTaskModal}
           onClose={handleCloseModal}
           members={members}
+          scheduleLabel={selectedTask ? scheduleLabels[selectedTask.taskDefinitionId] : undefined}
         />
       </PageContainer>
     </>

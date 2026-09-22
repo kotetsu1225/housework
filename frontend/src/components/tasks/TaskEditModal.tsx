@@ -6,11 +6,12 @@
  */
 
 import { useState, useEffect } from 'react'
-import { Clock, Users, User } from 'lucide-react'
 import { Modal } from '../ui/Modal'
 import { Button } from '../ui/Button'
 import { Input } from '../ui/Input'
 import { Alert } from '../ui/Alert'
+import { Segmented } from '../ui/Segmented'
+import { Select, Checkbox } from '../ui/Select'
 import { timeToISOString, formatTimeFromISO, calculateDurationMinutes } from '../../utils'
 import type { TaskDefinition, TaskScope, PatternType } from '../../types'
 import type { UpdateTaskDefinitionRequest, ScheduleDto, PatternDto } from '../../types/api'
@@ -223,6 +224,7 @@ export function TaskEditModal({
         <>
           <Button
             variant="secondary"
+            size="lg"
             className="flex-1"
             onClick={handleClose}
             disabled={loading}
@@ -231,6 +233,7 @@ export function TaskEditModal({
           </Button>
           <Button
             variant="primary"
+            size="lg"
             className="flex-1"
             onClick={handleSave}
             loading={loading}
@@ -241,38 +244,23 @@ export function TaskEditModal({
         </>
       }
     >
-      <div className="space-y-4 px-1">
+      <div className="space-y-4">
         {error && (
-          <Alert variant="error" className="mb-4">
+          <Alert variant="error">
             {error}
           </Alert>
         )}
 
-        {/* スコープ選択（タブ形式） */}
-        <div className="flex rounded-lg overflow-hidden border border-dark-700">
-          <button
-            onClick={() => handleScopeChange('FAMILY')}
-            className={`flex-1 py-3 px-4 text-sm font-medium transition-all flex items-center justify-center gap-2 ${
-              formState.scope === 'FAMILY'
-                ? 'bg-blue-500/20 text-blue-400 border-r border-blue-500/30'
-                : 'bg-dark-800/50 text-white/50 border-r border-dark-700 hover:bg-dark-700/50'
-            }`}
-          >
-            <Users className="w-4 h-4" />
-            家族タスク
-          </button>
-          <button
-            onClick={() => handleScopeChange('PERSONAL')}
-            className={`flex-1 py-3 px-4 text-sm font-medium transition-all flex items-center justify-center gap-2 ${
-              formState.scope === 'PERSONAL'
-                ? 'bg-emerald-500/20 text-emerald-400'
-                : 'bg-dark-800/50 text-white/50 hover:bg-dark-700/50'
-            }`}
-          >
-            <User className="w-4 h-4" />
-            個人タスク
-          </button>
-        </div>
+        {/* スコープ選択 */}
+        <Segmented
+          label="タスクの種別"
+          value={formState.scope}
+          onChange={(scope) => handleScopeChange(scope)}
+          options={[
+            { value: 'FAMILY', label: '家族タスク' },
+            { value: 'PERSONAL', label: '個人タスク' },
+          ]}
+        />
 
         <Input
           label="タスク名"
@@ -299,55 +287,44 @@ export function TaskEditModal({
           }
         />
 
-        <div className="grid grid-cols-2 gap-4">
-          <label className="block">
-            <span className="text-sm text-white/70 mb-1 block">開始時刻</span>
-            <Input
-              type="time"
-              value={formState.scheduledStartTime}
-              onChange={(e) =>
-                setFormState({ ...formState, scheduledStartTime: e.target.value })
-              }
-              required
-            />
-          </label>
-          <label className="block">
-            <span className="text-sm text-white/70 mb-1 block">終了時刻</span>
-            <Input
-              type="time"
-              value={formState.scheduledEndTime}
-              onChange={(e) =>
-                setFormState({ ...formState, scheduledEndTime: e.target.value })
-              }
-              required
-            />
-          </label>
+        <div className="grid grid-cols-2 gap-3">
+          <Input
+            label="開始時刻"
+            id="edit-start-time"
+            type="time"
+            value={formState.scheduledStartTime}
+            onChange={(e) =>
+              setFormState({ ...formState, scheduledStartTime: e.target.value })
+            }
+            required
+          />
+          <Input
+            label="終了時刻"
+            id="edit-end-time"
+            type="time"
+            value={formState.scheduledEndTime}
+            onChange={(e) =>
+              setFormState({ ...formState, scheduledEndTime: e.target.value })
+            }
+            required
+          />
         </div>
-        <p className="text-sm text-white/50 mt-1">
+        <p className="text-[13px] text-ink-muted -mt-2 tabular">
           所要時間: {calculateDurationMinutes(formState.scheduledStartTime, formState.scheduledEndTime)}分
         </p>
 
         {/* スケジュールタイプ選択 */}
         <div>
-          <label className="block text-sm font-medium text-dark-300 mb-2">
-            スケジュール
-          </label>
-          <div className="flex gap-2">
-            <Button
-              variant={formState.scheduleType === 'ONE_TIME' ? 'primary' : 'secondary'}
-              size="sm"
-              onClick={() => setFormState({ ...formState, scheduleType: 'ONE_TIME' })}
-            >
-              単発
-            </Button>
-            <Button
-              variant={formState.scheduleType === 'RECURRING' ? 'primary' : 'secondary'}
-              size="sm"
-              onClick={() => setFormState({ ...formState, scheduleType: 'RECURRING' })}
-            >
-              定期
-            </Button>
-          </div>
+          <p className="block text-[13px] font-medium text-ink-soft mb-1.5">スケジュール</p>
+          <Segmented
+            label="スケジュール"
+            value={formState.scheduleType}
+            onChange={(scheduleType) => setFormState({ ...formState, scheduleType })}
+            options={[
+              { value: 'ONE_TIME', label: '単発' },
+              { value: 'RECURRING', label: '定期' },
+            ]}
+          />
         </div>
 
         {/* 単発スケジュールの詳細 */}
@@ -364,57 +341,36 @@ export function TaskEditModal({
         {formState.scheduleType === 'RECURRING' && (
           <>
             <div>
-              <label className="block text-sm font-medium text-dark-300 mb-2">
-                繰り返しパターン
-              </label>
-              <div className="flex gap-2">
-                {PATTERN_OPTIONS.map((opt) => (
-                  <Button
-                    key={opt.value}
-                    variant={formState.patternType === opt.value ? 'primary' : 'secondary'}
-                    size="sm"
-                    onClick={() => setFormState({ ...formState, patternType: opt.value })}
-                  >
-                    {opt.label}
-                  </Button>
-                ))}
-              </div>
+              <p className="block text-[13px] font-medium text-ink-soft mb-1.5">繰り返しパターン</p>
+              <Segmented
+                label="繰り返しパターン"
+                value={formState.patternType}
+                onChange={(patternType) => setFormState({ ...formState, patternType })}
+                options={PATTERN_OPTIONS}
+              />
             </div>
 
             {formState.patternType === 'DAILY' && (
-              <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  id="editSkipWeekends"
-                  checked={formState.skipWeekends}
-                  onChange={(e) =>
-                    setFormState({ ...formState, skipWeekends: e.target.checked })
-                  }
-                  className="w-4 h-4 rounded border-dark-600 bg-dark-800"
-                />
-                <label htmlFor="editSkipWeekends" className="text-sm text-white/70">
-                  土日をスキップ
-                </label>
-              </div>
+              <Checkbox
+                id="editSkipWeekends"
+                label="土日をスキップ"
+                checked={formState.skipWeekends}
+                onChange={(checked) => setFormState({ ...formState, skipWeekends: checked })}
+              />
             )}
 
             {formState.patternType === 'WEEKLY' && (
-              <div>
-                <label className="block text-sm font-medium text-dark-300 mb-2">
-                  曜日
-                </label>
-                <select
-                  value={formState.dayOfWeek}
-                  onChange={(e) => setFormState({ ...formState, dayOfWeek: e.target.value })}
-                  className="w-full bg-dark-800 border border-dark-700 rounded-xl px-4 py-3 text-white"
-                >
-                  {DAY_OF_WEEK_OPTIONS.map((opt) => (
-                    <option key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <Select
+                label="曜日"
+                value={formState.dayOfWeek}
+                onChange={(e) => setFormState({ ...formState, dayOfWeek: e.target.value })}
+              >
+                {DAY_OF_WEEK_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </Select>
             )}
 
             {formState.patternType === 'MONTHLY' && (

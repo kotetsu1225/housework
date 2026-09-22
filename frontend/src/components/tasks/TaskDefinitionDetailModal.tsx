@@ -4,13 +4,13 @@
  * - カレンダーや定期タスクリストからクリックしたタスクの詳細を表示
  * - 編集権限がある場合は編集ボタンを表示
  */
-import { Clock, Edit2, Repeat, Star, User, Users } from 'lucide-react'
+import { Pencil } from 'lucide-react'
 import { Modal } from '../ui/Modal'
 import { Badge } from '../ui/Badge'
-import { Card } from '../ui/Card'
 import { Button } from '../ui/Button'
 import { Avatar } from '../ui/Avatar'
 import { formatTimeFromISO, isParentRole } from '../../utils'
+import { formatScheduleLabel, scheduleBadgeVariant } from '../../utils/scheduleLabel'
 import type { TaskDefinition, Member } from '../../types'
 
 export interface TaskDefinitionDetailModalProps {
@@ -28,32 +28,13 @@ export interface TaskDefinitionDetailModalProps {
   currentUserId?: string
 }
 
-/**
- * 繰り返しパターンをテキストに変換
- */
-function getPatternText(task: TaskDefinition): string {
-  const recurrence = task.recurrence
-  if (!recurrence) return '定期'
-
-  switch (recurrence.patternType) {
-    case 'DAILY':
-      if (recurrence.dailySkipWeekends) {
-        return '平日毎日'
-      }
-      return '毎日'
-    case 'WEEKLY': {
-      const days = ['月', '火', '水', '木', '金', '土', '日']
-      const dayIndex = (recurrence.weeklyDayOfWeek ?? 1) - 1
-      const dayName = days[dayIndex] ?? '?'
-      return `毎週${dayName}曜日`
-    }
-    case 'MONTHLY': {
-      const day = recurrence.monthlyDayOfMonth ?? 1
-      return `毎月${day}日`
-    }
-    default:
-      return '定期'
-  }
+function Row({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="flex items-start gap-3 py-2.5 border-b border-line last:border-b-0">
+      <p className="w-16 flex-shrink-0 text-[13px] text-ink-muted pt-0.5">{label}</p>
+      <div className="flex-1 min-w-0 text-[15px] font-medium text-ink">{children}</div>
+    </div>
+  )
 }
 
 /**
@@ -91,158 +72,96 @@ export function TaskDefinitionDetailModal({
       title="タスク詳細"
       footer={
         <>
+          <Button variant="secondary" size="lg" className="flex-1" onClick={onClose}>
+            閉じる
+          </Button>
           {onEdit && canEdit && (
-            <Button
-              variant="primary"
-              className="flex-1"
-              onClick={handleEdit}
-            >
-              <Edit2 className="w-4 h-4 mr-2" />
+            <Button variant="primary" size="lg" className="flex-1" onClick={handleEdit}>
+              <Pencil className="w-4 h-4" />
               編集
             </Button>
           )}
-          <Button
-            variant="secondary"
-            className="flex-1"
-            onClick={onClose}
-          >
-            閉じる
-          </Button>
         </>
       }
     >
       <div className="space-y-4">
-        {/* タスク名とバッジ */}
+        {/* タスク名とチップ */}
         <div>
-          <h3 className="text-lg font-bold text-white leading-snug">{task.name}</h3>
+          <h3 className="text-[17px] font-bold text-ink leading-snug">{task.name}</h3>
           <div className="mt-2 flex flex-wrap items-center gap-2">
-            {/* スコープバッジ */}
-            <Badge variant={task.scope === 'FAMILY' ? 'info' : 'personal'} size="sm">
-              <span className="flex items-center gap-1">
-                {task.scope === 'FAMILY' ? (
-                  <Users className="w-3 h-3" />
-                ) : (
-                  <User className="w-3 h-3" />
-                )}
-                {task.scope === 'FAMILY' ? '家族' : '個人'}
-              </span>
+            <Badge variant={scheduleBadgeVariant(task.scheduleType)} size="sm">
+              {formatScheduleLabel(task)}
             </Badge>
-            {/* スケジュールタイプバッジ */}
-            {task.scheduleType === 'RECURRING' ? (
-              <Badge variant="recurring" size="sm">
-                <span className="flex items-center gap-1">
-                  <Repeat className="w-3 h-3" />
-                  {getPatternText(task)}
-                </span>
-              </Badge>
-            ) : (
-              <Badge variant="warning" size="sm">
-                単発
-              </Badge>
-            )}
+            <Badge variant={task.scope === 'FAMILY' ? 'success' : 'personal'} size="sm">
+              {task.scope === 'FAMILY' ? '家族' : '個人'}
+            </Badge>
           </div>
         </div>
 
-        {/* 詳細情報カード */}
-        <Card variant="glass" className="p-4 space-y-3">
-          {/* 時間 */}
-          <div className="flex items-start gap-2 text-white/80">
-            <Clock className="w-4 h-4 mt-0.5 text-white/60" />
-            <div className="flex-1">
-              <p className="text-sm text-white/60">時間</p>
-              <p className="font-medium">
-                {formatTimeFromISO(task.scheduledTimeRange.startTime)} -{' '}
-                {formatTimeFromISO(task.scheduledTimeRange.endTime)}
-              </p>
-            </div>
-          </div>
+        {/* 詳細情報 */}
+        <div className="bg-canvas rounded-card px-3.5">
+          <Row label="時間">
+            <span className="tabular">
+              {formatTimeFromISO(task.scheduledTimeRange.startTime)}–{formatTimeFromISO(task.scheduledTimeRange.endTime)}
+            </span>
+          </Row>
 
-          {/* ポイント（家族タスクの場合のみ表示） */}
           {task.scope === 'FAMILY' && task.point > 0 && (
-            <div className="flex items-start gap-2 text-white/80">
-              <Star className="w-4 h-4 mt-0.5 text-amber-400 fill-amber-400" />
-              <div className="flex-1">
-                <p className="text-sm text-white/60">ポイント</p>
-                <p className="font-medium text-amber-400">{task.point}pt</p>
-              </div>
-            </div>
+            <Row label="ポイント">
+              <span className="text-accent font-bold tabular">{task.point}pt</span>
+            </Row>
           )}
 
-          {/* オーナー情報（個人タスクの場合） */}
           {task.scope === 'PERSONAL' && (
-            <div className="flex items-start gap-2 text-white/80">
-              <User className="w-4 h-4 mt-0.5 text-emerald-400" />
-              <div className="flex-1">
-                <p className="text-sm text-white/60">オーナー</p>
-                {owner ? (
-                  <div className="mt-1 flex items-center gap-2">
-                    <Avatar
-                      name={owner.name}
-                      size="sm"
-                      role={owner.role}
-                      variant={isParentRole(owner.role) ? 'parent' : 'child'}
-                    />
-                    <span className="font-medium text-white">{owner.name}</span>
-                  </div>
-                ) : (
-                  <p className="font-medium text-white/50">不明</p>
-                )}
-              </div>
-            </div>
+            <Row label="オーナー">
+              {owner ? (
+                <span className="flex items-center gap-2">
+                  <Avatar
+                    name={owner.name}
+                    size="sm"
+                    role={owner.role}
+                    variant={isParentRole(owner.role) ? 'parent' : 'child'}
+                    className="w-6 h-6"
+                  />
+                  <span>{owner.name}</span>
+                </span>
+              ) : (
+                <span className="text-ink-muted">不明</span>
+              )}
+            </Row>
           )}
 
-          {/* 種別 */}
-          <div className="flex items-start gap-2 text-white/80">
-            {task.scope === 'FAMILY' ? (
-              <Users className="w-4 h-4 mt-0.5 text-blue-400" />
-            ) : (
-              <User className="w-4 h-4 mt-0.5 text-emerald-400" />
-            )}
-            <div className="flex-1">
-              <p className="text-sm text-white/60">種別</p>
-              <p className="font-medium">{task.scope === 'FAMILY' ? '家族タスク' : '個人タスク'}</p>
-            </div>
-          </div>
+          <Row label="種別">{task.scope === 'FAMILY' ? '家族タスク' : '個人タスク'}</Row>
 
-          {/* 定期スケジュール詳細 */}
           {task.scheduleType === 'RECURRING' && task.recurrence && (
-            <div className="flex items-start gap-2 text-white/80">
-              <Repeat className="w-4 h-4 mt-0.5 text-coral-400" />
-              <div className="flex-1">
-                <p className="text-sm text-white/60">繰り返し</p>
-                <p className="font-medium">{getPatternText(task)}</p>
-                {task.recurrence.startDate && (
-                  <p className="text-sm text-white/50 mt-1">
-                    開始日: {task.recurrence.startDate}
-                    {task.recurrence.endDate && ` 〜 ${task.recurrence.endDate}`}
-                  </p>
-                )}
-              </div>
-            </div>
+            <Row label="繰り返し">
+              <span>{formatScheduleLabel(task)}</span>
+              {task.recurrence.startDate && (
+                <p className="text-[13px] font-normal text-ink-muted mt-0.5 tabular">
+                  {task.recurrence.startDate} から
+                  {task.recurrence.endDate && ` ${task.recurrence.endDate} まで`}
+                </p>
+              )}
+            </Row>
           )}
 
-          {/* 単発タスクの期限 */}
           {task.scheduleType === 'ONE_TIME' && task.oneTimeDeadline && (
-            <div className="flex items-start gap-2 text-white/80">
-              <Clock className="w-4 h-4 mt-0.5 text-coral-400" />
-              <div className="flex-1">
-                <p className="text-sm text-white/60">期限</p>
-                <p className="font-medium">{task.oneTimeDeadline}</p>
-              </div>
-            </div>
+            <Row label="期限">
+              <span className="tabular">{task.oneTimeDeadline}</span>
+            </Row>
           )}
-        </Card>
+        </div>
 
         {/* 説明 */}
         {task.description ? (
-          <div className="space-y-2">
-            <p className="text-sm text-white/70 font-medium">説明</p>
-            <div className="bg-dark-800/50 rounded-lg p-4 text-white/80 leading-relaxed whitespace-pre-wrap">
+          <div className="space-y-1.5">
+            <p className="text-[13px] font-medium text-ink-soft">説明</p>
+            <div className="bg-canvas rounded-card p-3.5 text-ink text-sm leading-relaxed whitespace-pre-wrap">
               {task.description}
             </div>
           </div>
         ) : (
-          <div className="text-sm text-white/40">説明はありません</div>
+          <p className="text-[13px] text-ink-muted">説明はありません</p>
         )}
       </div>
     </Modal>

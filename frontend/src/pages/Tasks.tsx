@@ -8,34 +8,35 @@
 
 import { useState, useEffect, useMemo, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Plus, RefreshCw, Settings, Clock, Star, Users, User, Calendar, X, Repeat, ChevronDown } from 'lucide-react'
+import { Plus, RefreshCw, ChevronRight, ChevronDown } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import { ja } from 'date-fns/locale'
 import { clsx } from 'clsx'
 import { Header } from '../components/layout/Header'
 import { PageContainer } from '../components/layout/PageContainer'
 import { Button } from '../components/ui/Button'
-import { Badge } from '../components/ui/Badge'
 import { Input } from '../components/ui/Input'
 import { Modal } from '../components/ui/Modal'
 import { Alert } from '../components/ui/Alert'
 import { Avatar } from '../components/ui/Avatar'
+import { Segmented } from '../components/ui/Segmented'
+import { Select, Checkbox } from '../components/ui/Select'
 import { TaskCalendar } from '../components/tasks/TaskCalendar'
 import { RecurringTaskList } from '../components/tasks/RecurringTaskList'
 import { TaskEditModal } from '../components/tasks/TaskEditModal'
 import { TaskDefinitionDetailModal } from '../components/tasks/TaskDefinitionDetailModal'
+import { TaskDefinitionCard } from '../components/tasks/TaskDefinitionCard'
 import { useTaskDefinition, useMembers } from '../hooks'
 import { useAuth } from '../contexts/AuthContext'
 import {
   timeToISOString,
-  formatTimeFromISO,
   isParentRole,
   alignStartDateToWeeklyDay,
   normalizeIsoDateString,
   isRecurringTaskOnDate,
   toISODateString,
 } from '../utils'
-import type { TaskDefinition, TaskScope, PatternType, Member } from '../types'
+import type { TaskDefinition, TaskScope, PatternType } from '../types'
 import type { CreateTaskDefinitionRequest, ScheduleDto, PatternDto } from '../types/api'
 
 type FilterScope = 'all' | 'family' | 'personal'
@@ -61,80 +62,6 @@ const DAY_OF_WEEK_OPTIONS: { value: string; label: string }[] = [
   { value: 'SATURDAY', label: '土曜日' },
   { value: 'SUNDAY', label: '日曜日' },
 ]
-
-/**
- * 選択日のタスクカード
- */
-interface DayTaskCardProps {
-  task: TaskDefinition
-  members?: Member[]
-  isRecurring?: boolean
-  /** カードクリック時のコールバック（詳細モーダルを開く） */
-  onClick?: (task: TaskDefinition) => void
-}
-
-function DayTaskCard({ task, members = [], isRecurring = false, onClick }: DayTaskCardProps) {
-  const owner = task.scope === 'PERSONAL' && task.ownerMemberId
-    ? members.find((m) => m.id === task.ownerMemberId)
-    : null
-
-  return (
-    <div
-      className={clsx(
-        'rounded-xl p-3 border transition-all',
-        task.scope === 'FAMILY'
-          ? 'bg-blue-950/30 border-blue-700/30'
-          : 'bg-emerald-950/30 border-emerald-700/30',
-        onClick && 'cursor-pointer hover:scale-[1.02] hover:shadow-lg active:scale-[0.98]'
-      )}
-      onClick={() => onClick?.(task)}
-    >
-      <div className="flex items-start gap-3">
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1.5">
-            {/* アイコン */}
-            {task.scope === 'FAMILY' ? (
-              <Users className="w-4 h-4 text-blue-400 flex-shrink-0" />
-            ) : owner ? (
-              <Avatar
-                name={owner.name}
-                size="sm"
-                role={owner.role}
-                variant={isParentRole(owner.role) ? 'parent' : 'child'}
-              />
-            ) : (
-              <User className="w-4 h-4 text-emerald-400 flex-shrink-0" />
-            )}
-            <span className="font-medium text-white truncate">{task.name}</span>
-            {isRecurring && (
-              <Badge variant="default" size="sm">
-                <Repeat className="w-2.5 h-2.5 mr-0.5" />
-                定期
-              </Badge>
-            )}
-          </div>
-
-          <div className="flex flex-wrap items-center gap-3 text-xs text-white/50">
-            <span className="flex items-center gap-1">
-              <Clock className="w-3 h-3" />
-              {formatTimeFromISO(task.scheduledTimeRange.startTime)} -{' '}
-              {formatTimeFromISO(task.scheduledTimeRange.endTime)}
-            </span>
-            {task.point > 0 && (
-              <span className="flex items-center gap-1 text-amber-400 font-bold">
-                <Star className="w-3 h-3 fill-amber-400" />
-                {task.point}pt
-              </span>
-            )}
-            {owner && (
-              <span className="text-emerald-400">{owner.name}</span>
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
-  )
-}
 
 /**
  * 週次パターンの開始日を曜日に合わせる
@@ -409,140 +336,142 @@ export function Tasks() {
   // 選択中のメンバー名を取得
   const selectedMember = selectedMemberId ? members.find((m) => m.id === selectedMemberId) : null
 
+  const openAddForToday = () => {
+    setSelectedDate(new Date())
+    setShowDateModal(true)
+    setShowAddForm(true)
+  }
+
   return (
     <>
       <Header
         title="タスク"
         subtitle="カレンダー"
         action={
-          <div className="flex gap-2">
-            <Button
-              variant="secondary"
-              size="sm"
+          <>
+            <button
+              type="button"
               onClick={handleRefresh}
               disabled={loading}
+              aria-label="最新の状態に更新"
+              className="w-11 h-11 rounded-full bg-surface text-accent flex items-center justify-center disabled:opacity-50"
             >
-              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-            </Button>
-            <Button
-              variant="primary"
-              size="sm"
-              onClick={() => {
-                setSelectedDate(new Date())
-                setShowDateModal(true)
-                setShowAddForm(true)
-              }}
+              <RefreshCw className={clsx('w-5 h-5', loading && 'animate-spin')} />
+            </button>
+            <button
+              type="button"
+              onClick={openAddForToday}
+              className="h-11 pl-3 pr-4 rounded-full bg-accent text-white text-[15px] font-bold flex items-center gap-1 active:bg-accent-strong"
             >
-              <Plus className="w-4 h-4 mr-1" />
+              <Plus className="w-[18px] h-[18px]" strokeWidth={2.4} />
               追加
-            </Button>
-          </div>
+            </button>
+          </>
         }
       />
-      <PageContainer noPadding className="max-w-none px-0">
-        <div className="px-4 md:px-6 lg:px-8 max-w-lg md:max-w-2xl lg:max-w-4xl mx-auto">
-          {/* エラーメッセージ */}
-          {error && (
-            <Alert variant="error" className="mb-4">
-              {error}
-            </Alert>
-          )}
+      <PageContainer>
+        {/* エラーメッセージ */}
+        {error && (
+          <Alert variant="error" className="mb-4">
+            {error}
+          </Alert>
+        )}
 
-          {/* スコープフィルター */}
-          <div className="flex flex-wrap gap-2 mb-4">
-            {(['all', 'family', 'personal'] as FilterScope[]).map((scope) => (
+        {/* スコープフィルター */}
+        <div className="space-y-2 mb-3">
+          <Segmented
+            label="表示する範囲"
+            value={filterScope}
+            onChange={(scope) => {
+              setFilterScope(scope)
+              if (scope !== 'personal') {
+                setSelectedMemberId(null)
+                setShowMemberFilter(false)
+              }
+            }}
+            options={[
+              { value: 'all', label: 'すべて' },
+              { value: 'family', label: '家族' },
+              { value: 'personal', label: '個人' },
+            ]}
+          />
+
+          {/* 個人フィルター用メンバー選択 */}
+          {filterScope === 'personal' && (
+            <div className="bg-surface rounded-xl">
               <button
-                key={scope}
-                onClick={() => {
-                  setFilterScope(scope)
-                  if (scope !== 'personal') {
-                    setSelectedMemberId(null)
-                    setShowMemberFilter(false)
-                  }
-                }}
-                className={clsx(
-                  'px-4 py-2 rounded-lg text-sm font-medium transition-all',
-                  filterScope === scope
-                    ? 'bg-coral-500/20 text-coral-400 border border-coral-500/30'
-                    : 'bg-dark-800/50 text-white/50 border border-transparent hover:border-dark-600'
-                )}
+                type="button"
+                onClick={() => setShowMemberFilter(!showMemberFilter)}
+                aria-expanded={showMemberFilter}
+                className="w-full flex items-center justify-between gap-2 px-3.5 min-h-tap text-[15px] text-ink"
               >
-                {scope === 'all' ? 'すべて' : scope === 'family' ? '家族' : '個人'}
-              </button>
-            ))}
-
-            {/* 個人フィルター用メンバー選択 */}
-            {filterScope === 'personal' && (
-              <div className="relative">
-                <button
-                  onClick={() => setShowMemberFilter(!showMemberFilter)}
-                  className={clsx(
-                    'px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2',
-                    'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-                  )}
-                >
+                <span className="flex items-center gap-2">
                   {selectedMember ? (
                     <>
                       <Avatar
                         name={selectedMember.name}
-                        size="xs"
+                        size="sm"
                         role={selectedMember.role}
                         variant={isParentRole(selectedMember.role) ? 'parent' : 'child'}
+                        className="w-6 h-6"
                       />
-                      {selectedMember.name}
+                      {selectedMember.id === user?.id ? '自分' : selectedMember.name}
                     </>
                   ) : (
                     '全員'
                   )}
-                  <ChevronDown className={clsx('w-4 h-4 transition-transform', showMemberFilter && 'rotate-180')} />
-                </button>
+                </span>
+                <ChevronDown className={clsx('w-5 h-5 text-icon-muted transition-transform', showMemberFilter && 'rotate-180')} />
+              </button>
 
-                {/* メンバー選択ドロップダウン */}
-                {showMemberFilter && (
-                  <div className="absolute top-full left-0 mt-1 w-48 bg-dark-800 border border-dark-700 rounded-lg shadow-lg z-20">
+              {showMemberFilter && (
+                <div className="border-t border-line px-2 py-2 flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    aria-pressed={!selectedMemberId}
+                    onClick={() => {
+                      setSelectedMemberId(null)
+                      setShowMemberFilter(false)
+                    }}
+                    className={clsx(
+                      'h-10 px-3.5 rounded-full text-sm',
+                      !selectedMemberId ? 'bg-accent text-white font-bold' : 'bg-canvas text-ink-soft font-medium'
+                    )}
+                  >
+                    全員
+                  </button>
+                  {members.map((member) => (
                     <button
+                      key={member.id}
+                      type="button"
+                      aria-pressed={selectedMemberId === member.id}
                       onClick={() => {
-                        setSelectedMemberId(null)
+                        setSelectedMemberId(member.id)
                         setShowMemberFilter(false)
                       }}
                       className={clsx(
-                        'w-full px-4 py-2 text-left text-sm hover:bg-dark-700 transition-colors',
-                        !selectedMemberId ? 'text-emerald-400' : 'text-white/70'
+                        'h-10 pl-1.5 pr-3.5 rounded-full text-sm flex items-center gap-1.5',
+                        selectedMemberId === member.id ? 'bg-accent text-white font-bold' : 'bg-canvas text-ink-soft font-medium'
                       )}
                     >
-                      全員
+                      <Avatar
+                        name={member.name}
+                        size="sm"
+                        role={member.role}
+                        variant={isParentRole(member.role) ? 'parent' : 'child'}
+                        className="w-7 h-7"
+                      />
+                      {member.id === user?.id ? '自分' : member.name}
                     </button>
-                    {members.map((member) => (
-                      <button
-                        key={member.id}
-                        onClick={() => {
-                          setSelectedMemberId(member.id)
-                          setShowMemberFilter(false)
-                        }}
-                        className={clsx(
-                          'w-full px-4 py-2 text-left text-sm hover:bg-dark-700 transition-colors flex items-center gap-2',
-                          selectedMemberId === member.id ? 'text-emerald-400' : 'text-white/70'
-                        )}
-                      >
-                        <Avatar
-                          name={member.name}
-                          size="xs"
-                          role={member.role}
-                          variant={isParentRole(member.role) ? 'parent' : 'child'}
-                        />
-                        {member.name}
-                        {member.id === user?.id && <span className="text-white/40">(自分)</span>}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* カレンダー */}
-        <section className="mb-4 sm:mb-6 px-2 sm:px-3 md:px-4">
+        <section className="mb-3">
           <TaskCalendar
             tasks={filteredTasks}
             selectedDate={selectedDate}
@@ -553,355 +482,274 @@ export function Tasks() {
           />
         </section>
 
-        <div className="px-4 md:px-6 lg:px-8 max-w-lg md:max-w-2xl lg:max-w-4xl mx-auto">
-          {/* 定期タスク一覧 */}
-          <section className="mb-6">
-            <RecurringTaskList
-              tasks={filteredTasks}
-              onEdit={handleEditTask}
-              onTaskClick={handleTaskDetailClick}
-              filterScope={filterScope}
-              members={members}
-              selectedMemberId={selectedMemberId}
-              defaultOpen={true}
-              currentUserId={user?.id}
-            />
-          </section>
+        {/* 定期タスク一覧 */}
+        <section className="mb-3">
+          <RecurringTaskList
+            tasks={filteredTasks}
+            onEdit={handleEditTask}
+            onTaskClick={handleTaskDetailClick}
+            filterScope={filterScope}
+            members={members}
+            selectedMemberId={selectedMemberId}
+            defaultOpen={true}
+            currentUserId={user?.id}
+          />
+        </section>
 
-          {/* タスク一覧を編集するリンク */}
-          <section>
-            <Button
-              variant="ghost"
-              className="w-full"
-              onClick={() => navigate('/tasks/list')}
-            >
-              <Settings className="w-4 h-4 mr-2" />
-              タスク一覧を編集する
-            </Button>
-          </section>
-        </div>
+        {/* タスク一覧を編集するリンク */}
+        <section>
+          <button
+            type="button"
+            onClick={() => navigate('/tasks/list')}
+            className="w-full h-12 rounded-xl bg-surface text-accent text-[15px] font-bold flex items-center justify-center gap-2"
+          >
+            タスク一覧を編集する
+            <ChevronRight className="w-[18px] h-[18px]" />
+          </button>
+        </section>
 
         {/* 日付選択モーダル */}
         <Modal
           isOpen={showDateModal}
           onClose={handleCloseDateModal}
-          title={format(selectedDate, 'M月d日(E)', { locale: ja })}
-        >
-          <div className="space-y-4">
-            {/* タスク追加フォームが表示されていない場合 */}
-            {!showAddForm ? (
+          title={showAddForm ? 'タスクを追加' : format(selectedDate, 'M月d日（E）', { locale: ja })}
+          footer={
+            showAddForm ? (
               <>
-                {/* この日の単発タスク一覧 */}
-                {selectedDateTasks.length > 0 && (
-                  <div>
-                    <h4 className="text-sm font-medium text-white/70 mb-2 flex items-center gap-2">
-                      <Calendar className="w-4 h-4" />
-                      単発タスク ({selectedDateTasks.length})
-                    </h4>
-                    <div className="space-y-2 max-h-40 overflow-y-auto">
-                      {selectedDateTasks.map((task) => (
-                        <DayTaskCard key={task.id} task={task} members={members} onClick={handleTaskDetailClick} />
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* 毎日以外の定期タスク一覧 */}
-                {nonDailyRecurringTasks.length > 0 && (
-                  <div>
-                    <h4 className="text-sm font-medium text-white/70 mb-2 flex items-center gap-2">
-                      <Repeat className="w-4 h-4" />
-                      定期タスク ({nonDailyRecurringTasks.length})
-                    </h4>
-                    <div className="space-y-2 max-h-40 overflow-y-auto">
-                      {nonDailyRecurringTasks.map((task) => (
-                        <DayTaskCard key={task.id} task={task} members={members} isRecurring onClick={handleTaskDetailClick} />
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* 毎日のタスク一覧 */}
-                {dailyRecurringTasks.length > 0 && (
-                  <div>
-                    <h4 className="text-sm font-medium text-white/70 mb-2 flex items-center gap-2">
-                      <RefreshCw className="w-4 h-4" />
-                      毎日のタスク ({dailyRecurringTasks.length})
-                    </h4>
-                    <div className="space-y-2 max-h-40 overflow-y-auto">
-                      {dailyRecurringTasks.map((task) => (
-                        <DayTaskCard key={task.id} task={task} members={members} isRecurring onClick={handleTaskDetailClick} />
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* タスクがない場合 */}
-                {selectedDateTasks.length === 0 && selectedDateRecurringTasks.length === 0 && (
-                  <div className="text-center py-6 text-white/50 bg-dark-800/30 rounded-xl border border-dark-700/30">
-                    <p>この日のタスクはありません</p>
-                  </div>
-                )}
-
-                {/* タスクを追加ボタン */}
+                <Button
+                  variant="secondary"
+                  size="lg"
+                  className="flex-1"
+                  onClick={handleCancelAddForm}
+                  disabled={loading}
+                >
+                  キャンセル
+                </Button>
                 <Button
                   variant="primary"
-                  className="w-full"
-                  onClick={handleShowAddForm}
+                  size="lg"
+                  className="flex-1"
+                  onClick={handleAddTask}
+                  loading={loading}
+                  disabled={!newTask.name.trim()}
                 >
-                  <Plus className="w-4 h-4 mr-2" />
-                  この日にタスクを追加
+                  追加
                 </Button>
               </>
             ) : (
-              /* タスク追加フォーム */
-              <div className="space-y-4">
-                <div className="flex items-center justify-between mb-2">
-                  <h4 className="text-sm font-medium text-white">タスクを追加</h4>
-                  <button
-                    onClick={handleCancelAddForm}
-                    className="text-white/50 hover:text-white transition-colors"
-                  >
-                    <X className="w-5 h-5" />
-                  </button>
+              <Button variant="primary" size="lg" className="flex-1" onClick={handleShowAddForm}>
+                <Plus className="w-[18px] h-[18px]" strokeWidth={2.4} />
+                この日にタスクを追加
+              </Button>
+            )
+          }
+        >
+          {!showAddForm ? (
+            <div className="space-y-3">
+              {/* この日の単発タスク一覧 */}
+              {selectedDateTasks.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-[13px] font-medium text-ink-muted px-1">単発タスク（{selectedDateTasks.length}）</p>
+                  {selectedDateTasks.map((task) => (
+                    <TaskDefinitionCard key={task.id} task={task} members={members} onClick={handleTaskDetailClick} />
+                  ))}
                 </div>
+              )}
 
-                {error && (
-                  <Alert variant="error" className="mb-4">
-                    {error}
-                  </Alert>
-                )}
-
-                {/* スコープ選択（タブ形式） */}
-                <div className="flex rounded-lg overflow-hidden border border-dark-700">
-                  <button
-                    onClick={() => handleScopeChange('FAMILY')}
-                    className={clsx(
-                      'flex-1 py-2 px-3 text-sm font-medium transition-all flex items-center justify-center gap-1',
-                      newTask.scope === 'FAMILY'
-                        ? 'bg-blue-500/20 text-blue-400 border-r border-blue-500/30'
-                        : 'bg-dark-800/50 text-white/50 border-r border-dark-700 hover:bg-dark-700/50'
-                    )}
-                  >
-                    <Users className="w-3 h-3" />
-                    家族
-                  </button>
-                  <button
-                    onClick={() => handleScopeChange('PERSONAL')}
-                    className={clsx(
-                      'flex-1 py-2 px-3 text-sm font-medium transition-all flex items-center justify-center gap-1',
-                      newTask.scope === 'PERSONAL'
-                        ? 'bg-emerald-500/20 text-emerald-400'
-                        : 'bg-dark-800/50 text-white/50 hover:bg-dark-700/50'
-                    )}
-                  >
-                    <User className="w-3 h-3" />
-                    個人
-                  </button>
+              {/* 毎日以外の定期タスク一覧 */}
+              {nonDailyRecurringTasks.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-[13px] font-medium text-ink-muted px-1">週次・月次の定期タスク（{nonDailyRecurringTasks.length}）</p>
+                  {nonDailyRecurringTasks.map((task) => (
+                    <TaskDefinitionCard key={task.id} task={task} members={members} onClick={handleTaskDetailClick} />
+                  ))}
                 </div>
+              )}
 
+              {/* 毎日のタスク一覧 */}
+              {dailyRecurringTasks.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-[13px] font-medium text-ink-muted px-1">毎日のタスク（{dailyRecurringTasks.length}）</p>
+                  {dailyRecurringTasks.map((task) => (
+                    <TaskDefinitionCard key={task.id} task={task} members={members} onClick={handleTaskDetailClick} />
+                  ))}
+                </div>
+              )}
+
+              {/* タスクがない場合 */}
+              {selectedDateTasks.length === 0 && selectedDateRecurringTasks.length === 0 && (
+                <div className="text-center py-8 bg-canvas rounded-card">
+                  <p className="text-ink-muted font-medium">この日のタスクはありません</p>
+                </div>
+              )}
+            </div>
+          ) : (
+            /* タスク追加フォーム */
+            <div className="space-y-4">
+              {error && (
+                <Alert variant="error">
+                  {error}
+                </Alert>
+              )}
+
+              {/* スコープ選択 */}
+              <Segmented
+                label="タスクの種別"
+                value={newTask.scope}
+                onChange={(scope) => handleScopeChange(scope)}
+                options={[
+                  { value: 'FAMILY', label: '家族タスク' },
+                  { value: 'PERSONAL', label: '個人タスク' },
+                ]}
+              />
+
+              <Input
+                label="タスク名"
+                placeholder="例: お風呂掃除"
+                value={newTask.name}
+                onChange={(e) => setNewTask({ ...newTask, name: e.target.value })}
+              />
+
+              <Input
+                label="説明（任意）"
+                placeholder="例: 浴槽と床を洗う"
+                value={newTask.description}
+                onChange={(e) => setNewTask({ ...newTask, description: e.target.value })}
+              />
+
+              {/* ポイント入力は家族タスクの場合のみ表示 */}
+              {newTask.scope === 'FAMILY' && (
                 <Input
-                  label="タスク名"
-                  placeholder="例: お風呂掃除"
-                  value={newTask.name}
-                  onChange={(e) => setNewTask({ ...newTask, name: e.target.value })}
+                  label="ポイント"
+                  type="number"
+                  min="0"
+                  value={newTask.point}
+                  onChange={(e) =>
+                    setNewTask({ ...newTask, point: parseInt(e.target.value) || 0 })
+                  }
                 />
+              )}
 
+              <div>
+                <p className="block text-[13px] font-medium text-ink-soft mb-1.5">タイプ</p>
+                <Segmented
+                  label="タイプ"
+                  value={newTask.scheduleType}
+                  onChange={(scheduleType) => setNewTask({ ...newTask, scheduleType })}
+                  options={[
+                    { value: 'ONE_TIME', label: '単発' },
+                    { value: 'RECURRING', label: '定期' },
+                  ]}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
                 <Input
-                  label="説明（任意）"
-                  placeholder="例: 浴槽と床を洗う"
-                  value={newTask.description}
-                  onChange={(e) => setNewTask({ ...newTask, description: e.target.value })}
+                  label="開始時刻"
+                  id="new-start-time"
+                  type="time"
+                  value={newTask.scheduledStartTime}
+                  onChange={(e) =>
+                    setNewTask({ ...newTask, scheduledStartTime: e.target.value })
+                  }
                 />
+                <Input
+                  label="終了時刻"
+                  id="new-end-time"
+                  type="time"
+                  value={newTask.scheduledEndTime}
+                  onChange={(e) =>
+                    setNewTask({ ...newTask, scheduledEndTime: e.target.value })
+                  }
+                />
+              </div>
 
-                <div className={newTask.scope === 'FAMILY' ? 'grid grid-cols-2 gap-4' : ''}>
-                  {/* ポイント入力は家族タスクの場合のみ表示 */}
-                  {newTask.scope === 'FAMILY' && (
+              {/* 単発の場合の期限 */}
+              {newTask.scheduleType === 'ONE_TIME' && (
+                <Input
+                  label="期限"
+                  type="date"
+                  value={newTask.deadline}
+                  onChange={(e) => setNewTask({ ...newTask, deadline: e.target.value })}
+                />
+              )}
+
+              {/* 定期スケジュールの詳細 */}
+              {newTask.scheduleType === 'RECURRING' && (
+                <>
+                  <div>
+                    <p className="block text-[13px] font-medium text-ink-soft mb-1.5">繰り返しパターン</p>
+                    <Segmented
+                      label="繰り返しパターン"
+                      value={newTask.patternType}
+                      onChange={(patternType) => setNewTask((prev) => {
+                        const next = { ...prev, patternType }
+                        if (patternType === 'WEEKLY') {
+                          next.startDate = alignWeeklyStartDate(prev.startDate, prev.dayOfWeek)
+                        }
+                        return next
+                      })}
+                      options={PATTERN_OPTIONS}
+                    />
+                  </div>
+
+                  {newTask.patternType === 'DAILY' && (
+                    <Checkbox
+                      id="skipWeekends"
+                      label="土日をスキップ"
+                      checked={newTask.skipWeekends}
+                      onChange={(checked) => setNewTask({ ...newTask, skipWeekends: checked })}
+                    />
+                  )}
+
+                  {newTask.patternType === 'WEEKLY' && (
+                    <Select
+                      label="曜日"
+                      value={newTask.dayOfWeek}
+                      onChange={(e) => setNewTask((prev) => ({
+                        ...prev,
+                        dayOfWeek: e.target.value,
+                        startDate: prev.patternType === 'WEEKLY'
+                          ? alignWeeklyStartDate(prev.startDate, e.target.value)
+                          : prev.startDate,
+                      }))}
+                    >
+                      {DAY_OF_WEEK_OPTIONS.map((opt) => (
+                        <option key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </option>
+                      ))}
+                    </Select>
+                  )}
+
+                  {newTask.patternType === 'MONTHLY' && (
                     <Input
-                      label="ポイント"
+                      label="日付（1-28）"
                       type="number"
-                      min="0"
-                      value={newTask.point}
+                      min={1}
+                      max={28}
+                      value={newTask.dayOfMonth}
                       onChange={(e) =>
-                        setNewTask({ ...newTask, point: parseInt(e.target.value) || 0 })
+                        setNewTask({ ...newTask, dayOfMonth: Number(e.target.value) })
                       }
                     />
                   )}
-                  <div>
-                    <label className="block text-sm font-medium text-dark-300 mb-2">
-                      タイプ
-                    </label>
-                    <div className="flex gap-1">
-                      <Button
-                        variant={newTask.scheduleType === 'ONE_TIME' ? 'primary' : 'secondary'}
-                        size="sm"
-                        onClick={() => setNewTask({ ...newTask, scheduleType: 'ONE_TIME' })}
-                      >
-                        単発
-                      </Button>
-                      <Button
-                        variant={newTask.scheduleType === 'RECURRING' ? 'primary' : 'secondary'}
-                        size="sm"
-                        onClick={() => setNewTask({ ...newTask, scheduleType: 'RECURRING' })}
-                      >
-                        定期
-                      </Button>
-                    </div>
-                  </div>
-                </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <label className="block">
-                    <span className="text-sm text-white/70 mb-1 block">開始時刻</span>
-                    <Input
-                      type="time"
-                      value={newTask.scheduledStartTime}
-                      onChange={(e) =>
-                        setNewTask({ ...newTask, scheduledStartTime: e.target.value })
-                      }
-                    />
-                  </label>
-                  <label className="block">
-                    <span className="text-sm text-white/70 mb-1 block">終了時刻</span>
-                    <Input
-                      type="time"
-                      value={newTask.scheduledEndTime}
-                      onChange={(e) =>
-                        setNewTask({ ...newTask, scheduledEndTime: e.target.value })
-                      }
-                    />
-                  </label>
-                </div>
-
-                {/* 単発の場合の期限 */}
-                {newTask.scheduleType === 'ONE_TIME' && (
                   <Input
-                    label="期限"
+                    label="開始日"
                     type="date"
-                    value={newTask.deadline}
-                    onChange={(e) => setNewTask({ ...newTask, deadline: e.target.value })}
+                    value={newTask.startDate}
+                    onChange={(e) => setNewTask((prev) => ({
+                      ...prev,
+                      startDate: prev.patternType === 'WEEKLY'
+                        ? alignWeeklyStartDate(e.target.value, prev.dayOfWeek)
+                        : e.target.value,
+                    }))}
                   />
-                )}
-
-                {/* 定期スケジュールの詳細 */}
-                {newTask.scheduleType === 'RECURRING' && (
-                  <>
-                    <div>
-                      <label className="block text-sm font-medium text-dark-300 mb-2">
-                        繰り返しパターン
-                      </label>
-                      <div className="flex gap-2">
-                        {PATTERN_OPTIONS.map((opt) => (
-                          <Button
-                            key={opt.value}
-                            variant={newTask.patternType === opt.value ? 'primary' : 'secondary'}
-                            size="sm"
-                            onClick={() => setNewTask((prev) => {
-                              const next = { ...prev, patternType: opt.value }
-                              if (opt.value === 'WEEKLY') {
-                                next.startDate = alignWeeklyStartDate(prev.startDate, prev.dayOfWeek)
-                              }
-                              return next
-                            })}
-                          >
-                            {opt.label}
-                          </Button>
-                        ))}
-                      </div>
-                    </div>
-
-                    {newTask.patternType === 'DAILY' && (
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="checkbox"
-                          id="skipWeekends"
-                          checked={newTask.skipWeekends}
-                          onChange={(e) =>
-                            setNewTask({ ...newTask, skipWeekends: e.target.checked })
-                          }
-                          className="w-4 h-4 rounded border-dark-600 bg-dark-800"
-                        />
-                        <label htmlFor="skipWeekends" className="text-sm text-white/70">
-                          土日をスキップ
-                        </label>
-                      </div>
-                    )}
-
-                    {newTask.patternType === 'WEEKLY' && (
-                      <div>
-                        <label className="block text-sm font-medium text-dark-300 mb-2">
-                          曜日
-                        </label>
-                        <select
-                          value={newTask.dayOfWeek}
-                          onChange={(e) => setNewTask((prev) => ({
-                            ...prev,
-                            dayOfWeek: e.target.value,
-                            startDate: prev.patternType === 'WEEKLY'
-                              ? alignWeeklyStartDate(prev.startDate, e.target.value)
-                              : prev.startDate,
-                          }))}
-                          className="w-full bg-dark-800 border border-dark-700 rounded-xl px-4 py-3 text-white"
-                        >
-                          {DAY_OF_WEEK_OPTIONS.map((opt) => (
-                            <option key={opt.value} value={opt.value}>
-                              {opt.label}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                    )}
-
-                    {newTask.patternType === 'MONTHLY' && (
-                      <Input
-                        label="日付（1-28）"
-                        type="number"
-                        min={1}
-                        max={28}
-                        value={newTask.dayOfMonth}
-                        onChange={(e) =>
-                          setNewTask({ ...newTask, dayOfMonth: Number(e.target.value) })
-                        }
-                      />
-                    )}
-
-                    <Input
-                      label="開始日"
-                      type="date"
-                      value={newTask.startDate}
-                      onChange={(e) => setNewTask((prev) => ({
-                        ...prev,
-                        startDate: prev.patternType === 'WEEKLY'
-                          ? alignWeeklyStartDate(e.target.value, prev.dayOfWeek)
-                          : e.target.value,
-                      }))}
-                    />
-                  </>
-                )}
-
-                {/* 追加ボタン */}
-                <div className="flex gap-2">
-                  <Button
-                    variant="secondary"
-                    className="flex-1"
-                    onClick={handleCancelAddForm}
-                    disabled={loading}
-                  >
-                    キャンセル
-                  </Button>
-                  <Button
-                    variant="primary"
-                    className="flex-1"
-                    onClick={handleAddTask}
-                    loading={loading}
-                    disabled={!newTask.name.trim()}
-                  >
-                    追加
-                  </Button>
-                </div>
-              </div>
-            )}
-          </div>
+                </>
+              )}
+            </div>
+          )}
         </Modal>
 
         {/* タスク編集モーダル */}

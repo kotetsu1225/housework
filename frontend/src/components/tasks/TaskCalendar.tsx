@@ -186,6 +186,11 @@ export function TaskCalendar({
           const isToday = isSameDay(day, new Date())
           const dayOfWeek = day.getDay()
 
+          // 前後月の日付は表示しない（薄い文字はコントラスト 4.5:1 を満たせないため）
+          if (!isCurrentMonth) {
+            return <div key={dateKey} aria-hidden="true" className="min-h-[78px]" />
+          }
+
           return (
             <button
               key={dateKey}
@@ -205,21 +210,18 @@ export function TaskCalendar({
                   'text-sm tabular leading-none',
                   isToday
                     ? 'w-[22px] h-[22px] rounded-full bg-accent text-white font-bold flex items-center justify-center text-[13px]'
-                    : !isCurrentMonth
-                      ? 'text-icon-muted'
-                      : dayOfWeek === 0
-                        ? 'text-danger'
-                        : dayOfWeek === 6
-                          ? 'text-cycle-ink'
-                          : 'text-ink'
+                    : dayOfWeek === 0
+                      ? 'text-danger'
+                      : dayOfWeek === 6
+                        ? 'text-cycle-ink'
+                        : 'text-ink'
                 )}
               >
                 {format(day, 'd')}
               </span>
 
               {/* タスク名表示（最大4件、先頭4文字） */}
-              {isCurrentMonth &&
-                dayTaskItems.slice(0, MAX_TITLES_PER_DAY).map(({ task, isRecurring }) => (
+              {dayTaskItems.slice(0, MAX_TITLES_PER_DAY).map(({ task, isRecurring }) => (
                   <span
                     key={`${task.id}-${isRecurring ? 'rec' : 'one'}`}
                     className={clsx(
@@ -230,7 +232,7 @@ export function TaskCalendar({
                     {Array.from(task.name).slice(0, 4).join('')}
                   </span>
                 ))}
-              {isCurrentMonth && dayTaskItems.length > MAX_TITLES_PER_DAY && (
+              {dayTaskItems.length > MAX_TITLES_PER_DAY && (
                 <span className="text-[9px] text-ink-muted tabular">+{dayTaskItems.length - MAX_TITLES_PER_DAY}</span>
               )}
             </button>

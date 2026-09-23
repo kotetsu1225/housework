@@ -515,6 +515,10 @@ npm run test:coverage
 
 # リント実行
 npm run lint
+
+# UI 監査（SP 各画面のタップ領域 44px・コントラスト 4.5:1・禁止クラスを機械チェック）
+# 事前に `npm run dev` を起動し、初回のみ `npx playwright install chromium` を実行
+npm run ui:audit
 ```
 
 ---

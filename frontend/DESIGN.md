@@ -70,7 +70,7 @@ font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans",
 | カード（箱の中） | 10px | 内側 12px 14px、カード同士 8px |
 | 単体のカード（進捗、プロフィール） | 12px | 内側 14〜16px |
 | 入力欄・主ボタン | 10px | 高さ 50px |
-| セグメント切替 | 外 10px / 内 8px | 高さ 44px（内側 38px） |
+| セグメント切替 | 外 10px / 内 8px | 高さ 50px（ボタン 44px） |
 | チップ | 6px | 2px 8px |
 | 丸ボタン（更新、追加） | 22px（円） | 44px |
 
@@ -98,7 +98,28 @@ font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans",
 - 44px 未満のタップ領域、4.5:1 未満の文字コントラスト
 - ダークモード用のクラス（`dark:`）の追加
 
-## 7. 参照
+## 7. 機械チェック（再発防止）
+
+`scripts/ui-audit.mjs` が SP（390×844）で各画面を開き、§6 のうち数値で判定できるものを検査する。
+
+```bash
+npm run dev                          # 別ターミナルで開発サーバーを起動
+npx playwright install chromium      # 初回のみ
+npm run ui:audit                     # 違反があれば一覧を出して exit code 1
+```
+
+検査項目:
+
+- タップ領域: `a` / `button` / `input` / `select` / `role=button|radio|tab|checkbox` が 44×44px 未満
+- 文字コントラスト: WCAG 2.2 1.4.3（通常 4.5:1、24px 以上または 18.66px 以上の太字は 3:1）
+- 禁止クラス: `bg-gradient-*` / `backdrop-blur` / `blur-*` / `hover:scale-*` / `dark:`
+- フォント: 描画フォントが Inter / Roboto / Arial になっていないか
+
+API はスクリプト内のモックに差し替わるのでバックエンドは不要。`UI_AUDIT_PAGES=/tasks,/members` で対象を絞れる。
+`UI_AUDIT_SHOTS=./shots` を付けると各画面の全長スクリーンショットも保存する。
+無効化された要素（`disabled`）は WCAG の例外に従って対象外。
+
+## 8. 参照
 
 - 認識合わせのキャンバス（案B 各画面）: https://claude.ai/artifact/PSuKGRV4KPcvnpTC5Gtxqr
 - WCAG 2.2 1.4.3 Contrast (Minimum): https://www.w3.org/WAI/WCAG22/Understanding/contrast-minimum.html

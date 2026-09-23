@@ -18,7 +18,7 @@ export interface SegmentedProps<T extends string> {
 /**
  * セグメント切替（frontend/DESIGN.md §4）
  *
- * 高さ 44px（内側 38px）。選択中は白い面、非選択は下地に文字だけ。
+ * 高さ 50px（ボタン 44px = タップ領域の最小値）。選択中は白い面、非選択は下地に文字だけ。
  */
 export function Segmented<T extends string>({
   options,
@@ -45,7 +45,7 @@ export function Segmented<T extends string>({
             disabled={disabled}
             onClick={() => onChange(opt.value)}
             className={clsx(
-              'h-[38px] rounded-lg text-sm transition-colors disabled:opacity-50',
+              'h-11 rounded-lg text-sm transition-colors disabled:opacity-50',
               selected ? 'bg-surface text-ink font-bold' : 'bg-transparent text-ink-soft font-medium'
             )}
           >

@@ -6,7 +6,7 @@
 
 ---
 
-## 0. 最初にやること(5 分)
+## 0. 最初にやること
 
 1. このファイルと [multi-tenant-progress.md](multi-tenant-progress.md) を読む。progress に「着手中」があれば、そこから再開する(前任のエージェントが途中で止まった状態)。
 2. `gh issue view 34` を読む(トラッキング issue。契約と決定の正典)。

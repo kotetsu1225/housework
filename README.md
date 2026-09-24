@@ -519,6 +519,10 @@ npm run lint
 # UI 監査（SP 各画面のタップ領域 44px・コントラスト 4.5:1・禁止クラスを機械チェック）
 # 事前に `npm run dev` を起動し、初回のみ `npx playwright install chromium` を実行
 npm run ui:audit
+
+# E2E テスト（実バックエンド + PostgreSQL に対して実ブラウザで操作。設計は frontend/e2e/README.md）
+# 事前に DB とバックエンド（:8080）を起動。Vite は未起動なら自動で立ち上がる
+npm run test:e2e
 ```
 
 ---

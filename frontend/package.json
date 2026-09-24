@@ -11,7 +11,9 @@
     "test": "vitest",
     "test:ui": "vitest --ui",
     "test:coverage": "vitest run --coverage",
-    "ui:audit": "node scripts/ui-audit.mjs"
+    "ui:audit": "node scripts/ui-audit.mjs",
+    "test:e2e": "playwright test",
+    "test:e2e:report": "playwright show-report e2e-report"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.23",
@@ -24,6 +26,7 @@
     "react-router-dom": "^6.21.1"
   },
   "devDependencies": {
+    "@playwright/test": "^1.63.0",
     "@testing-library/jest-dom": "^6.2.0",
     "@testing-library/react": "^14.1.2",
     "@types/react": "^18.2.43",

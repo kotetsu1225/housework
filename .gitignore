@@ -16,6 +16,14 @@ node_modules/
 .env.*.local
 !.env.example
 
+# Terraform / GCP (PUBLIC リポジトリ。state・変数・キーはコミットしない)
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+*.tfvars
+!*.tfvars.example
+*-sa-key*.json
 
 # macOS
 .DS_Store

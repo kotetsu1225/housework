@@ -1,6 +1,7 @@
 package com.task
 
 import com.task.infra.config.DotenvLoader
+import com.task.infra.database.DatabaseConfig
 import com.task.infra.security.JwtConfig
 import com.task.presentation.GuicePlugin
 import com.task.presentation.auth
@@ -48,6 +49,10 @@ fun main() {
 
 fun Application.module() {
     DotenvLoader.loadIfPresent()
+
+    // 起動時にFlywayマイグレーションを流し、オーナー・app両方のHikariプールを初期化する
+    // （これまでは最初のDBアクセスまで遅延していた）
+    DatabaseConfig.initialize()
 
     install(GuicePlugin) {
         modules = listOf(AppModule())

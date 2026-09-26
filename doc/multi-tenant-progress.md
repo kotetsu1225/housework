@@ -2,7 +2,7 @@
 
 [multi-tenant-handoff.md](multi-tenant-handoff.md) §6.4 に従い、**issue の着手時と完了時に必ず更新する**。コンテキストが切れた別のエージェントが、このファイルだけを見て再開できる粒度で書く。
 
-最終更新: 2026-09-26(#35 #36 完了、#37 #39 実装中、#69 は apply の承認待ち)
+最終更新: 2026-09-26(#35 #36 #37 #39 #62 #64 完了。#38 #40 #41 #63 実装中。#69 は apply の承認待ち)
 
 ## 現在の状態
 
@@ -33,11 +33,13 @@
 
 ## 着手中
 
-| issue | 担当 | ブランチ | 状況・次の一手 |
+| issue | 担当 | ブランチ(worktree は `~/Desktop/housework-wt/mt-<番号>`) | 状況・次の一手 |
 |---|---|---|---|
-| #37 F2 | Sonnet(ファイル編集)+ 親(ビルド・Docker での起動確認・fail-closed 確認・レビュー) | `mt/37-app-role-pool`(worktree `~/Desktop/housework-wt/mt-37`) | 編集中。V21 のパスワードを placeholder に、2 本目のプール、起動時の初期化、本番で既定パスワードのままなら起動を止める安全策、.env.example の修正 |
-| #39 F4 | Sonnet(ファイル編集)+ 親(ビルド・テスト・レビュー) | `mt/39-tenant-aggregate`(worktree `~/Desktop/housework-wt/mt-39`) | 編集中。Tenant 集約・FamilyName・TenantRepository(Impl)・Config.kt の bind・単体テスト |
-| #69 G0 | 親(人間と伴走) | `mt/69-gcp-foundation`(push 済み、PR 未作成) | state バケット作成済み。`infra/terraform/` を push 済み。plan は 5 件追加。**オーナーの承認後に apply → plan で差分なしを確認 → PR** |
+| #38 F3 | Sonnet(編集)+ 親(psql で隔離の検証) | `mt/38-rls-non-rls-tables` | V24 と V21 コメント修正を編集中 |
+| #40 F5 | Sonnet(編集)+ 親(ビルド・レビュー) | `mt/40-db-connection-points` | `Database.withTransaction(tenantId)` と `DatabaseWithoutRLS` を編集中。データソースはコンストラクタで受け取る(テストで差し替えるため)。隔離テストは #41 のマージ後に追加 |
+| #41 F6 | Sonnet(編集)+ 親(`./gradlew test` 実行) | `mt/41-test-infra` | Testcontainers 2.0.5 + postgres:17-alpine。Docker 29 は Testcontainers 1.x だと API 版の都合で接続できない可能性があるため 2.x |
+| #63 FE2 | Sonnet(実装)+ 親(全テスト・build) | `mt/63-register-family` | 家族名の入力、JWT の tenantId、旧トークンの破棄、409 |
+| #69 G0 | 親(人間と伴走) | `mt/69-gcp-foundation`(push 済み、PR 未作成) | plan は 5 件追加。**オーナーの承認後に apply → plan で差分なしを確認 → PR** |
 
 ## 完了(統合ブランチにマージ済み)
 
@@ -45,6 +47,10 @@
 |---|---|---|---|
 | §5 キャッチアップ | #74 | 2026-09-24 | オーナーの LGTM(会話上)を H1 承認とした。5.1 の推奨も承認 |
 | #35 F0 | #78 | 2026-09-26 | `TenantId` を `@JvmInline value class` で追加 |
+| #37 F2 | #81 | 2026-09-26 | V21 のパスワードを placeholder に、2 本目のプール、**起動時に Flyway と両プールを初期化**、本番で APP_PGPASSWORD 未設定なら起動を止める安全策。ロールの無い PG17 で起動して検証 |
+| #39 F4 | #80 | 2026-09-26 | Tenant 集約・FamilyName・TenantRepository(Impl)。単体テスト 6 件(リポジトリ初のテスト) |
+| #62 FE1 | #83 | 2026-09-26 | ログインを email に。npm test 287 件 |
+| #64 FE3 | #84 | 2026-09-26 | メンバー追加の 409 をメール重複として表示。npm test 293 件 |
 | #36 F1 | #79 | 2026-09-26 | V22 backfill 新規、V23 に rename、jOOQ 再生成。**素の `./gradlew build` はもう DB に触れない**(コンパイル時の自動生成を停止)。生成は `./gradlew generateJooq -PdbUrl=jdbc:postgresql://localhost:5433/<DB名>` |
 
 ## ブロック中・未解決の疑問
@@ -61,6 +67,11 @@
 - 本番 DB の接続ユーザーは superuser(V21 の CREATE ROLE は通る)、`max_connections` は 100。
 - **GCP はトライアルのクレジットが無い通常の請求先アカウント(JPY)。** 90 日の期限は無い。#34 の決定事項を更新済み。
 - #36 本文の「shopping-api/shopping-api-bc.md への追記」は、handoff §4 のガードレール(shopping に触らない)が優先するため行わない。issue コメントで申し送る。
+
+## 既存の問題(マルチテナント化の範囲外。起票済み)
+
+- **#82**: frontend に ESLint の設定ファイルが一度も存在せず、`npm run lint` は常に exit 2。frontend の issue は当面 `npm test` と `npm run build`(tsc を含む)で確認する。あわせて `frontend/node_modules` が 18,291 ファイル git に追跡されている。
+- 起動には VAPID の鍵が必要(空だと `WebPushSenderImpl` が落ちる)。jar を直接起動して確認するときは使い捨ての鍵を渡す。
 
 ## 順序の決定(親エージェント)
 
@@ -81,7 +92,8 @@
 
 ## 次にやること(優先順)
 
-1. #37 と #39 の編集をレビュー → ビルド・検証 → PR → マージ
-2. #69: オーナーの承認後に apply → PR
-3. #37 マージ後: #38(V24。V21 を触るので #37 の後)、#40(接続点の分離)→ #41(テスト基盤)
+1. #38 #40 #41 #63 をレビュー → 検証 → PR → マージ
+2. #41 マージ後、#40 に隔離テストを追加
+3. #69: オーナーの承認後に apply → PR
+4. Wave 1 のドメイン(#45 #46 #48 #49 → #47)と認証(#42 → #43 #44)、#71(Pub/Sub 基盤)
 4. 並行可能: #62 #63 #64(フロント)、#71(Pub/Sub クライアント基盤)

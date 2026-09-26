@@ -140,7 +140,7 @@ export function useMembers(initialMembers: Member[] = []): UseMemberReturn {
         return true
       } catch (err) {
         if (err instanceof ApiError) {
-          setError(err.message)
+          setError(err.status === 409 ? 'このメールアドレスは既に登録されています' : err.message)
         } else if (err instanceof Error) {
           setError(err.message)
         } else {
@@ -182,7 +182,7 @@ export function useMembers(initialMembers: Member[] = []): UseMemberReturn {
         return true
       } catch (err) {
         if (err instanceof ApiError) {
-          setError(err.message)
+          setError(err.status === 409 ? 'このメールアドレスは既に登録されています' : err.message)
         } else if (err instanceof Error) {
           setError(err.message)
         } else {

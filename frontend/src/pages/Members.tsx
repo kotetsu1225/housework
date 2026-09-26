@@ -311,6 +311,10 @@ export function Members() {
             onChange={(e) => setNewMemberPassword(e.target.value)}
           />
 
+          <p className="text-xs text-white/50">
+            追加したメンバーは、ここで設定したメールアドレスとパスワードでログインします。
+          </p>
+
           <RoleSelector
             value={newMemberRole}
             onChange={setNewMemberRole}

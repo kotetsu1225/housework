@@ -32,6 +32,7 @@ class DeleteTaskDefinitionUseCaseImpl @Inject constructor(
             deletedTaskDefinition.domainEvents.forEach { event ->
                 if (event is TaskDefinitionDeleted) {
                     val outboxRecord = OutboxRecord.create(
+                        tenantId = targetTaskDefinition.tenantId,
                         eventType = DomainEventSerializer.getEventType(event),
                         aggregateType = "TaskDefinition",
                         aggregateId = event.taskDefinitionId.value,

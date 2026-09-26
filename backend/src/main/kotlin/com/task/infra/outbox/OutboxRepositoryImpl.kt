@@ -2,6 +2,7 @@ package com.task.infra.outbox
 
 import com.google.inject.Singleton
 import com.task.domain.AppTimeZone
+import com.task.domain.tenant.TenantId
 import com.task.infra.database.jooq.tables.Outbox.Companion.OUTBOX
 import org.jooq.DSLContext
 import org.jooq.JSONB
@@ -20,6 +21,7 @@ class OutboxRepositoryImpl : OutboxRepository {
     override fun save(record: OutboxRecord, session: DSLContext): OutboxRecord {
         session.insertInto(OUTBOX)
             .set(OUTBOX.ID, record.id)
+            .set(OUTBOX.TENANT_ID, record.tenantId.value)
             .set(OUTBOX.EVENT_TYPE, record.eventType)
             .set(OUTBOX.AGGREGATE_TYPE, record.aggregateType)
             .set(OUTBOX.AGGREGATE_ID, record.aggregateId)
@@ -43,6 +45,7 @@ class OutboxRepositoryImpl : OutboxRepository {
             .fetch { record ->
                 OutboxRecord(
                     id = record.id!!,
+                    tenantId = TenantId(record.tenantId),
                     eventType = record.eventType!!,
                     aggregateType = record.aggregateType!!,
                     aggregateId = record.aggregateId!!,
@@ -75,6 +78,7 @@ class OutboxRepositoryImpl : OutboxRepository {
             .fetchOne { record ->
                 OutboxRecord(
                     id = record.id!!,
+                    tenantId = TenantId(record.tenantId),
                     eventType = record.eventType!!,
                     aggregateType = record.aggregateType!!,
                     aggregateId = record.aggregateId!!,

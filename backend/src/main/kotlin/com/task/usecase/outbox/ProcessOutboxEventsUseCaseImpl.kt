@@ -115,7 +115,7 @@ class ProcessOutboxEventsUseCaseImpl @Inject constructor(
                 }
             }
 
-            completedDomainEventRepository.save(eventId, record.eventType, session)
+            completedDomainEventRepository.save(eventId, record.eventType, record.tenantId, session)
             outboxRepository.update(record.markAsProcessed(), session)
 
             logger.info("Successfully processed event: $eventId")

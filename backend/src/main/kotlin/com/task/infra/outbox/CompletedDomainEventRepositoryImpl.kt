@@ -1,6 +1,7 @@
 package com.task.infra.outbox
 
 import com.google.inject.Singleton
+import com.task.domain.tenant.TenantId
 import com.task.infra.database.jooq.tables.CompletedDomainEvents.Companion.COMPLETED_DOMAIN_EVENTS
 import org.jooq.DSLContext
 import java.time.OffsetDateTime
@@ -16,9 +17,10 @@ class CompletedDomainEventRepositoryImpl : CompletedDomainEventRepository {
         )
     }
 
-    override fun save(eventId: UUID, eventType: String, session: DSLContext) {
+    override fun save(eventId: UUID, eventType: String, tenantId: TenantId, session: DSLContext) {
         session.insertInto(COMPLETED_DOMAIN_EVENTS)
             .set(COMPLETED_DOMAIN_EVENTS.EVENT_ID, eventId)
+            .set(COMPLETED_DOMAIN_EVENTS.TENANT_ID, tenantId.value)
             .set(COMPLETED_DOMAIN_EVENTS.EVENT_TYPE, eventType)
             .set(COMPLETED_DOMAIN_EVENTS.PROCESSED_AT, OffsetDateTime.now())
             .onConflictDoNothing()

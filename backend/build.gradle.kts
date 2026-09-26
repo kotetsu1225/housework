@@ -10,6 +10,11 @@ plugins {
     application
 }
 
+// マルチテナント作業では shopping を含まない DB を指すため -PdbUrl で上書きする(handoff §12、#36)
+val dbUrl: String = (findProperty("dbUrl") as String?) ?: "jdbc:postgresql://localhost:5432/housework"
+val dbUser: String = (findProperty("dbUser") as String?) ?: "housework"
+val dbPassword: String = (findProperty("dbPassword") as String?) ?: "housework_password"
+
 group = "com.task"
 version = "0.0.1"
 
@@ -88,9 +93,9 @@ dependencies {
 
 // Flyway configuration
 flyway {
-    url = "jdbc:postgresql://localhost:5432/housework"
-    user = "housework"
-    password = "housework_password"
+    url = dbUrl
+    user = dbUser
+    password = dbPassword
     locations = arrayOf("filesystem:db/migration")
     cleanDisabled = false
 }
@@ -100,13 +105,17 @@ jooq {
     version.set(jooqVersion)
     configurations {
         create("main") {
+            // 生成物はコミット済みなのでコンパイル時に自動生成しない。
+            // 生成は `./gradlew generateJooq -PdbUrl=...` で明示的に行う。
+            // 素の build で DB に触れないようにするため。
+            generateSchemaSourceOnCompilation.set(false)
             jooqConfiguration.apply {
                 logging = org.jooq.meta.jaxb.Logging.WARN
                 jdbc.apply {
                     driver = "org.postgresql.Driver"
-                    url = "jdbc:postgresql://localhost:5432/housework"
-                    user = "housework"
-                    password = "housework_password"
+                    url = dbUrl
+                    user = dbUser
+                    password = dbPassword
                 }
                 generator.apply {
                     name = "org.jooq.codegen.KotlinGenerator"

@@ -148,6 +148,10 @@ fun Route.members() {
 
         val output = instance<CreateMemberUseCase>().execute(
             CreateMemberUseCase.Input(
+                // TODO(#51): 呼び出し元メンバーの tenantId を JWT(#42 の AuthenticatedMember)から渡す。
+                // マルチテナント化の途中の暫定で、ここに来ると NotImplementedError(500)になる。
+                // 統合ブランチは全 issue 完了まで本番に出ない。
+                tenantId = TODO("#51: 呼び出し元メンバーの tenantId を JWT から渡す"),
                 name = MemberName(request.name),
                 email = MemberEmail(request.email),
                 familyRole = FamilyRole.get(request.familyRole),

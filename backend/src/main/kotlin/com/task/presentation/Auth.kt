@@ -76,6 +76,10 @@ fun Route.auth() {
             // 1. メンバーを作成
             val createOutput = instance<CreateMemberUseCase>().execute(
                 CreateMemberUseCase.Input(
+                    // TODO(#44): register は「家族(tenant)+ 最初のメンバーの作成」に置き換える。
+                    // マルチテナント化の途中の暫定で、ここに来ると NotImplementedError(500)になる。
+                    // 統合ブランチは全 issue 完了まで本番に出ない。
+                    tenantId = TODO("#44: register は家族(tenant)+ 最初のメンバーの作成に置き換える"),
                     name = MemberName(request.name),
                     email = MemberEmail(request.email),
                     familyRole = FamilyRole.get(request.familyRole),

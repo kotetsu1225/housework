@@ -6,10 +6,12 @@ import com.task.domain.member.MemberEmail
 import com.task.domain.member.MemberId
 import com.task.domain.member.MemberName
 import com.task.domain.member.PlainPassword
+import com.task.domain.tenant.TenantId
 
 @ImplementedBy(CreateMemberUseCaseImpl::class)
 interface CreateMemberUseCase {
     data class Input(
+        val tenantId: TenantId,
         val name: MemberName,
         val familyRole: FamilyRole,
         val email: MemberEmail,

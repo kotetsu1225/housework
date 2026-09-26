@@ -1,9 +1,11 @@
 package com.task.domain.member
 
+import com.task.domain.tenant.TenantId
 import java.util.UUID
 
 class Member private constructor(
     val id: MemberId,
+    val tenantId: TenantId,
     val name: MemberName,
     val email: MemberEmail,
     val familyRole: FamilyRole,
@@ -14,6 +16,7 @@ class Member private constructor(
 
         return Member(
             id = this.id,
+            tenantId = this.tenantId,
             name = newName,
             email = this.email,
             familyRole = this.familyRole,
@@ -24,6 +27,7 @@ class Member private constructor(
     fun updateEmail(newEmail: MemberEmail): Member {
         return Member(
             id = this.id,
+            tenantId = this.tenantId,
             name = this.name,
             email = newEmail,
             familyRole = this.familyRole,
@@ -34,6 +38,7 @@ class Member private constructor(
     fun updateFamilyRole(newRole: FamilyRole): Member {
         return Member(
             id = this.id,
+            tenantId = this.tenantId,
             name = this.name,
             email = this.email,
             familyRole = newRole,
@@ -43,6 +48,7 @@ class Member private constructor(
 
     companion object {
         fun create(
+            tenantId: TenantId,
             name: MemberName,
             email: MemberEmail,
             familyRole: FamilyRole,
@@ -53,6 +59,7 @@ class Member private constructor(
 
             return Member(
                 id = MemberId.generate(),
+                tenantId = tenantId,
                 name = name,
                 email = email,
                 familyRole = familyRole,
@@ -62,6 +69,7 @@ class Member private constructor(
 
         fun reconstruct(
             id: MemberId,
+            tenantId: TenantId,
             name: MemberName,
             email: MemberEmail,
             familyRole: FamilyRole,
@@ -69,6 +77,7 @@ class Member private constructor(
         ): Member {
             return Member(
                 id = id,
+                tenantId = tenantId,
                 name = name,
                 email = email,
                 familyRole = familyRole,

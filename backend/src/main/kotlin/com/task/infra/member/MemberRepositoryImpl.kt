@@ -8,6 +8,7 @@ import com.task.domain.member.MemberId
 import com.task.domain.member.MemberName
 import com.task.domain.member.MemberRepository
 import com.task.domain.member.PasswordHash
+import com.task.domain.tenant.TenantId
 import com.task.infra.database.jooq.tables.Members.Companion.MEMBERS
 import com.task.infra.database.jooq.tables.records.MembersRecord
 import org.jooq.DSLContext
@@ -20,6 +21,7 @@ class MemberRepositoryImpl : MemberRepository {
         val record = session.newRecord(MEMBERS)
 
         record.id = member.id.value
+        record.tenantId = member.tenantId.value
         record.name = member.name.value
         record.email = member.email.value
         record.role = member.familyRole.value
@@ -95,6 +97,7 @@ class MemberRepositoryImpl : MemberRepository {
     private fun MembersRecord.toDomain(): Member {
         return Member.reconstruct(
             id = MemberId(this.id!!),
+            tenantId = TenantId(this.tenantId),
             name = MemberName(this.name),
             email = MemberEmail(this.email),
             familyRole = FamilyRole.get(this.role),

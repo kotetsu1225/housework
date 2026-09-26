@@ -22,6 +22,7 @@ class CreateMemberUseCaseImpl @Inject constructor(
             val existingMembersName = memberRepository.findAllNames(session)
 
             val newMember = Member.create(
+                tenantId = input.tenantId,
                 name = input.name,
                 familyRole = input.familyRole,
                 password = hashedPassword,

@@ -9,6 +9,7 @@ import com.task.domain.member.MemberRepository
 import com.task.domain.taskDefinition.TaskDefinitionRepository
 import com.task.domain.tenant.TenantRepository
 import com.task.infra.database.Database
+import com.task.infra.database.DatabaseWithoutRLS
 import com.task.infra.event.InMemoryDomainEventDispatcher
 import com.task.infra.member.MemberRepositoryImpl
 import com.task.infra.memberMeta.MemberMetaRepository
@@ -79,6 +80,7 @@ import com.task.usecase.memberMeta.SaveMemberMetaUseCaseImpl
 class AppModule : AbstractModule() {
     override fun configure() {
         bind(Database::class.java).asEagerSingleton()
+        bind(DatabaseWithoutRLS::class.java).asEagerSingleton()
 
         bind(MemberRepository::class.java).to(MemberRepositoryImpl::class.java)
         bind(TaskDefinitionRepository::class.java).to(TaskDefinitionRepositoryImpl::class.java)

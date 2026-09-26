@@ -128,6 +128,24 @@ object PostgresTestDatabase {
         )
     }
 
+    /**
+     * `housework_app` ロールの新しい接続プールを作る。呼び出し側で close すること。
+     * 接続の使い回しを確実に起こしたいテスト(maximumPoolSize = 1)のために使う(#40)。
+     */
+    fun createAppDataSource(maximumPoolSize: Int): HikariDataSource {
+        check(!ownerDataSource.isClosed) { "ownerDataSourceの初期化(Flyway)が完了していません" }
+        return HikariDataSource(
+            HikariConfig().apply {
+                driverClassName = "org.postgresql.Driver"
+                jdbcUrl = container.jdbcUrl
+                username = "housework_app"
+                password = APP_ROLE_PASSWORD
+                this.maximumPoolSize = maximumPoolSize
+                poolName = "PostgresTestDatabase-app-$maximumPoolSize"
+            }
+        )
+    }
+
     /** オーナー接続のjOOQ DSLContext。呼び出すたびに作成する(状態を持たない)。 */
     fun ownerDsl(): DSLContext = DSL.using(ownerDataSource, SQLDialect.POSTGRES)
 

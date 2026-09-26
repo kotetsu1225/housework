@@ -2,7 +2,7 @@
 
 [multi-tenant-handoff.md](multi-tenant-handoff.md) §6.4 に従い、**issue の着手時と完了時に必ず更新する**。コンテキストが切れた別のエージェントが、このファイルだけを見て再開できる粒度で書く。
 
-最終更新: 2026-09-26(#35 #36 #37 #39 #62 #64 完了。#38 #40 #41 #63 実装中。#69 は apply の承認待ち)
+最終更新: 2026-09-26(完了 12 件。#42 #47 #49 実装中。#69 apply と #48 の方針はオーナーの判断待ち)
 
 ## 現在の状態
 
@@ -35,11 +35,11 @@
 
 | issue | 担当 | ブランチ(worktree は `~/Desktop/housework-wt/mt-<番号>`) | 状況・次の一手 |
 |---|---|---|---|
-| #38 F3 | Sonnet(編集)+ 親(psql で隔離の検証) | `mt/38-rls-non-rls-tables` | V24 と V21 コメント修正を編集中 |
-| #40 F5 | Sonnet(編集)+ 親(ビルド・レビュー) | `mt/40-db-connection-points` | `Database.withTransaction(tenantId)` と `DatabaseWithoutRLS` を編集中。データソースはコンストラクタで受け取る(テストで差し替えるため)。隔離テストは #41 のマージ後に追加 |
-| #41 F6 | Sonnet(編集)+ 親(`./gradlew test` 実行) | `mt/41-test-infra` | Testcontainers 2.0.5 + postgres:17-alpine。Docker 29 は Testcontainers 1.x だと API 版の都合で接続できない可能性があるため 2.x |
-| #63 FE2 | Sonnet(実装)+ 親(全テスト・build) | `mt/63-register-family` | 家族名の入力、JWT の tenantId、旧トークンの破棄、409 |
-| #69 G0 | 親(人間と伴走) | `mt/69-gcp-foundation`(push 済み、PR 未作成) | plan は 5 件追加。**オーナーの承認後に apply → plan で差分なしを確認 → PR** |
+| #42 A1 | Sonnet(編集)+ 親(テスト・レビュー) | `mt/42-jwt-tenant-claim` | JWT の tenantId クレーム、validate で 401、AuthenticatedMember、principal 6 箇所の置き換え、testApplication のテスト |
+| #47 D3 | Sonnet(編集)+ 親(DB テスト・レビュー) | `mt/47-taskexecution-tenant-id` | TaskExecution の 4 状態と 3 テーブルに tenantId。create は TaskDefinition から引き継ぐ |
+| #49 D5 | Sonnet(編集)+ 親(DB テスト・レビュー) | `mt/49-outbox-tenant-id` | OutboxRecord / completed_domain_events に tenantId(エンベロープ方式) |
+| #48 D4 | — | 未着手 | **endpoint の他テナント衝突の扱いがオーナーの判断待ち**(#48 にコメント。推奨は「409 で断る」) |
+| #69 G0 | 親(人間と伴走) | `mt/69-gcp-foundation`(push 済み、PR 未作成) | plan は 5 件追加。**オーナーの承認後に apply → PR** |
 
 ## 完了(統合ブランチにマージ済み)
 
@@ -51,6 +51,12 @@
 | #39 F4 | #80 | 2026-09-26 | Tenant 集約・FamilyName・TenantRepository(Impl)。単体テスト 6 件(リポジトリ初のテスト) |
 | #62 FE1 | #83 | 2026-09-26 | ログインを email に。npm test 287 件 |
 | #64 FE3 | #84 | 2026-09-26 | メンバー追加の 409 をメール重複として表示。npm test 293 件 |
+| #38 F3 | #85 | 2026-09-26 | V24。tenants / outbox / completed_domain_events に RLS。psql で 10 項目確認 |
+| #40 F5 | #87 | 2026-09-26 | `Database.withTransaction(tenantId)` / `DatabaseWithoutRLS`。データソースはコンストラクタ注入。テスト 5 件(同じ接続を続けて使っても前のテナントが残らないことを `pg_backend_pid` で確認) |
+| #41 F6 | #86 | 2026-09-26 | Testcontainers 2.0.5 + postgres:17-alpine。**使い回した接続では fail-closed のエラーが「uuid に変換できない」になる**(新しい接続では「設定が無い」)。テストは両方を受け入れる |
+| #45 D1 | #88 | 2026-09-26 | Member に tenantId。register(#44)と member/create(#51)は暫定で `tenantId = TODO(...)` |
+| #46 D2 | #89 | 2026-09-26 | TaskDefinition に tenantId。task-definitions/create(#53)は暫定で `tenantId = TODO(...)` |
+| #63 FE2 | #90 | 2026-09-26 | 家族名、JWT tenantId、旧トークン破棄、409。保存済みユーザーの復元はトークンと同じメンバーのときだけ |
 | #36 F1 | #79 | 2026-09-26 | V22 backfill 新規、V23 に rename、jOOQ 再生成。**素の `./gradlew build` はもう DB に触れない**(コンパイル時の自動生成を停止)。生成は `./gradlew generateJooq -PdbUrl=jdbc:postgresql://localhost:5433/<DB名>` |
 
 ## ブロック中・未解決の疑問
@@ -73,6 +79,10 @@
 - **#82**: frontend に ESLint の設定ファイルが一度も存在せず、`npm run lint` は常に exit 2。frontend の issue は当面 `npm test` と `npm run build`(tsc を含む)で確認する。あわせて `frontend/node_modules` が 18,291 ファイル git に追跡されている。
 - 起動には VAPID の鍵が必要(空だと `WebPushSenderImpl` が落ちる)。jar を直接起動して確認するときは使い捨ての鍵を渡す。
 
+## 暫定の書き方(D 系で UseCase の Input に tenantId を足したとき)
+
+ルートから tenantId を渡す手段が無い間は、ルートのコードを残したまま `tenantId = TODO("#NN: …")` とだけ書く(到達すると NotImplementedError で 500)。U 系・A 系の issue では、その 1 行を `call.authenticatedMember().tenantId` などに差し替える。
+
 ## 順序の決定(親エージェント)
 
 | 日付 | 決定 | 理由 |
@@ -92,8 +102,9 @@
 
 ## 次にやること(優先順)
 
-1. #38 #40 #41 #63 をレビュー → 検証 → PR → マージ
-2. #41 マージ後、#40 に隔離テストを追加
-3. #69: オーナーの承認後に apply → PR
-4. Wave 1 のドメイン(#45 #46 #48 #49 → #47)と認証(#42 → #43 #44)、#71(Pub/Sub 基盤)
+1. #42 #47 #49 をレビュー → DB テスト → PR → マージ
+2. #42 の後: #43(email ログイン)→ #44(サインアップ)。#44 → #51 の順
+3. #48: オーナーの判断後
+4. #69: オーナーの承認後に apply → PR
+5. #71(Pub/Sub 基盤)、#50(same-tenant)、U 系(#51〜#55)、B 系(#56〜#60)
 4. 並行可能: #62 #63 #64(フロント)、#71(Pub/Sub クライアント基盤)

@@ -110,6 +110,7 @@ export interface LoginResponse {
  * @see backend/src/main/kotlin/com/task/presentation/Auth.kt
  */
 export interface RegisterRequest {
+  familyName: string
   name: string
   email: string
   familyRole: FamilyRole

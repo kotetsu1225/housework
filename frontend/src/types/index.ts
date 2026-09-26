@@ -28,6 +28,8 @@ export interface User {
   name: string
   email: string
   role: FamilyRole
+  /** 所属するテナント（家族）のID。JWTのtenantIdクレームに対応 */
+  tenantId: string
   createdAt: string
 }
 

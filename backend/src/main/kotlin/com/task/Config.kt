@@ -7,6 +7,7 @@ import com.task.domain.event.DomainEventDispatcher
 import com.task.domain.event.DomainEventHandler
 import com.task.domain.member.MemberRepository
 import com.task.domain.taskDefinition.TaskDefinitionRepository
+import com.task.domain.tenant.TenantRepository
 import com.task.infra.database.Database
 import com.task.infra.event.InMemoryDomainEventDispatcher
 import com.task.infra.member.MemberRepositoryImpl
@@ -15,6 +16,7 @@ import com.task.infra.memberMeta.MemberMetaRepositoryImpl
 import com.task.infra.pushSubscription.PushSubscriptionRepository
 import com.task.infra.pushSubscription.PushSubscriptionRepositoryImpl
 import com.task.infra.taskDefinition.TaskDefinitionRepositoryImpl
+import com.task.infra.tenant.TenantRepositoryImpl
 import com.task.usecase.member.CreateMemberUseCase
 import com.task.usecase.member.CreateMemberUseCaseImpl
 import com.task.usecase.member.GetMemberUseCase
@@ -82,6 +84,7 @@ class AppModule : AbstractModule() {
         bind(TaskDefinitionRepository::class.java).to(TaskDefinitionRepositoryImpl::class.java)
         bind(PushSubscriptionRepository::class.java).to(PushSubscriptionRepositoryImpl::class.java)
         bind(MemberMetaRepository::class.java).to(MemberMetaRepositoryImpl::class.java)
+        bind(TenantRepository::class.java).to(TenantRepositoryImpl::class.java)
 
         bind(CreateMemberUseCase::class.java).to(CreateMemberUseCaseImpl::class.java)
         bind(UpdateMemberUseCase::class.java).to(UpdateMemberUseCaseImpl::class.java)

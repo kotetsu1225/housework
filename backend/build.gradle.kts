@@ -85,6 +85,8 @@ dependencies {
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit:$kotlinVersion")
     testImplementation("io.mockk:mockk:1.13.8")
     testImplementation("org.junit.jupiter:junit-jupiter:5.10.1")
+    // Testcontainers（実PostgreSQLでのRLSテスト用。ローカル実行にはDockerが必須。#41）
+    testImplementation("org.testcontainers:testcontainers-postgresql:2.0.5")
 
     // JOOQ code generation
     jooqGenerator("org.postgresql:postgresql:$postgresVersion")

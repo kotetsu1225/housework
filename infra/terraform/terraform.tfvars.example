@@ -1,0 +1,8 @@
+# このファイルを terraform.tfvars にコピーして値を埋める。terraform.tfvars はコミットしない(.gitignore 済み)。
+project_id      = "your-project-id"
+billing_account = "000000-000000-000000"
+
+# 既定値を変えるときだけ書く
+# region          = "asia-northeast1"
+# budget_amount   = 1000
+# budget_currency = "JPY"

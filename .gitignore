@@ -23,6 +23,8 @@ node_modules/
 *.tfplan
 *.tfvars
 !*.tfvars.example
+*.tfbackend
+!*.tfbackend.example
 *-sa-key*.json
 
 # macOS

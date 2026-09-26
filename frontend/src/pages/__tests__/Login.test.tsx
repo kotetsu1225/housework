@@ -63,7 +63,7 @@ describe('Login', () => {
       // 見出しを確認（複数あるので getAllByRole を使用）
       const headings = screen.getAllByRole('heading')
       expect(headings.length).toBeGreaterThan(0)
-      expect(screen.getByLabelText('名前')).toBeInTheDocument()
+      expect(screen.getByLabelText('メールアドレス')).toBeInTheDocument()
     })
 
     it('新規登録リンクが表示される', () => {
@@ -73,19 +73,32 @@ describe('Login', () => {
   })
 
   describe('バリデーション', () => {
-    it('名前が空の場合ボタンが無効化される', async () => {
+    it('メールアドレスが空の場合ボタンが無効化される', async () => {
       renderLoginPage()
       fireEvent.change(screen.getByLabelText('パスワード'), { target: { value: 'password' } })
-      
+
       const button = screen.getByRole('button', { name: 'ログイン' })
       expect(button).toBeDisabled()
     })
 
+    it('メールアドレスの形式が不正な場合ボタンが無効化され送信されない', async () => {
+      renderLoginPage()
+      fireEvent.change(screen.getByLabelText('メールアドレス'), { target: { value: 'invalid-email' } })
+      fireEvent.change(screen.getByLabelText('パスワード'), { target: { value: 'password' } })
+
+      const button = screen.getByRole('button', { name: 'ログイン' })
+      expect(button).toBeDisabled()
+
+      fireEvent.click(button)
+
+      expect(api.loginApi).not.toHaveBeenCalled()
+    })
+
     it('パスワードが短すぎる場合ボタンが無効化される', async () => {
       renderLoginPage()
-      fireEvent.change(screen.getByLabelText('名前'), { target: { value: 'user' } })
+      fireEvent.change(screen.getByLabelText('メールアドレス'), { target: { value: 'user@example.com' } })
       fireEvent.change(screen.getByLabelText('パスワード'), { target: { value: '1234' } }) // 5文字未満
-      
+
       const button = screen.getByRole('button', { name: 'ログイン' })
       expect(button).toBeDisabled()
     })
@@ -96,15 +109,15 @@ describe('Login', () => {
       vi.mocked(api.loginApi).mockRejectedValue(new api.ApiError('認証失敗', 401))
 
       renderLoginPage()
-      fireEvent.change(screen.getByLabelText('名前'), { target: { value: '存在しないユーザー' } })
+      fireEvent.change(screen.getByLabelText('メールアドレス'), { target: { value: 'notexist@example.com' } })
       fireEvent.change(screen.getByLabelText('パスワード'), { target: { value: 'password' } })
-      
+
       const button = screen.getByRole('button', { name: 'ログイン' })
       expect(button).not.toBeDisabled()
       fireEvent.click(button)
-      
+
       await waitFor(() => {
-        expect(screen.getByText('名前またはパスワードが正しくありません')).toBeInTheDocument()
+        expect(screen.getByText('メールアドレスまたはパスワードが正しくありません')).toBeInTheDocument()
       })
     })
 
@@ -126,14 +139,15 @@ describe('Login', () => {
       })
 
       renderLoginPage()
-      fireEvent.change(screen.getByLabelText('名前'), { target: { value: 'テストユーザー' } })
+      fireEvent.change(screen.getByLabelText('メールアドレス'), { target: { value: 'test@example.com' } })
       fireEvent.change(screen.getByLabelText('パスワード'), { target: { value: 'password' } })
-      
+
       fireEvent.click(screen.getByRole('button', { name: 'ログイン' }))
-      
+
       await waitFor(() => {
         expect(screen.getByText('ホームページ')).toBeInTheDocument()
       })
+      expect(api.loginApi).toHaveBeenCalledWith({ email: 'test@example.com', password: 'password' })
     })
   })
 

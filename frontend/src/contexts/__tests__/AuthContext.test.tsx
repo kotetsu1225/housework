@@ -35,7 +35,7 @@ function TestComponent() {
       <button onClick={() => register('新規ユーザー', 'new@example.com', 'FATHER', 'password')}>
         登録
       </button>
-      <button onClick={() => login('既存ユーザー', 'password')}>ログイン</button>
+      <button onClick={() => login('existing@example.com', 'password')}>ログイン</button>
       <button onClick={logout}>ログアウト</button>
     </div>
   )
@@ -211,6 +211,7 @@ describe('AuthContext', () => {
         expect(screen.getByTestId('user-name')).toHaveTextContent('既存ユーザー')
         expect(api.setStoredToken).toHaveBeenCalledWith(token)
       })
+      expect(api.loginApi).toHaveBeenCalledWith({ email: 'existing@example.com', password: 'password' })
     })
 
     it('ログイン失敗時にエラーが表示される', async () => {
@@ -227,7 +228,7 @@ describe('AuthContext', () => {
 
       await waitFor(() => {
         expect(screen.getByTestId('is-authenticated')).toHaveTextContent('false')
-        expect(screen.getByTestId('error')).toHaveTextContent('名前またはパスワードが正しくありません')
+        expect(screen.getByTestId('error')).toHaveTextContent('メールアドレスまたはパスワードが正しくありません')
       })
     })
   })

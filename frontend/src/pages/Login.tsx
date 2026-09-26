@@ -21,11 +21,14 @@ const PASSWORD_MIN_LENGTH = 5
 /** パスワードの最大文字数（バックエンドと同期） */
 const PASSWORD_MAX_LENGTH = 72
 
+/** 簡易的なメールアドレス形式チェック(Register.tsx と同じ正規表現) */
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
 export function Login() {
   const navigate = useNavigate()
   const location = useLocation()
   const { login, loading, error, clearError } = useAuth()
-  const [name, setName] = useState('')
+  const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [localError, setLocalError] = useState('')
@@ -36,6 +39,19 @@ export function Login() {
   useEffect(() => {
     clearError()
   }, [clearError])
+
+  /**
+   * メールアドレスバリデーション
+   */
+  const validateEmail = (value: string): string | null => {
+    if (!value) {
+      return 'メールアドレスを入力してください'
+    }
+    if (!EMAIL_REGEX.test(value)) {
+      return '有効なメールアドレスを入力してください'
+    }
+    return null
+  }
 
   /**
    * パスワードバリデーション
@@ -60,8 +76,9 @@ export function Login() {
     e.preventDefault()
     setLocalError('')
 
-    if (!name.trim()) {
-      setLocalError('名前を入力してください')
+    const emailError = validateEmail(email.trim())
+    if (emailError) {
+      setLocalError(emailError)
       return
     }
 
@@ -71,7 +88,7 @@ export function Login() {
       return
     }
 
-    const success = await login(name.trim(), password)
+    const success = await login(email.trim(), password)
 
     if (success) {
       navigate(from, { replace: true })
@@ -79,7 +96,8 @@ export function Login() {
   }
 
   // フォームが有効かどうか
-  const isFormValid = name.trim() && password.length >= PASSWORD_MIN_LENGTH
+  const isEmailValid = EMAIL_REGEX.test(email.trim())
+  const isFormValid = isEmailValid && password.length >= PASSWORD_MIN_LENGTH
 
   // エラーメッセージ（ローカルエラーまたはAPI エラー）
   const displayError = localError || error
@@ -105,10 +123,11 @@ export function Login() {
 
               <form onSubmit={handleSubmit} className="space-y-6">
                 <Input
-                  label="名前"
-                  placeholder="登録した名前を入力"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
+                  label="メールアドレス"
+                  type="email"
+                  placeholder="登録したメールアドレスを入力"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                   disabled={loading}
                   autoComplete="username"
                 />

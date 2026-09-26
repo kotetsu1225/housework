@@ -92,7 +92,7 @@ export interface MemberListItemResponse extends MemberResponse {
  * @see backend/src/main/kotlin/com/task/presentation/Auth.kt
  */
 export interface LoginRequest {
-  name: string
+  email: string
   password: string
 }
 

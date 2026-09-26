@@ -16,13 +16,13 @@ import type {
 /**
  * ログイン
  *
- * @param request - ログインリクエスト（name, password）
+ * @param request - ログインリクエスト（email, password）
  * @returns JWTトークンとメンバー名
  *
  * @example
  * ```typescript
  * const { token, memberName } = await loginApi({
- *   name: 'タロウ',
+ *   email: 'taro@example.com',
  *   password: 'password123'
  * })
  * ```

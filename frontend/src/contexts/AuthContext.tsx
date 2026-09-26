@@ -83,11 +83,11 @@ interface AuthContextType {
   error: string | null
   /**
    * ログイン（バックエンドの/api/auth/loginを使用）
-   * @param name - メンバー名
+   * @param email - メールアドレス
    * @param password - パスワード
    * @returns ログイン成功したかどうか
    */
-  login: (name: string, password: string) => Promise<boolean>
+  login: (email: string, password: string) => Promise<boolean>
   /** ログアウト */
   logout: () => void
   /**
@@ -209,13 +209,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
    * JWTトークンを取得してセッションを開始します。
    */
   const login = useCallback(
-    async (name: string, password: string): Promise<boolean> => {
+    async (email: string, password: string): Promise<boolean> => {
       setLoading(true)
       setError(null)
 
       try {
         // バックエンドにログインリクエスト
-        const response = await loginApi({ name, password })
+        const response = await loginApi({ email, password })
 
         // トークンを保存
         setStoredToken(response.token)
@@ -243,7 +243,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } catch (err) {
         if (err instanceof ApiError) {
           if (err.status === 401) {
-            setError('名前またはパスワードが正しくありません')
+            setError('メールアドレスまたはパスワードが正しくありません')
           } else {
             setError(err.message)
           }
@@ -369,7 +369,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
  *   const { user, login, logout, register } = useAuth()
  *
  *   const handleLogin = async () => {
- *     const success = await login('タロウ', 'password123')
+ *     const success = await login('taro@example.com', 'password123')
  *     if (success) {
  *       console.log('ログイン成功')
  *     }

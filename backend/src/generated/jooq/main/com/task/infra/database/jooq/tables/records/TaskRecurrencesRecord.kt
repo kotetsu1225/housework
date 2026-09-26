@@ -12,8 +12,8 @@ import java.util.UUID
 
 import org.jooq.Field
 import org.jooq.Record1
-import org.jooq.Record9
-import org.jooq.Row9
+import org.jooq.Record10
+import org.jooq.Row10
 import org.jooq.impl.UpdatableRecordImpl
 
 
@@ -21,7 +21,7 @@ import org.jooq.impl.UpdatableRecordImpl
  * タスクの繰り返し設定
  */
 @Suppress("UNCHECKED_CAST")
-open class TaskRecurrencesRecord private constructor() : UpdatableRecordImpl<TaskRecurrencesRecord>(TaskRecurrences.TASK_RECURRENCES), Record9<UUID?, String?, Boolean?, Int?, Int?, LocalDate?, LocalDate?, OffsetDateTime?, OffsetDateTime?> {
+open class TaskRecurrencesRecord private constructor() : UpdatableRecordImpl<TaskRecurrencesRecord>(TaskRecurrences.TASK_RECURRENCES), Record10<UUID?, String?, Boolean?, Int?, Int?, LocalDate?, LocalDate?, OffsetDateTime?, OffsetDateTime?, UUID?> {
 
     open var taskDefinitionId: UUID
         set(value): Unit = set(0, value)
@@ -59,6 +59,10 @@ open class TaskRecurrencesRecord private constructor() : UpdatableRecordImpl<Tas
         set(value): Unit = set(8, value)
         get(): OffsetDateTime? = get(8) as OffsetDateTime?
 
+    open var tenantId: UUID
+        set(value): Unit = set(9, value)
+        get(): UUID = get(9) as UUID
+
     // -------------------------------------------------------------------------
     // Primary key information
     // -------------------------------------------------------------------------
@@ -66,11 +70,11 @@ open class TaskRecurrencesRecord private constructor() : UpdatableRecordImpl<Tas
     override fun key(): Record1<UUID?> = super.key() as Record1<UUID?>
 
     // -------------------------------------------------------------------------
-    // Record9 type implementation
+    // Record10 type implementation
     // -------------------------------------------------------------------------
 
-    override fun fieldsRow(): Row9<UUID?, String?, Boolean?, Int?, Int?, LocalDate?, LocalDate?, OffsetDateTime?, OffsetDateTime?> = super.fieldsRow() as Row9<UUID?, String?, Boolean?, Int?, Int?, LocalDate?, LocalDate?, OffsetDateTime?, OffsetDateTime?>
-    override fun valuesRow(): Row9<UUID?, String?, Boolean?, Int?, Int?, LocalDate?, LocalDate?, OffsetDateTime?, OffsetDateTime?> = super.valuesRow() as Row9<UUID?, String?, Boolean?, Int?, Int?, LocalDate?, LocalDate?, OffsetDateTime?, OffsetDateTime?>
+    override fun fieldsRow(): Row10<UUID?, String?, Boolean?, Int?, Int?, LocalDate?, LocalDate?, OffsetDateTime?, OffsetDateTime?, UUID?> = super.fieldsRow() as Row10<UUID?, String?, Boolean?, Int?, Int?, LocalDate?, LocalDate?, OffsetDateTime?, OffsetDateTime?, UUID?>
+    override fun valuesRow(): Row10<UUID?, String?, Boolean?, Int?, Int?, LocalDate?, LocalDate?, OffsetDateTime?, OffsetDateTime?, UUID?> = super.valuesRow() as Row10<UUID?, String?, Boolean?, Int?, Int?, LocalDate?, LocalDate?, OffsetDateTime?, OffsetDateTime?, UUID?>
     override fun field1(): Field<UUID?> = TaskRecurrences.TASK_RECURRENCES.TASK_DEFINITION_ID
     override fun field2(): Field<String?> = TaskRecurrences.TASK_RECURRENCES.PATTERN_TYPE
     override fun field3(): Field<Boolean?> = TaskRecurrences.TASK_RECURRENCES.DAILY_SKIP_WEEKENDS
@@ -80,6 +84,7 @@ open class TaskRecurrencesRecord private constructor() : UpdatableRecordImpl<Tas
     override fun field7(): Field<LocalDate?> = TaskRecurrences.TASK_RECURRENCES.END_DATE
     override fun field8(): Field<OffsetDateTime?> = TaskRecurrences.TASK_RECURRENCES.CREATED_AT
     override fun field9(): Field<OffsetDateTime?> = TaskRecurrences.TASK_RECURRENCES.UPDATED_AT
+    override fun field10(): Field<UUID?> = TaskRecurrences.TASK_RECURRENCES.TENANT_ID
     override fun component1(): UUID = taskDefinitionId
     override fun component2(): String = patternType
     override fun component3(): Boolean? = dailySkipWeekends
@@ -89,6 +94,7 @@ open class TaskRecurrencesRecord private constructor() : UpdatableRecordImpl<Tas
     override fun component7(): LocalDate? = endDate
     override fun component8(): OffsetDateTime? = createdAt
     override fun component9(): OffsetDateTime? = updatedAt
+    override fun component10(): UUID = tenantId
     override fun value1(): UUID = taskDefinitionId
     override fun value2(): String = patternType
     override fun value3(): Boolean? = dailySkipWeekends
@@ -98,6 +104,7 @@ open class TaskRecurrencesRecord private constructor() : UpdatableRecordImpl<Tas
     override fun value7(): LocalDate? = endDate
     override fun value8(): OffsetDateTime? = createdAt
     override fun value9(): OffsetDateTime? = updatedAt
+    override fun value10(): UUID = tenantId
 
     override fun value1(value: UUID?): TaskRecurrencesRecord {
         set(0, value)
@@ -144,7 +151,12 @@ open class TaskRecurrencesRecord private constructor() : UpdatableRecordImpl<Tas
         return this
     }
 
-    override fun values(value1: UUID?, value2: String?, value3: Boolean?, value4: Int?, value5: Int?, value6: LocalDate?, value7: LocalDate?, value8: OffsetDateTime?, value9: OffsetDateTime?): TaskRecurrencesRecord {
+    override fun value10(value: UUID?): TaskRecurrencesRecord {
+        set(9, value)
+        return this
+    }
+
+    override fun values(value1: UUID?, value2: String?, value3: Boolean?, value4: Int?, value5: Int?, value6: LocalDate?, value7: LocalDate?, value8: OffsetDateTime?, value9: OffsetDateTime?, value10: UUID?): TaskRecurrencesRecord {
         this.value1(value1)
         this.value2(value2)
         this.value3(value3)
@@ -154,13 +166,14 @@ open class TaskRecurrencesRecord private constructor() : UpdatableRecordImpl<Tas
         this.value7(value7)
         this.value8(value8)
         this.value9(value9)
+        this.value10(value10)
         return this
     }
 
     /**
      * Create a detached, initialised TaskRecurrencesRecord
      */
-    constructor(taskDefinitionId: UUID, patternType: String, dailySkipWeekends: Boolean? = null, weeklyDayOfWeek: Int? = null, monthlyDayOfMonth: Int? = null, startDate: LocalDate, endDate: LocalDate? = null, createdAt: OffsetDateTime? = null, updatedAt: OffsetDateTime? = null): this() {
+    constructor(taskDefinitionId: UUID, patternType: String, dailySkipWeekends: Boolean? = null, weeklyDayOfWeek: Int? = null, monthlyDayOfMonth: Int? = null, startDate: LocalDate, endDate: LocalDate? = null, createdAt: OffsetDateTime? = null, updatedAt: OffsetDateTime? = null, tenantId: UUID): this() {
         this.taskDefinitionId = taskDefinitionId
         this.patternType = patternType
         this.dailySkipWeekends = dailySkipWeekends
@@ -170,6 +183,7 @@ open class TaskRecurrencesRecord private constructor() : UpdatableRecordImpl<Tas
         this.endDate = endDate
         this.createdAt = createdAt
         this.updatedAt = updatedAt
+        this.tenantId = tenantId
         resetChangedOnNotNull()
     }
 
@@ -187,6 +201,7 @@ open class TaskRecurrencesRecord private constructor() : UpdatableRecordImpl<Tas
             this.endDate = value.endDate
             this.createdAt = value.createdAt
             this.updatedAt = value.updatedAt
+            this.tenantId = value.tenantId
             resetChangedOnNotNull()
         }
     }

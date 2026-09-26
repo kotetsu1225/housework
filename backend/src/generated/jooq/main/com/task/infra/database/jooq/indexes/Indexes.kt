@@ -9,10 +9,11 @@ import com.task.infra.database.jooq.tables.MemberMetas
 import com.task.infra.database.jooq.tables.Members
 import com.task.infra.database.jooq.tables.Outbox
 import com.task.infra.database.jooq.tables.PushSubscriptions
-import com.task.infra.database.jooq.tables.ScheduledNotifications
 import com.task.infra.database.jooq.tables.TaskDefinitions
 import com.task.infra.database.jooq.tables.TaskExecutionParticipants
 import com.task.infra.database.jooq.tables.TaskExecutions
+import com.task.infra.database.jooq.tables.TaskRecurrences
+import com.task.infra.database.jooq.tables.TaskSnapshots
 
 import org.jooq.Index
 import org.jooq.impl.DSL
@@ -24,27 +25,34 @@ import org.jooq.impl.Internal
 // INDEX definitions
 // -------------------------------------------------------------------------
 
+val IDX_COMPLETED_DOMAIN_EVENTS_TENANT_ID: Index = Internal.createIndex(DSL.name("idx_completed_domain_events_tenant_id"), CompletedDomainEvents.COMPLETED_DOMAIN_EVENTS, arrayOf(CompletedDomainEvents.COMPLETED_DOMAIN_EVENTS.TENANT_ID), false)
 val IDX_COMPLETED_EVENTS_PROCESSED_AT: Index = Internal.createIndex(DSL.name("idx_completed_events_processed_at"), CompletedDomainEvents.COMPLETED_DOMAIN_EVENTS, arrayOf(CompletedDomainEvents.COMPLETED_DOMAIN_EVENTS.PROCESSED_AT), false)
 val IDX_COMPLETED_EVENTS_TYPE: Index = Internal.createIndex(DSL.name("idx_completed_events_type"), CompletedDomainEvents.COMPLETED_DOMAIN_EVENTS, arrayOf(CompletedDomainEvents.COMPLETED_DOMAIN_EVENTS.EVENT_TYPE), false)
 val IDX_MEMBER_METAS_MEMBER_ID: Index = Internal.createIndex(DSL.name("idx_member_metas_member_id"), MemberMetas.MEMBER_METAS, arrayOf(MemberMetas.MEMBER_METAS.MEMBER_ID), false)
-val IDX_MEMBERS_NAME: Index = Internal.createIndex(DSL.name("idx_members_name"), Members.MEMBERS, arrayOf(Members.MEMBERS.NAME), true)
+val IDX_MEMBER_METAS_TENANT_ID: Index = Internal.createIndex(DSL.name("idx_member_metas_tenant_id"), MemberMetas.MEMBER_METAS, arrayOf(MemberMetas.MEMBER_METAS.TENANT_ID), false)
 val IDX_MEMBERS_ROLE: Index = Internal.createIndex(DSL.name("idx_members_role"), Members.MEMBERS, arrayOf(Members.MEMBERS.ROLE), false)
+val IDX_MEMBERS_TENANT_ID: Index = Internal.createIndex(DSL.name("idx_members_tenant_id"), Members.MEMBERS, arrayOf(Members.MEMBERS.TENANT_ID), false)
+val IDX_MEMBERS_TENANT_NAME: Index = Internal.createIndex(DSL.name("idx_members_tenant_name"), Members.MEMBERS, arrayOf(Members.MEMBERS.TENANT_ID, Members.MEMBERS.NAME), true)
 val IDX_OUTBOX_AGGREGATE: Index = Internal.createIndex(DSL.name("idx_outbox_aggregate"), Outbox.OUTBOX, arrayOf(Outbox.OUTBOX.AGGREGATE_TYPE, Outbox.OUTBOX.AGGREGATE_ID), false)
 val IDX_OUTBOX_PENDING: Index = Internal.createIndex(DSL.name("idx_outbox_pending"), Outbox.OUTBOX, arrayOf(Outbox.OUTBOX.STATUS, Outbox.OUTBOX.CREATED_AT), false)
+val IDX_OUTBOX_TENANT_ID: Index = Internal.createIndex(DSL.name("idx_outbox_tenant_id"), Outbox.OUTBOX, arrayOf(Outbox.OUTBOX.TENANT_ID), false)
 val IDX_PUSH_SUBSCRIPTIONS_ACTIVE: Index = Internal.createIndex(DSL.name("idx_push_subscriptions_active"), PushSubscriptions.PUSH_SUBSCRIPTIONS, arrayOf(PushSubscriptions.PUSH_SUBSCRIPTIONS.IS_ACTIVE), false)
 val IDX_PUSH_SUBSCRIPTIONS_MEMBER: Index = Internal.createIndex(DSL.name("idx_push_subscriptions_member"), PushSubscriptions.PUSH_SUBSCRIPTIONS, arrayOf(PushSubscriptions.PUSH_SUBSCRIPTIONS.MEMBER_ID), false)
-val IDX_SCHEDULED_NOTIFICATIONS_MEMBER: Index = Internal.createIndex(DSL.name("idx_scheduled_notifications_member"), ScheduledNotifications.SCHEDULED_NOTIFICATIONS, arrayOf(ScheduledNotifications.SCHEDULED_NOTIFICATIONS.MEMBER_ID), false)
-val IDX_SCHEDULED_NOTIFICATIONS_PENDING: Index = Internal.createIndex(DSL.name("idx_scheduled_notifications_pending"), ScheduledNotifications.SCHEDULED_NOTIFICATIONS, arrayOf(ScheduledNotifications.SCHEDULED_NOTIFICATIONS.STATUS, ScheduledNotifications.SCHEDULED_NOTIFICATIONS.NOTIFY_AT), false)
-val IDX_SCHEDULED_NOTIFICATIONS_TASK_EXECUTION: Index = Internal.createIndex(DSL.name("idx_scheduled_notifications_task_execution"), ScheduledNotifications.SCHEDULED_NOTIFICATIONS, arrayOf(ScheduledNotifications.SCHEDULED_NOTIFICATIONS.TASK_EXECUTION_ID), false)
+val IDX_PUSH_SUBSCRIPTIONS_TENANT_ID: Index = Internal.createIndex(DSL.name("idx_push_subscriptions_tenant_id"), PushSubscriptions.PUSH_SUBSCRIPTIONS, arrayOf(PushSubscriptions.PUSH_SUBSCRIPTIONS.TENANT_ID), false)
 val IDX_TASK_DEFINITIONS_IS_DELETED: Index = Internal.createIndex(DSL.name("idx_task_definitions_is_deleted"), TaskDefinitions.TASK_DEFINITIONS, arrayOf(TaskDefinitions.TASK_DEFINITIONS.IS_DELETED), false)
 val IDX_TASK_DEFINITIONS_OWNER: Index = Internal.createIndex(DSL.name("idx_task_definitions_owner"), TaskDefinitions.TASK_DEFINITIONS, arrayOf(TaskDefinitions.TASK_DEFINITIONS.OWNER_MEMBER_ID), false)
 val IDX_TASK_DEFINITIONS_SCHEDULE_TYPE: Index = Internal.createIndex(DSL.name("idx_task_definitions_schedule_type"), TaskDefinitions.TASK_DEFINITIONS, arrayOf(TaskDefinitions.TASK_DEFINITIONS.SCHEDULE_TYPE), false)
 val IDX_TASK_DEFINITIONS_SCHEDULED_END_TIME: Index = Internal.createIndex(DSL.name("idx_task_definitions_scheduled_end_time"), TaskDefinitions.TASK_DEFINITIONS, arrayOf(TaskDefinitions.TASK_DEFINITIONS.SCHEDULED_END_TIME), false)
 val IDX_TASK_DEFINITIONS_SCHEDULED_START_TIME: Index = Internal.createIndex(DSL.name("idx_task_definitions_scheduled_start_time"), TaskDefinitions.TASK_DEFINITIONS, arrayOf(TaskDefinitions.TASK_DEFINITIONS.SCHEDULED_START_TIME), false)
 val IDX_TASK_DEFINITIONS_SCOPE: Index = Internal.createIndex(DSL.name("idx_task_definitions_scope"), TaskDefinitions.TASK_DEFINITIONS, arrayOf(TaskDefinitions.TASK_DEFINITIONS.SCOPE), false)
+val IDX_TASK_DEFINITIONS_TENANT_ID: Index = Internal.createIndex(DSL.name("idx_task_definitions_tenant_id"), TaskDefinitions.TASK_DEFINITIONS, arrayOf(TaskDefinitions.TASK_DEFINITIONS.TENANT_ID), false)
 val IDX_TASK_EXECUTION_PARTICIPANTS_EXECUTION: Index = Internal.createIndex(DSL.name("idx_task_execution_participants_execution"), TaskExecutionParticipants.TASK_EXECUTION_PARTICIPANTS, arrayOf(TaskExecutionParticipants.TASK_EXECUTION_PARTICIPANTS.TASK_EXECUTION_ID), false)
 val IDX_TASK_EXECUTION_PARTICIPANTS_MEMBER: Index = Internal.createIndex(DSL.name("idx_task_execution_participants_member"), TaskExecutionParticipants.TASK_EXECUTION_PARTICIPANTS, arrayOf(TaskExecutionParticipants.TASK_EXECUTION_PARTICIPANTS.MEMBER_ID), false)
+val IDX_TASK_EXECUTION_PARTICIPANTS_TENANT_ID: Index = Internal.createIndex(DSL.name("idx_task_execution_participants_tenant_id"), TaskExecutionParticipants.TASK_EXECUTION_PARTICIPANTS, arrayOf(TaskExecutionParticipants.TASK_EXECUTION_PARTICIPANTS.TENANT_ID), false)
 val IDX_TASK_EXECUTIONS_DATE_STATUS: Index = Internal.createIndex(DSL.name("idx_task_executions_date_status"), TaskExecutions.TASK_EXECUTIONS, arrayOf(TaskExecutions.TASK_EXECUTIONS.SCHEDULED_DATE, TaskExecutions.TASK_EXECUTIONS.STATUS), false)
 val IDX_TASK_EXECUTIONS_DEFINITION: Index = Internal.createIndex(DSL.name("idx_task_executions_definition"), TaskExecutions.TASK_EXECUTIONS, arrayOf(TaskExecutions.TASK_EXECUTIONS.TASK_DEFINITION_ID), false)
 val IDX_TASK_EXECUTIONS_SCHEDULED_DATE: Index = Internal.createIndex(DSL.name("idx_task_executions_scheduled_date"), TaskExecutions.TASK_EXECUTIONS, arrayOf(TaskExecutions.TASK_EXECUTIONS.SCHEDULED_DATE), false)
 val IDX_TASK_EXECUTIONS_STATUS: Index = Internal.createIndex(DSL.name("idx_task_executions_status"), TaskExecutions.TASK_EXECUTIONS, arrayOf(TaskExecutions.TASK_EXECUTIONS.STATUS), false)
+val IDX_TASK_EXECUTIONS_TENANT_ID: Index = Internal.createIndex(DSL.name("idx_task_executions_tenant_id"), TaskExecutions.TASK_EXECUTIONS, arrayOf(TaskExecutions.TASK_EXECUTIONS.TENANT_ID), false)
+val IDX_TASK_RECURRENCES_TENANT_ID: Index = Internal.createIndex(DSL.name("idx_task_recurrences_tenant_id"), TaskRecurrences.TASK_RECURRENCES, arrayOf(TaskRecurrences.TASK_RECURRENCES.TENANT_ID), false)
+val IDX_TASK_SNAPSHOTS_TENANT_ID: Index = Internal.createIndex(DSL.name("idx_task_snapshots_tenant_id"), TaskSnapshots.TASK_SNAPSHOTS, arrayOf(TaskSnapshots.TASK_SNAPSHOTS.TENANT_ID), false)

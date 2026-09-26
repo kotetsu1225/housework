@@ -23,7 +23,8 @@ data class PushSubscriptions(
     val userAgent: String? = null,
     val isActive: Boolean? = null,
     val createdAt: OffsetDateTime? = null,
-    val updatedAt: OffsetDateTime? = null
+    val updatedAt: OffsetDateTime? = null,
+    val tenantId: UUID
 ): Serializable {
 
     override fun equals(other: Any?): Boolean {
@@ -78,6 +79,8 @@ data class PushSubscriptions(
         }
         else if (this.updatedAt != o.updatedAt)
             return false
+        if (this.tenantId != o.tenantId)
+            return false
         return true
     }
 
@@ -94,6 +97,7 @@ data class PushSubscriptions(
         result = prime * result + (if (this.isActive == null) 0 else this.isActive.hashCode())
         result = prime * result + (if (this.createdAt == null) 0 else this.createdAt.hashCode())
         result = prime * result + (if (this.updatedAt == null) 0 else this.updatedAt.hashCode())
+        result = prime * result + this.tenantId.hashCode()
         return result
     }
 
@@ -110,6 +114,7 @@ data class PushSubscriptions(
         sb.append(", ").append(isActive)
         sb.append(", ").append(createdAt)
         sb.append(", ").append(updatedAt)
+        sb.append(", ").append(tenantId)
 
         sb.append(")")
         return sb.toString()

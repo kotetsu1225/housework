@@ -17,7 +17,8 @@ data class TaskExecutionParticipants(
     val taskExecutionId: UUID,
     val memberId: UUID,
     val joinedAt: OffsetDateTime? = null,
-    val earnedPoint: Int? = null
+    val earnedPoint: Int? = null,
+    val tenantId: UUID
 ): Serializable {
 
     override fun equals(other: Any?): Boolean {
@@ -44,6 +45,8 @@ data class TaskExecutionParticipants(
         }
         else if (this.earnedPoint != o.earnedPoint)
             return false
+        if (this.tenantId != o.tenantId)
+            return false
         return true
     }
 
@@ -54,6 +57,7 @@ data class TaskExecutionParticipants(
         result = prime * result + this.memberId.hashCode()
         result = prime * result + (if (this.joinedAt == null) 0 else this.joinedAt.hashCode())
         result = prime * result + (if (this.earnedPoint == null) 0 else this.earnedPoint.hashCode())
+        result = prime * result + this.tenantId.hashCode()
         return result
     }
 
@@ -64,6 +68,7 @@ data class TaskExecutionParticipants(
         sb.append(", ").append(memberId)
         sb.append(", ").append(joinedAt)
         sb.append(", ").append(earnedPoint)
+        sb.append(", ").append(tenantId)
 
         sb.append(")")
         return sb.toString()

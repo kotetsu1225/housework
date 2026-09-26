@@ -12,8 +12,8 @@ import java.util.UUID
 
 import org.jooq.Field
 import org.jooq.Record1
-import org.jooq.Record8
-import org.jooq.Row8
+import org.jooq.Record9
+import org.jooq.Row9
 import org.jooq.impl.UpdatableRecordImpl
 
 
@@ -21,7 +21,7 @@ import org.jooq.impl.UpdatableRecordImpl
  * タスク実行（チケット）
  */
 @Suppress("UNCHECKED_CAST")
-open class TaskExecutionsRecord private constructor() : UpdatableRecordImpl<TaskExecutionsRecord>(TaskExecutions.TASK_EXECUTIONS), Record8<UUID?, UUID?, LocalDate?, String?, OffsetDateTime?, OffsetDateTime?, OffsetDateTime?, OffsetDateTime?> {
+open class TaskExecutionsRecord private constructor() : UpdatableRecordImpl<TaskExecutionsRecord>(TaskExecutions.TASK_EXECUTIONS), Record9<UUID?, UUID?, LocalDate?, String?, OffsetDateTime?, OffsetDateTime?, OffsetDateTime?, OffsetDateTime?, UUID?> {
 
     open var id: UUID?
         set(value): Unit = set(0, value)
@@ -55,6 +55,10 @@ open class TaskExecutionsRecord private constructor() : UpdatableRecordImpl<Task
         set(value): Unit = set(7, value)
         get(): OffsetDateTime? = get(7) as OffsetDateTime?
 
+    open var tenantId: UUID
+        set(value): Unit = set(8, value)
+        get(): UUID = get(8) as UUID
+
     // -------------------------------------------------------------------------
     // Primary key information
     // -------------------------------------------------------------------------
@@ -62,11 +66,11 @@ open class TaskExecutionsRecord private constructor() : UpdatableRecordImpl<Task
     override fun key(): Record1<UUID?> = super.key() as Record1<UUID?>
 
     // -------------------------------------------------------------------------
-    // Record8 type implementation
+    // Record9 type implementation
     // -------------------------------------------------------------------------
 
-    override fun fieldsRow(): Row8<UUID?, UUID?, LocalDate?, String?, OffsetDateTime?, OffsetDateTime?, OffsetDateTime?, OffsetDateTime?> = super.fieldsRow() as Row8<UUID?, UUID?, LocalDate?, String?, OffsetDateTime?, OffsetDateTime?, OffsetDateTime?, OffsetDateTime?>
-    override fun valuesRow(): Row8<UUID?, UUID?, LocalDate?, String?, OffsetDateTime?, OffsetDateTime?, OffsetDateTime?, OffsetDateTime?> = super.valuesRow() as Row8<UUID?, UUID?, LocalDate?, String?, OffsetDateTime?, OffsetDateTime?, OffsetDateTime?, OffsetDateTime?>
+    override fun fieldsRow(): Row9<UUID?, UUID?, LocalDate?, String?, OffsetDateTime?, OffsetDateTime?, OffsetDateTime?, OffsetDateTime?, UUID?> = super.fieldsRow() as Row9<UUID?, UUID?, LocalDate?, String?, OffsetDateTime?, OffsetDateTime?, OffsetDateTime?, OffsetDateTime?, UUID?>
+    override fun valuesRow(): Row9<UUID?, UUID?, LocalDate?, String?, OffsetDateTime?, OffsetDateTime?, OffsetDateTime?, OffsetDateTime?, UUID?> = super.valuesRow() as Row9<UUID?, UUID?, LocalDate?, String?, OffsetDateTime?, OffsetDateTime?, OffsetDateTime?, OffsetDateTime?, UUID?>
     override fun field1(): Field<UUID?> = TaskExecutions.TASK_EXECUTIONS.ID
     override fun field2(): Field<UUID?> = TaskExecutions.TASK_EXECUTIONS.TASK_DEFINITION_ID
     override fun field3(): Field<LocalDate?> = TaskExecutions.TASK_EXECUTIONS.SCHEDULED_DATE
@@ -75,6 +79,7 @@ open class TaskExecutionsRecord private constructor() : UpdatableRecordImpl<Task
     override fun field6(): Field<OffsetDateTime?> = TaskExecutions.TASK_EXECUTIONS.COMPLETED_AT
     override fun field7(): Field<OffsetDateTime?> = TaskExecutions.TASK_EXECUTIONS.CREATED_AT
     override fun field8(): Field<OffsetDateTime?> = TaskExecutions.TASK_EXECUTIONS.UPDATED_AT
+    override fun field9(): Field<UUID?> = TaskExecutions.TASK_EXECUTIONS.TENANT_ID
     override fun component1(): UUID? = id
     override fun component2(): UUID = taskDefinitionId
     override fun component3(): LocalDate = scheduledDate
@@ -83,6 +88,7 @@ open class TaskExecutionsRecord private constructor() : UpdatableRecordImpl<Task
     override fun component6(): OffsetDateTime? = completedAt
     override fun component7(): OffsetDateTime? = createdAt
     override fun component8(): OffsetDateTime? = updatedAt
+    override fun component9(): UUID = tenantId
     override fun value1(): UUID? = id
     override fun value2(): UUID = taskDefinitionId
     override fun value3(): LocalDate = scheduledDate
@@ -91,6 +97,7 @@ open class TaskExecutionsRecord private constructor() : UpdatableRecordImpl<Task
     override fun value6(): OffsetDateTime? = completedAt
     override fun value7(): OffsetDateTime? = createdAt
     override fun value8(): OffsetDateTime? = updatedAt
+    override fun value9(): UUID = tenantId
 
     override fun value1(value: UUID?): TaskExecutionsRecord {
         set(0, value)
@@ -132,7 +139,12 @@ open class TaskExecutionsRecord private constructor() : UpdatableRecordImpl<Task
         return this
     }
 
-    override fun values(value1: UUID?, value2: UUID?, value3: LocalDate?, value4: String?, value5: OffsetDateTime?, value6: OffsetDateTime?, value7: OffsetDateTime?, value8: OffsetDateTime?): TaskExecutionsRecord {
+    override fun value9(value: UUID?): TaskExecutionsRecord {
+        set(8, value)
+        return this
+    }
+
+    override fun values(value1: UUID?, value2: UUID?, value3: LocalDate?, value4: String?, value5: OffsetDateTime?, value6: OffsetDateTime?, value7: OffsetDateTime?, value8: OffsetDateTime?, value9: UUID?): TaskExecutionsRecord {
         this.value1(value1)
         this.value2(value2)
         this.value3(value3)
@@ -141,13 +153,14 @@ open class TaskExecutionsRecord private constructor() : UpdatableRecordImpl<Task
         this.value6(value6)
         this.value7(value7)
         this.value8(value8)
+        this.value9(value9)
         return this
     }
 
     /**
      * Create a detached, initialised TaskExecutionsRecord
      */
-    constructor(id: UUID? = null, taskDefinitionId: UUID, scheduledDate: LocalDate, status: String? = null, startedAt: OffsetDateTime? = null, completedAt: OffsetDateTime? = null, createdAt: OffsetDateTime? = null, updatedAt: OffsetDateTime? = null): this() {
+    constructor(id: UUID? = null, taskDefinitionId: UUID, scheduledDate: LocalDate, status: String? = null, startedAt: OffsetDateTime? = null, completedAt: OffsetDateTime? = null, createdAt: OffsetDateTime? = null, updatedAt: OffsetDateTime? = null, tenantId: UUID): this() {
         this.id = id
         this.taskDefinitionId = taskDefinitionId
         this.scheduledDate = scheduledDate
@@ -156,6 +169,7 @@ open class TaskExecutionsRecord private constructor() : UpdatableRecordImpl<Task
         this.completedAt = completedAt
         this.createdAt = createdAt
         this.updatedAt = updatedAt
+        this.tenantId = tenantId
         resetChangedOnNotNull()
     }
 
@@ -172,6 +186,7 @@ open class TaskExecutionsRecord private constructor() : UpdatableRecordImpl<Task
             this.completedAt = value.completedAt
             this.createdAt = value.createdAt
             this.updatedAt = value.updatedAt
+            this.tenantId = value.tenantId
             resetChangedOnNotNull()
         }
     }

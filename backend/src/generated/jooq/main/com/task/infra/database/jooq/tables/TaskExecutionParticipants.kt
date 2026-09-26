@@ -7,7 +7,9 @@ package com.task.infra.database.jooq.tables
 import com.task.infra.database.jooq.Public
 import com.task.infra.database.jooq.indexes.IDX_TASK_EXECUTION_PARTICIPANTS_EXECUTION
 import com.task.infra.database.jooq.indexes.IDX_TASK_EXECUTION_PARTICIPANTS_MEMBER
+import com.task.infra.database.jooq.indexes.IDX_TASK_EXECUTION_PARTICIPANTS_TENANT_ID
 import com.task.infra.database.jooq.keys.TASK_EXECUTION_PARTICIPANTS_PKEY
+import com.task.infra.database.jooq.keys.TASK_EXECUTION_PARTICIPANTS__FK_TASK_EXECUTION_PARTICIPANTS_TENANT
 import com.task.infra.database.jooq.keys.TASK_EXECUTION_PARTICIPANTS__TASK_EXECUTION_PARTICIPANTS_MEMBER_ID_FKEY
 import com.task.infra.database.jooq.keys.TASK_EXECUTION_PARTICIPANTS__TASK_EXECUTION_PARTICIPANTS_TASK_EXECUTION_ID_FKEY
 import com.task.infra.database.jooq.tables.records.TaskExecutionParticipantsRecord
@@ -24,7 +26,7 @@ import org.jooq.Index
 import org.jooq.Name
 import org.jooq.Record
 import org.jooq.Records
-import org.jooq.Row4
+import org.jooq.Row5
 import org.jooq.Schema
 import org.jooq.SelectField
 import org.jooq.Table
@@ -96,6 +98,11 @@ open class TaskExecutionParticipants(
      */
     val EARNED_POINT: TableField<TaskExecutionParticipantsRecord, Int?> = createField(DSL.name("earned_point"), SQLDataType.INTEGER, this, "獲得したポイント（NULL = 未完了、NOT NULL = 完了時の獲得ポイント）")
 
+    /**
+     * The column <code>public.task_execution_participants.tenant_id</code>.
+     */
+    val TENANT_ID: TableField<TaskExecutionParticipantsRecord, UUID?> = createField(DSL.name("tenant_id"), SQLDataType.UUID.nullable(false), this, "")
+
     private constructor(alias: Name, aliased: Table<TaskExecutionParticipantsRecord>?): this(alias, null, null, aliased, null)
     private constructor(alias: Name, aliased: Table<TaskExecutionParticipantsRecord>?, parameters: Array<Field<*>?>?): this(alias, null, null, aliased, parameters)
 
@@ -118,12 +125,13 @@ open class TaskExecutionParticipants(
 
     constructor(child: Table<out Record>, key: ForeignKey<out Record, TaskExecutionParticipantsRecord>): this(Internal.createPathAlias(child, key), child, key, TASK_EXECUTION_PARTICIPANTS, null)
     override fun getSchema(): Schema? = if (aliased()) null else Public.PUBLIC
-    override fun getIndexes(): List<Index> = listOf(IDX_TASK_EXECUTION_PARTICIPANTS_EXECUTION, IDX_TASK_EXECUTION_PARTICIPANTS_MEMBER)
+    override fun getIndexes(): List<Index> = listOf(IDX_TASK_EXECUTION_PARTICIPANTS_EXECUTION, IDX_TASK_EXECUTION_PARTICIPANTS_MEMBER, IDX_TASK_EXECUTION_PARTICIPANTS_TENANT_ID)
     override fun getPrimaryKey(): UniqueKey<TaskExecutionParticipantsRecord> = TASK_EXECUTION_PARTICIPANTS_PKEY
-    override fun getReferences(): List<ForeignKey<TaskExecutionParticipantsRecord, *>> = listOf(TASK_EXECUTION_PARTICIPANTS__TASK_EXECUTION_PARTICIPANTS_TASK_EXECUTION_ID_FKEY, TASK_EXECUTION_PARTICIPANTS__TASK_EXECUTION_PARTICIPANTS_MEMBER_ID_FKEY)
+    override fun getReferences(): List<ForeignKey<TaskExecutionParticipantsRecord, *>> = listOf(TASK_EXECUTION_PARTICIPANTS__TASK_EXECUTION_PARTICIPANTS_TASK_EXECUTION_ID_FKEY, TASK_EXECUTION_PARTICIPANTS__TASK_EXECUTION_PARTICIPANTS_MEMBER_ID_FKEY, TASK_EXECUTION_PARTICIPANTS__FK_TASK_EXECUTION_PARTICIPANTS_TENANT)
 
     private lateinit var _taskExecutions: TaskExecutions
     private lateinit var _members: Members
+    private lateinit var _tenants: Tenants
 
     /**
      * Get the implicit join path to the <code>public.task_executions</code>
@@ -151,6 +159,19 @@ open class TaskExecutionParticipants(
 
     val members: Members
         get(): Members = members()
+
+    /**
+     * Get the implicit join path to the <code>public.tenants</code> table.
+     */
+    fun tenants(): Tenants {
+        if (!this::_tenants.isInitialized)
+            _tenants = Tenants(this, TASK_EXECUTION_PARTICIPANTS__FK_TASK_EXECUTION_PARTICIPANTS_TENANT)
+
+        return _tenants;
+    }
+
+    val tenants: Tenants
+        get(): Tenants = tenants()
     override fun `as`(alias: String): TaskExecutionParticipants = TaskExecutionParticipants(DSL.name(alias), this)
     override fun `as`(alias: Name): TaskExecutionParticipants = TaskExecutionParticipants(alias, this)
     override fun `as`(alias: Table<*>): TaskExecutionParticipants = TaskExecutionParticipants(alias.getQualifiedName(), this)
@@ -171,18 +192,18 @@ open class TaskExecutionParticipants(
     override fun rename(name: Table<*>): TaskExecutionParticipants = TaskExecutionParticipants(name.getQualifiedName(), null)
 
     // -------------------------------------------------------------------------
-    // Row4 type methods
+    // Row5 type methods
     // -------------------------------------------------------------------------
-    override fun fieldsRow(): Row4<UUID?, UUID?, OffsetDateTime?, Int?> = super.fieldsRow() as Row4<UUID?, UUID?, OffsetDateTime?, Int?>
+    override fun fieldsRow(): Row5<UUID?, UUID?, OffsetDateTime?, Int?, UUID?> = super.fieldsRow() as Row5<UUID?, UUID?, OffsetDateTime?, Int?, UUID?>
 
     /**
      * Convenience mapping calling {@link SelectField#convertFrom(Function)}.
      */
-    fun <U> mapping(from: (UUID?, UUID?, OffsetDateTime?, Int?) -> U): SelectField<U> = convertFrom(Records.mapping(from))
+    fun <U> mapping(from: (UUID?, UUID?, OffsetDateTime?, Int?, UUID?) -> U): SelectField<U> = convertFrom(Records.mapping(from))
 
     /**
      * Convenience mapping calling {@link SelectField#convertFrom(Class,
      * Function)}.
      */
-    fun <U> mapping(toType: Class<U>, from: (UUID?, UUID?, OffsetDateTime?, Int?) -> U): SelectField<U> = convertFrom(toType, Records.mapping(from))
+    fun <U> mapping(toType: Class<U>, from: (UUID?, UUID?, OffsetDateTime?, Int?, UUID?) -> U): SelectField<U> = convertFrom(toType, Records.mapping(from))
 }

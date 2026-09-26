@@ -5,9 +5,11 @@ package com.task.infra.database.jooq.tables
 
 
 import com.task.infra.database.jooq.Public
+import com.task.infra.database.jooq.indexes.IDX_COMPLETED_DOMAIN_EVENTS_TENANT_ID
 import com.task.infra.database.jooq.indexes.IDX_COMPLETED_EVENTS_PROCESSED_AT
 import com.task.infra.database.jooq.indexes.IDX_COMPLETED_EVENTS_TYPE
 import com.task.infra.database.jooq.keys.COMPLETED_DOMAIN_EVENTS_PKEY
+import com.task.infra.database.jooq.keys.COMPLETED_DOMAIN_EVENTS__FK_COMPLETED_DOMAIN_EVENTS_TENANT
 import com.task.infra.database.jooq.tables.records.CompletedDomainEventsRecord
 
 import java.time.OffsetDateTime
@@ -22,7 +24,7 @@ import org.jooq.Index
 import org.jooq.Name
 import org.jooq.Record
 import org.jooq.Records
-import org.jooq.Row3
+import org.jooq.Row4
 import org.jooq.Schema
 import org.jooq.SelectField
 import org.jooq.Table
@@ -86,6 +88,11 @@ open class CompletedDomainEvents(
      */
     val PROCESSED_AT: TableField<CompletedDomainEventsRecord, OffsetDateTime?> = createField(DSL.name("processed_at"), SQLDataType.TIMESTAMPWITHTIMEZONE(6).nullable(false).defaultValue(DSL.field(DSL.raw("CURRENT_TIMESTAMP"), SQLDataType.TIMESTAMPWITHTIMEZONE)), this, "処理完了日時")
 
+    /**
+     * The column <code>public.completed_domain_events.tenant_id</code>.
+     */
+    val TENANT_ID: TableField<CompletedDomainEventsRecord, UUID?> = createField(DSL.name("tenant_id"), SQLDataType.UUID.nullable(false), this, "")
+
     private constructor(alias: Name, aliased: Table<CompletedDomainEventsRecord>?): this(alias, null, null, aliased, null)
     private constructor(alias: Name, aliased: Table<CompletedDomainEventsRecord>?, parameters: Array<Field<*>?>?): this(alias, null, null, aliased, parameters)
 
@@ -108,8 +115,24 @@ open class CompletedDomainEvents(
 
     constructor(child: Table<out Record>, key: ForeignKey<out Record, CompletedDomainEventsRecord>): this(Internal.createPathAlias(child, key), child, key, COMPLETED_DOMAIN_EVENTS, null)
     override fun getSchema(): Schema? = if (aliased()) null else Public.PUBLIC
-    override fun getIndexes(): List<Index> = listOf(IDX_COMPLETED_EVENTS_PROCESSED_AT, IDX_COMPLETED_EVENTS_TYPE)
+    override fun getIndexes(): List<Index> = listOf(IDX_COMPLETED_DOMAIN_EVENTS_TENANT_ID, IDX_COMPLETED_EVENTS_PROCESSED_AT, IDX_COMPLETED_EVENTS_TYPE)
     override fun getPrimaryKey(): UniqueKey<CompletedDomainEventsRecord> = COMPLETED_DOMAIN_EVENTS_PKEY
+    override fun getReferences(): List<ForeignKey<CompletedDomainEventsRecord, *>> = listOf(COMPLETED_DOMAIN_EVENTS__FK_COMPLETED_DOMAIN_EVENTS_TENANT)
+
+    private lateinit var _tenants: Tenants
+
+    /**
+     * Get the implicit join path to the <code>public.tenants</code> table.
+     */
+    fun tenants(): Tenants {
+        if (!this::_tenants.isInitialized)
+            _tenants = Tenants(this, COMPLETED_DOMAIN_EVENTS__FK_COMPLETED_DOMAIN_EVENTS_TENANT)
+
+        return _tenants;
+    }
+
+    val tenants: Tenants
+        get(): Tenants = tenants()
     override fun `as`(alias: String): CompletedDomainEvents = CompletedDomainEvents(DSL.name(alias), this)
     override fun `as`(alias: Name): CompletedDomainEvents = CompletedDomainEvents(alias, this)
     override fun `as`(alias: Table<*>): CompletedDomainEvents = CompletedDomainEvents(alias.getQualifiedName(), this)
@@ -130,18 +153,18 @@ open class CompletedDomainEvents(
     override fun rename(name: Table<*>): CompletedDomainEvents = CompletedDomainEvents(name.getQualifiedName(), null)
 
     // -------------------------------------------------------------------------
-    // Row3 type methods
+    // Row4 type methods
     // -------------------------------------------------------------------------
-    override fun fieldsRow(): Row3<UUID?, String?, OffsetDateTime?> = super.fieldsRow() as Row3<UUID?, String?, OffsetDateTime?>
+    override fun fieldsRow(): Row4<UUID?, String?, OffsetDateTime?, UUID?> = super.fieldsRow() as Row4<UUID?, String?, OffsetDateTime?, UUID?>
 
     /**
      * Convenience mapping calling {@link SelectField#convertFrom(Function)}.
      */
-    fun <U> mapping(from: (UUID?, String?, OffsetDateTime?) -> U): SelectField<U> = convertFrom(Records.mapping(from))
+    fun <U> mapping(from: (UUID?, String?, OffsetDateTime?, UUID?) -> U): SelectField<U> = convertFrom(Records.mapping(from))
 
     /**
      * Convenience mapping calling {@link SelectField#convertFrom(Class,
      * Function)}.
      */
-    fun <U> mapping(toType: Class<U>, from: (UUID?, String?, OffsetDateTime?) -> U): SelectField<U> = convertFrom(toType, Records.mapping(from))
+    fun <U> mapping(toType: Class<U>, from: (UUID?, String?, OffsetDateTime?, UUID?) -> U): SelectField<U> = convertFrom(toType, Records.mapping(from))
 }

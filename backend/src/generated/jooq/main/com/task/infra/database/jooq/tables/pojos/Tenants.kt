@@ -10,18 +10,14 @@ import java.util.UUID
 
 
 /**
- * 予定された通知
+ * テナント（家族）情報
  */
 @Suppress("UNCHECKED_CAST")
-data class ScheduledNotifications(
+data class Tenants(
     val id: UUID? = null,
-    val taskExecutionId: UUID,
-    val memberId: UUID,
-    val taskName: String,
-    val notifyAt: OffsetDateTime,
+    val familyName: String,
+    val email: String,
     val status: String? = null,
-    val sentAt: OffsetDateTime? = null,
-    val errorMessage: String? = null,
     val createdAt: OffsetDateTime? = null,
     val updatedAt: OffsetDateTime? = null
 ): Serializable {
@@ -33,38 +29,22 @@ data class ScheduledNotifications(
             return false
         if (this::class != other::class)
             return false
-        val o: ScheduledNotifications = other as ScheduledNotifications
+        val o: Tenants = other as Tenants
         if (this.id == null) {
             if (o.id != null)
                 return false
         }
         else if (this.id != o.id)
             return false
-        if (this.taskExecutionId != o.taskExecutionId)
+        if (this.familyName != o.familyName)
             return false
-        if (this.memberId != o.memberId)
-            return false
-        if (this.taskName != o.taskName)
-            return false
-        if (this.notifyAt != o.notifyAt)
+        if (this.email != o.email)
             return false
         if (this.status == null) {
             if (o.status != null)
                 return false
         }
         else if (this.status != o.status)
-            return false
-        if (this.sentAt == null) {
-            if (o.sentAt != null)
-                return false
-        }
-        else if (this.sentAt != o.sentAt)
-            return false
-        if (this.errorMessage == null) {
-            if (o.errorMessage != null)
-                return false
-        }
-        else if (this.errorMessage != o.errorMessage)
             return false
         if (this.createdAt == null) {
             if (o.createdAt != null)
@@ -85,29 +65,21 @@ data class ScheduledNotifications(
         val prime = 31
         var result = 1
         result = prime * result + (if (this.id == null) 0 else this.id.hashCode())
-        result = prime * result + this.taskExecutionId.hashCode()
-        result = prime * result + this.memberId.hashCode()
-        result = prime * result + this.taskName.hashCode()
-        result = prime * result + this.notifyAt.hashCode()
+        result = prime * result + this.familyName.hashCode()
+        result = prime * result + this.email.hashCode()
         result = prime * result + (if (this.status == null) 0 else this.status.hashCode())
-        result = prime * result + (if (this.sentAt == null) 0 else this.sentAt.hashCode())
-        result = prime * result + (if (this.errorMessage == null) 0 else this.errorMessage.hashCode())
         result = prime * result + (if (this.createdAt == null) 0 else this.createdAt.hashCode())
         result = prime * result + (if (this.updatedAt == null) 0 else this.updatedAt.hashCode())
         return result
     }
 
     override fun toString(): String {
-        val sb = StringBuilder("ScheduledNotifications (")
+        val sb = StringBuilder("Tenants (")
 
         sb.append(id)
-        sb.append(", ").append(taskExecutionId)
-        sb.append(", ").append(memberId)
-        sb.append(", ").append(taskName)
-        sb.append(", ").append(notifyAt)
+        sb.append(", ").append(familyName)
+        sb.append(", ").append(email)
         sb.append(", ").append(status)
-        sb.append(", ").append(sentAt)
-        sb.append(", ").append(errorMessage)
         sb.append(", ").append(createdAt)
         sb.append(", ").append(updatedAt)
 

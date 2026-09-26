@@ -9,23 +9,23 @@ import com.task.infra.database.jooq.tables.MemberMetas
 import com.task.infra.database.jooq.tables.Members
 import com.task.infra.database.jooq.tables.Outbox
 import com.task.infra.database.jooq.tables.PushSubscriptions
-import com.task.infra.database.jooq.tables.ScheduledNotifications
 import com.task.infra.database.jooq.tables.TaskDefinitions
 import com.task.infra.database.jooq.tables.TaskExecutionParticipants
 import com.task.infra.database.jooq.tables.TaskExecutions
 import com.task.infra.database.jooq.tables.TaskRecurrences
 import com.task.infra.database.jooq.tables.TaskSnapshots
+import com.task.infra.database.jooq.tables.Tenants
 import com.task.infra.database.jooq.tables.records.CompletedDomainEventsRecord
 import com.task.infra.database.jooq.tables.records.MemberMetasRecord
 import com.task.infra.database.jooq.tables.records.MembersRecord
 import com.task.infra.database.jooq.tables.records.OutboxRecord
 import com.task.infra.database.jooq.tables.records.PushSubscriptionsRecord
-import com.task.infra.database.jooq.tables.records.ScheduledNotificationsRecord
 import com.task.infra.database.jooq.tables.records.TaskDefinitionsRecord
 import com.task.infra.database.jooq.tables.records.TaskExecutionParticipantsRecord
 import com.task.infra.database.jooq.tables.records.TaskExecutionsRecord
 import com.task.infra.database.jooq.tables.records.TaskRecurrencesRecord
 import com.task.infra.database.jooq.tables.records.TaskSnapshotsRecord
+import com.task.infra.database.jooq.tables.records.TenantsRecord
 
 import org.jooq.ForeignKey
 import org.jooq.UniqueKey
@@ -45,24 +45,33 @@ val MEMBERS_PKEY: UniqueKey<MembersRecord> = Internal.createUniqueKey(Members.ME
 val OUTBOX_PKEY: UniqueKey<OutboxRecord> = Internal.createUniqueKey(Outbox.OUTBOX, DSL.name("outbox_pkey"), arrayOf(Outbox.OUTBOX.ID), true)
 val PUSH_SUBSCRIPTIONS_PKEY: UniqueKey<PushSubscriptionsRecord> = Internal.createUniqueKey(PushSubscriptions.PUSH_SUBSCRIPTIONS, DSL.name("push_subscriptions_pkey"), arrayOf(PushSubscriptions.PUSH_SUBSCRIPTIONS.ID), true)
 val UQ_PUSH_SUBSCRIPTIONS_ENDPOINT: UniqueKey<PushSubscriptionsRecord> = Internal.createUniqueKey(PushSubscriptions.PUSH_SUBSCRIPTIONS, DSL.name("uq_push_subscriptions_endpoint"), arrayOf(PushSubscriptions.PUSH_SUBSCRIPTIONS.ENDPOINT), true)
-val SCHEDULED_NOTIFICATIONS_PKEY: UniqueKey<ScheduledNotificationsRecord> = Internal.createUniqueKey(ScheduledNotifications.SCHEDULED_NOTIFICATIONS, DSL.name("scheduled_notifications_pkey"), arrayOf(ScheduledNotifications.SCHEDULED_NOTIFICATIONS.ID), true)
 val TASK_DEFINITIONS_PKEY: UniqueKey<TaskDefinitionsRecord> = Internal.createUniqueKey(TaskDefinitions.TASK_DEFINITIONS, DSL.name("task_definitions_pkey"), arrayOf(TaskDefinitions.TASK_DEFINITIONS.ID), true)
 val TASK_EXECUTION_PARTICIPANTS_PKEY: UniqueKey<TaskExecutionParticipantsRecord> = Internal.createUniqueKey(TaskExecutionParticipants.TASK_EXECUTION_PARTICIPANTS, DSL.name("task_execution_participants_pkey"), arrayOf(TaskExecutionParticipants.TASK_EXECUTION_PARTICIPANTS.TASK_EXECUTION_ID, TaskExecutionParticipants.TASK_EXECUTION_PARTICIPANTS.MEMBER_ID), true)
 val TASK_EXECUTIONS_PKEY: UniqueKey<TaskExecutionsRecord> = Internal.createUniqueKey(TaskExecutions.TASK_EXECUTIONS, DSL.name("task_executions_pkey"), arrayOf(TaskExecutions.TASK_EXECUTIONS.ID), true)
 val TASK_RECURRENCES_PKEY: UniqueKey<TaskRecurrencesRecord> = Internal.createUniqueKey(TaskRecurrences.TASK_RECURRENCES, DSL.name("task_recurrences_pkey"), arrayOf(TaskRecurrences.TASK_RECURRENCES.TASK_DEFINITION_ID), true)
 val TASK_SNAPSHOTS_PKEY: UniqueKey<TaskSnapshotsRecord> = Internal.createUniqueKey(TaskSnapshots.TASK_SNAPSHOTS, DSL.name("task_snapshots_pkey"), arrayOf(TaskSnapshots.TASK_SNAPSHOTS.TASK_EXECUTION_ID), true)
+val TENANTS_EMAIL_KEY: UniqueKey<TenantsRecord> = Internal.createUniqueKey(Tenants.TENANTS, DSL.name("tenants_email_key"), arrayOf(Tenants.TENANTS.EMAIL), true)
+val TENANTS_PKEY: UniqueKey<TenantsRecord> = Internal.createUniqueKey(Tenants.TENANTS, DSL.name("tenants_pkey"), arrayOf(Tenants.TENANTS.ID), true)
 
 // -------------------------------------------------------------------------
 // FOREIGN KEY definitions
 // -------------------------------------------------------------------------
 
+val COMPLETED_DOMAIN_EVENTS__FK_COMPLETED_DOMAIN_EVENTS_TENANT: ForeignKey<CompletedDomainEventsRecord, TenantsRecord> = Internal.createForeignKey(CompletedDomainEvents.COMPLETED_DOMAIN_EVENTS, DSL.name("fk_completed_domain_events_tenant"), arrayOf(CompletedDomainEvents.COMPLETED_DOMAIN_EVENTS.TENANT_ID), com.task.infra.database.jooq.keys.TENANTS_PKEY, arrayOf(Tenants.TENANTS.ID), true)
+val MEMBER_METAS__FK_MEMBER_METAS_TENANT: ForeignKey<MemberMetasRecord, TenantsRecord> = Internal.createForeignKey(MemberMetas.MEMBER_METAS, DSL.name("fk_member_metas_tenant"), arrayOf(MemberMetas.MEMBER_METAS.TENANT_ID), com.task.infra.database.jooq.keys.TENANTS_PKEY, arrayOf(Tenants.TENANTS.ID), true)
 val MEMBER_METAS__MEMBER_METAS_MEMBER_ID_FKEY: ForeignKey<MemberMetasRecord, MembersRecord> = Internal.createForeignKey(MemberMetas.MEMBER_METAS, DSL.name("member_metas_member_id_fkey"), arrayOf(MemberMetas.MEMBER_METAS.MEMBER_ID), com.task.infra.database.jooq.keys.MEMBERS_PKEY, arrayOf(Members.MEMBERS.ID), true)
+val MEMBERS__FK_MEMBERS_TENANT: ForeignKey<MembersRecord, TenantsRecord> = Internal.createForeignKey(Members.MEMBERS, DSL.name("fk_members_tenant"), arrayOf(Members.MEMBERS.TENANT_ID), com.task.infra.database.jooq.keys.TENANTS_PKEY, arrayOf(Tenants.TENANTS.ID), true)
+val OUTBOX__FK_OUTBOX_TENANT: ForeignKey<OutboxRecord, TenantsRecord> = Internal.createForeignKey(Outbox.OUTBOX, DSL.name("fk_outbox_tenant"), arrayOf(Outbox.OUTBOX.TENANT_ID), com.task.infra.database.jooq.keys.TENANTS_PKEY, arrayOf(Tenants.TENANTS.ID), true)
+val PUSH_SUBSCRIPTIONS__FK_PUSH_SUBSCRIPTIONS_TENANT: ForeignKey<PushSubscriptionsRecord, TenantsRecord> = Internal.createForeignKey(PushSubscriptions.PUSH_SUBSCRIPTIONS, DSL.name("fk_push_subscriptions_tenant"), arrayOf(PushSubscriptions.PUSH_SUBSCRIPTIONS.TENANT_ID), com.task.infra.database.jooq.keys.TENANTS_PKEY, arrayOf(Tenants.TENANTS.ID), true)
 val PUSH_SUBSCRIPTIONS__PUSH_SUBSCRIPTIONS_MEMBER_ID_FKEY: ForeignKey<PushSubscriptionsRecord, MembersRecord> = Internal.createForeignKey(PushSubscriptions.PUSH_SUBSCRIPTIONS, DSL.name("push_subscriptions_member_id_fkey"), arrayOf(PushSubscriptions.PUSH_SUBSCRIPTIONS.MEMBER_ID), com.task.infra.database.jooq.keys.MEMBERS_PKEY, arrayOf(Members.MEMBERS.ID), true)
-val SCHEDULED_NOTIFICATIONS__SCHEDULED_NOTIFICATIONS_MEMBER_ID_FKEY: ForeignKey<ScheduledNotificationsRecord, MembersRecord> = Internal.createForeignKey(ScheduledNotifications.SCHEDULED_NOTIFICATIONS, DSL.name("scheduled_notifications_member_id_fkey"), arrayOf(ScheduledNotifications.SCHEDULED_NOTIFICATIONS.MEMBER_ID), com.task.infra.database.jooq.keys.MEMBERS_PKEY, arrayOf(Members.MEMBERS.ID), true)
-val SCHEDULED_NOTIFICATIONS__SCHEDULED_NOTIFICATIONS_TASK_EXECUTION_ID_FKEY: ForeignKey<ScheduledNotificationsRecord, TaskExecutionsRecord> = Internal.createForeignKey(ScheduledNotifications.SCHEDULED_NOTIFICATIONS, DSL.name("scheduled_notifications_task_execution_id_fkey"), arrayOf(ScheduledNotifications.SCHEDULED_NOTIFICATIONS.TASK_EXECUTION_ID), com.task.infra.database.jooq.keys.TASK_EXECUTIONS_PKEY, arrayOf(TaskExecutions.TASK_EXECUTIONS.ID), true)
+val TASK_DEFINITIONS__FK_TASK_DEFINITIONS_TENANT: ForeignKey<TaskDefinitionsRecord, TenantsRecord> = Internal.createForeignKey(TaskDefinitions.TASK_DEFINITIONS, DSL.name("fk_task_definitions_tenant"), arrayOf(TaskDefinitions.TASK_DEFINITIONS.TENANT_ID), com.task.infra.database.jooq.keys.TENANTS_PKEY, arrayOf(Tenants.TENANTS.ID), true)
 val TASK_DEFINITIONS__TASK_DEFINITIONS_OWNER_MEMBER_ID_FKEY: ForeignKey<TaskDefinitionsRecord, MembersRecord> = Internal.createForeignKey(TaskDefinitions.TASK_DEFINITIONS, DSL.name("task_definitions_owner_member_id_fkey"), arrayOf(TaskDefinitions.TASK_DEFINITIONS.OWNER_MEMBER_ID), com.task.infra.database.jooq.keys.MEMBERS_PKEY, arrayOf(Members.MEMBERS.ID), true)
+val TASK_EXECUTION_PARTICIPANTS__FK_TASK_EXECUTION_PARTICIPANTS_TENANT: ForeignKey<TaskExecutionParticipantsRecord, TenantsRecord> = Internal.createForeignKey(TaskExecutionParticipants.TASK_EXECUTION_PARTICIPANTS, DSL.name("fk_task_execution_participants_tenant"), arrayOf(TaskExecutionParticipants.TASK_EXECUTION_PARTICIPANTS.TENANT_ID), com.task.infra.database.jooq.keys.TENANTS_PKEY, arrayOf(Tenants.TENANTS.ID), true)
 val TASK_EXECUTION_PARTICIPANTS__TASK_EXECUTION_PARTICIPANTS_MEMBER_ID_FKEY: ForeignKey<TaskExecutionParticipantsRecord, MembersRecord> = Internal.createForeignKey(TaskExecutionParticipants.TASK_EXECUTION_PARTICIPANTS, DSL.name("task_execution_participants_member_id_fkey"), arrayOf(TaskExecutionParticipants.TASK_EXECUTION_PARTICIPANTS.MEMBER_ID), com.task.infra.database.jooq.keys.MEMBERS_PKEY, arrayOf(Members.MEMBERS.ID), true)
 val TASK_EXECUTION_PARTICIPANTS__TASK_EXECUTION_PARTICIPANTS_TASK_EXECUTION_ID_FKEY: ForeignKey<TaskExecutionParticipantsRecord, TaskExecutionsRecord> = Internal.createForeignKey(TaskExecutionParticipants.TASK_EXECUTION_PARTICIPANTS, DSL.name("task_execution_participants_task_execution_id_fkey"), arrayOf(TaskExecutionParticipants.TASK_EXECUTION_PARTICIPANTS.TASK_EXECUTION_ID), com.task.infra.database.jooq.keys.TASK_EXECUTIONS_PKEY, arrayOf(TaskExecutions.TASK_EXECUTIONS.ID), true)
+val TASK_EXECUTIONS__FK_TASK_EXECUTIONS_TENANT: ForeignKey<TaskExecutionsRecord, TenantsRecord> = Internal.createForeignKey(TaskExecutions.TASK_EXECUTIONS, DSL.name("fk_task_executions_tenant"), arrayOf(TaskExecutions.TASK_EXECUTIONS.TENANT_ID), com.task.infra.database.jooq.keys.TENANTS_PKEY, arrayOf(Tenants.TENANTS.ID), true)
 val TASK_EXECUTIONS__TASK_EXECUTIONS_TASK_DEFINITION_ID_FKEY: ForeignKey<TaskExecutionsRecord, TaskDefinitionsRecord> = Internal.createForeignKey(TaskExecutions.TASK_EXECUTIONS, DSL.name("task_executions_task_definition_id_fkey"), arrayOf(TaskExecutions.TASK_EXECUTIONS.TASK_DEFINITION_ID), com.task.infra.database.jooq.keys.TASK_DEFINITIONS_PKEY, arrayOf(TaskDefinitions.TASK_DEFINITIONS.ID), true)
+val TASK_RECURRENCES__FK_TASK_RECURRENCES_TENANT: ForeignKey<TaskRecurrencesRecord, TenantsRecord> = Internal.createForeignKey(TaskRecurrences.TASK_RECURRENCES, DSL.name("fk_task_recurrences_tenant"), arrayOf(TaskRecurrences.TASK_RECURRENCES.TENANT_ID), com.task.infra.database.jooq.keys.TENANTS_PKEY, arrayOf(Tenants.TENANTS.ID), true)
 val TASK_RECURRENCES__TASK_RECURRENCES_TASK_DEFINITION_ID_FKEY: ForeignKey<TaskRecurrencesRecord, TaskDefinitionsRecord> = Internal.createForeignKey(TaskRecurrences.TASK_RECURRENCES, DSL.name("task_recurrences_task_definition_id_fkey"), arrayOf(TaskRecurrences.TASK_RECURRENCES.TASK_DEFINITION_ID), com.task.infra.database.jooq.keys.TASK_DEFINITIONS_PKEY, arrayOf(TaskDefinitions.TASK_DEFINITIONS.ID), true)
+val TASK_SNAPSHOTS__FK_TASK_SNAPSHOTS_TENANT: ForeignKey<TaskSnapshotsRecord, TenantsRecord> = Internal.createForeignKey(TaskSnapshots.TASK_SNAPSHOTS, DSL.name("fk_task_snapshots_tenant"), arrayOf(TaskSnapshots.TASK_SNAPSHOTS.TENANT_ID), com.task.infra.database.jooq.keys.TENANTS_PKEY, arrayOf(Tenants.TENANTS.ID), true)
 val TASK_SNAPSHOTS__TASK_SNAPSHOTS_TASK_EXECUTION_ID_FKEY: ForeignKey<TaskSnapshotsRecord, TaskExecutionsRecord> = Internal.createForeignKey(TaskSnapshots.TASK_SNAPSHOTS, DSL.name("task_snapshots_task_execution_id_fkey"), arrayOf(TaskSnapshots.TASK_SNAPSHOTS.TASK_EXECUTION_ID), com.task.infra.database.jooq.keys.TASK_EXECUTIONS_PKEY, arrayOf(TaskExecutions.TASK_EXECUTIONS.ID), true)

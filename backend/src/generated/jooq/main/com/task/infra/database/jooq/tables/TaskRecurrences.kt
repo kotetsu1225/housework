@@ -5,7 +5,9 @@ package com.task.infra.database.jooq.tables
 
 
 import com.task.infra.database.jooq.Public
+import com.task.infra.database.jooq.indexes.IDX_TASK_RECURRENCES_TENANT_ID
 import com.task.infra.database.jooq.keys.TASK_RECURRENCES_PKEY
+import com.task.infra.database.jooq.keys.TASK_RECURRENCES__FK_TASK_RECURRENCES_TENANT
 import com.task.infra.database.jooq.keys.TASK_RECURRENCES__TASK_RECURRENCES_TASK_DEFINITION_ID_FKEY
 import com.task.infra.database.jooq.tables.records.TaskRecurrencesRecord
 
@@ -19,10 +21,11 @@ import kotlin.collections.List
 import org.jooq.Check
 import org.jooq.Field
 import org.jooq.ForeignKey
+import org.jooq.Index
 import org.jooq.Name
 import org.jooq.Record
 import org.jooq.Records
-import org.jooq.Row9
+import org.jooq.Row10
 import org.jooq.Schema
 import org.jooq.SelectField
 import org.jooq.Table
@@ -119,6 +122,11 @@ open class TaskRecurrences(
      */
     val UPDATED_AT: TableField<TaskRecurrencesRecord, OffsetDateTime?> = createField(DSL.name("updated_at"), SQLDataType.TIMESTAMPWITHTIMEZONE(6).nullable(false).defaultValue(DSL.field(DSL.raw("CURRENT_TIMESTAMP"), SQLDataType.TIMESTAMPWITHTIMEZONE)), this, "更新日時")
 
+    /**
+     * The column <code>public.task_recurrences.tenant_id</code>.
+     */
+    val TENANT_ID: TableField<TaskRecurrencesRecord, UUID?> = createField(DSL.name("tenant_id"), SQLDataType.UUID.nullable(false), this, "")
+
     private constructor(alias: Name, aliased: Table<TaskRecurrencesRecord>?): this(alias, null, null, aliased, null)
     private constructor(alias: Name, aliased: Table<TaskRecurrencesRecord>?, parameters: Array<Field<*>?>?): this(alias, null, null, aliased, parameters)
 
@@ -139,10 +147,12 @@ open class TaskRecurrences(
 
     constructor(child: Table<out Record>, key: ForeignKey<out Record, TaskRecurrencesRecord>): this(Internal.createPathAlias(child, key), child, key, TASK_RECURRENCES, null)
     override fun getSchema(): Schema? = if (aliased()) null else Public.PUBLIC
+    override fun getIndexes(): List<Index> = listOf(IDX_TASK_RECURRENCES_TENANT_ID)
     override fun getPrimaryKey(): UniqueKey<TaskRecurrencesRecord> = TASK_RECURRENCES_PKEY
-    override fun getReferences(): List<ForeignKey<TaskRecurrencesRecord, *>> = listOf(TASK_RECURRENCES__TASK_RECURRENCES_TASK_DEFINITION_ID_FKEY)
+    override fun getReferences(): List<ForeignKey<TaskRecurrencesRecord, *>> = listOf(TASK_RECURRENCES__TASK_RECURRENCES_TASK_DEFINITION_ID_FKEY, TASK_RECURRENCES__FK_TASK_RECURRENCES_TENANT)
 
     private lateinit var _taskDefinitions: TaskDefinitions
+    private lateinit var _tenants: Tenants
 
     /**
      * Get the implicit join path to the <code>public.task_definitions</code>
@@ -157,6 +167,19 @@ open class TaskRecurrences(
 
     val taskDefinitions: TaskDefinitions
         get(): TaskDefinitions = taskDefinitions()
+
+    /**
+     * Get the implicit join path to the <code>public.tenants</code> table.
+     */
+    fun tenants(): Tenants {
+        if (!this::_tenants.isInitialized)
+            _tenants = Tenants(this, TASK_RECURRENCES__FK_TASK_RECURRENCES_TENANT)
+
+        return _tenants;
+    }
+
+    val tenants: Tenants
+        get(): Tenants = tenants()
     override fun getChecks(): List<Check<TaskRecurrencesRecord>> = listOf(
         Internal.createCheck(this, DSL.name("chk_daily_pattern"), "((((pattern_type)::text <> 'DAILY'::text) OR (daily_skip_weekends IS NOT NULL)))", true),
         Internal.createCheck(this, DSL.name("chk_date_order"), "(((end_date IS NULL) OR (start_date <= end_date)))", true),
@@ -186,18 +209,18 @@ open class TaskRecurrences(
     override fun rename(name: Table<*>): TaskRecurrences = TaskRecurrences(name.getQualifiedName(), null)
 
     // -------------------------------------------------------------------------
-    // Row9 type methods
+    // Row10 type methods
     // -------------------------------------------------------------------------
-    override fun fieldsRow(): Row9<UUID?, String?, Boolean?, Int?, Int?, LocalDate?, LocalDate?, OffsetDateTime?, OffsetDateTime?> = super.fieldsRow() as Row9<UUID?, String?, Boolean?, Int?, Int?, LocalDate?, LocalDate?, OffsetDateTime?, OffsetDateTime?>
+    override fun fieldsRow(): Row10<UUID?, String?, Boolean?, Int?, Int?, LocalDate?, LocalDate?, OffsetDateTime?, OffsetDateTime?, UUID?> = super.fieldsRow() as Row10<UUID?, String?, Boolean?, Int?, Int?, LocalDate?, LocalDate?, OffsetDateTime?, OffsetDateTime?, UUID?>
 
     /**
      * Convenience mapping calling {@link SelectField#convertFrom(Function)}.
      */
-    fun <U> mapping(from: (UUID?, String?, Boolean?, Int?, Int?, LocalDate?, LocalDate?, OffsetDateTime?, OffsetDateTime?) -> U): SelectField<U> = convertFrom(Records.mapping(from))
+    fun <U> mapping(from: (UUID?, String?, Boolean?, Int?, Int?, LocalDate?, LocalDate?, OffsetDateTime?, OffsetDateTime?, UUID?) -> U): SelectField<U> = convertFrom(Records.mapping(from))
 
     /**
      * Convenience mapping calling {@link SelectField#convertFrom(Class,
      * Function)}.
      */
-    fun <U> mapping(toType: Class<U>, from: (UUID?, String?, Boolean?, Int?, Int?, LocalDate?, LocalDate?, OffsetDateTime?, OffsetDateTime?) -> U): SelectField<U> = convertFrom(toType, Records.mapping(from))
+    fun <U> mapping(toType: Class<U>, from: (UUID?, String?, Boolean?, Int?, Int?, LocalDate?, LocalDate?, OffsetDateTime?, OffsetDateTime?, UUID?) -> U): SelectField<U> = convertFrom(toType, Records.mapping(from))
 }

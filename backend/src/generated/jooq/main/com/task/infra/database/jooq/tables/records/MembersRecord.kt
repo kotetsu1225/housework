@@ -11,8 +11,8 @@ import java.util.UUID
 
 import org.jooq.Field
 import org.jooq.Record1
-import org.jooq.Record7
-import org.jooq.Row7
+import org.jooq.Record8
+import org.jooq.Row8
 import org.jooq.impl.UpdatableRecordImpl
 
 
@@ -20,7 +20,7 @@ import org.jooq.impl.UpdatableRecordImpl
  * 家族メンバー
  */
 @Suppress("UNCHECKED_CAST")
-open class MembersRecord private constructor() : UpdatableRecordImpl<MembersRecord>(Members.MEMBERS), Record7<UUID?, String?, String?, OffsetDateTime?, OffsetDateTime?, String?, String?> {
+open class MembersRecord private constructor() : UpdatableRecordImpl<MembersRecord>(Members.MEMBERS), Record8<UUID?, String?, String?, OffsetDateTime?, OffsetDateTime?, String?, String?, UUID?> {
 
     open var id: UUID?
         set(value): Unit = set(0, value)
@@ -50,6 +50,10 @@ open class MembersRecord private constructor() : UpdatableRecordImpl<MembersReco
         set(value): Unit = set(6, value)
         get(): String = get(6) as String
 
+    open var tenantId: UUID
+        set(value): Unit = set(7, value)
+        get(): UUID = get(7) as UUID
+
     // -------------------------------------------------------------------------
     // Primary key information
     // -------------------------------------------------------------------------
@@ -57,11 +61,11 @@ open class MembersRecord private constructor() : UpdatableRecordImpl<MembersReco
     override fun key(): Record1<UUID?> = super.key() as Record1<UUID?>
 
     // -------------------------------------------------------------------------
-    // Record7 type implementation
+    // Record8 type implementation
     // -------------------------------------------------------------------------
 
-    override fun fieldsRow(): Row7<UUID?, String?, String?, OffsetDateTime?, OffsetDateTime?, String?, String?> = super.fieldsRow() as Row7<UUID?, String?, String?, OffsetDateTime?, OffsetDateTime?, String?, String?>
-    override fun valuesRow(): Row7<UUID?, String?, String?, OffsetDateTime?, OffsetDateTime?, String?, String?> = super.valuesRow() as Row7<UUID?, String?, String?, OffsetDateTime?, OffsetDateTime?, String?, String?>
+    override fun fieldsRow(): Row8<UUID?, String?, String?, OffsetDateTime?, OffsetDateTime?, String?, String?, UUID?> = super.fieldsRow() as Row8<UUID?, String?, String?, OffsetDateTime?, OffsetDateTime?, String?, String?, UUID?>
+    override fun valuesRow(): Row8<UUID?, String?, String?, OffsetDateTime?, OffsetDateTime?, String?, String?, UUID?> = super.valuesRow() as Row8<UUID?, String?, String?, OffsetDateTime?, OffsetDateTime?, String?, String?, UUID?>
     override fun field1(): Field<UUID?> = Members.MEMBERS.ID
     override fun field2(): Field<String?> = Members.MEMBERS.NAME
     override fun field3(): Field<String?> = Members.MEMBERS.ROLE
@@ -69,6 +73,7 @@ open class MembersRecord private constructor() : UpdatableRecordImpl<MembersReco
     override fun field5(): Field<OffsetDateTime?> = Members.MEMBERS.UPDATED_AT
     override fun field6(): Field<String?> = Members.MEMBERS.PASSWORD_HASH
     override fun field7(): Field<String?> = Members.MEMBERS.EMAIL
+    override fun field8(): Field<UUID?> = Members.MEMBERS.TENANT_ID
     override fun component1(): UUID? = id
     override fun component2(): String = name
     override fun component3(): String = role
@@ -76,6 +81,7 @@ open class MembersRecord private constructor() : UpdatableRecordImpl<MembersReco
     override fun component5(): OffsetDateTime? = updatedAt
     override fun component6(): String = passwordHash
     override fun component7(): String = email
+    override fun component8(): UUID = tenantId
     override fun value1(): UUID? = id
     override fun value2(): String = name
     override fun value3(): String = role
@@ -83,6 +89,7 @@ open class MembersRecord private constructor() : UpdatableRecordImpl<MembersReco
     override fun value5(): OffsetDateTime? = updatedAt
     override fun value6(): String = passwordHash
     override fun value7(): String = email
+    override fun value8(): UUID = tenantId
 
     override fun value1(value: UUID?): MembersRecord {
         set(0, value)
@@ -119,7 +126,12 @@ open class MembersRecord private constructor() : UpdatableRecordImpl<MembersReco
         return this
     }
 
-    override fun values(value1: UUID?, value2: String?, value3: String?, value4: OffsetDateTime?, value5: OffsetDateTime?, value6: String?, value7: String?): MembersRecord {
+    override fun value8(value: UUID?): MembersRecord {
+        set(7, value)
+        return this
+    }
+
+    override fun values(value1: UUID?, value2: String?, value3: String?, value4: OffsetDateTime?, value5: OffsetDateTime?, value6: String?, value7: String?, value8: UUID?): MembersRecord {
         this.value1(value1)
         this.value2(value2)
         this.value3(value3)
@@ -127,13 +139,14 @@ open class MembersRecord private constructor() : UpdatableRecordImpl<MembersReco
         this.value5(value5)
         this.value6(value6)
         this.value7(value7)
+        this.value8(value8)
         return this
     }
 
     /**
      * Create a detached, initialised MembersRecord
      */
-    constructor(id: UUID? = null, name: String, role: String, createdAt: OffsetDateTime? = null, updatedAt: OffsetDateTime? = null, passwordHash: String, email: String): this() {
+    constructor(id: UUID? = null, name: String, role: String, createdAt: OffsetDateTime? = null, updatedAt: OffsetDateTime? = null, passwordHash: String, email: String, tenantId: UUID): this() {
         this.id = id
         this.name = name
         this.role = role
@@ -141,6 +154,7 @@ open class MembersRecord private constructor() : UpdatableRecordImpl<MembersReco
         this.updatedAt = updatedAt
         this.passwordHash = passwordHash
         this.email = email
+        this.tenantId = tenantId
         resetChangedOnNotNull()
     }
 
@@ -156,6 +170,7 @@ open class MembersRecord private constructor() : UpdatableRecordImpl<MembersReco
             this.updatedAt = value.updatedAt
             this.passwordHash = value.passwordHash
             this.email = value.email
+            this.tenantId = value.tenantId
             resetChangedOnNotNull()
         }
     }

@@ -162,6 +162,34 @@ describe('useMembers', () => {
       expect(success!).toBe(false)
       expect(result.current.error).toBe('追加失敗')
     })
+
+    it('409エラー(メール重複)のときは専用メッセージを設定する', async () => {
+      vi.mocked(api.createMember).mockRejectedValueOnce(new api.ApiError('Conflict', 409))
+
+      const { result } = renderHook(() => useMembers())
+
+      let success: boolean
+      await act(async () => {
+        success = await result.current.addMember('次郎', 'jiro@example.com', 'BROTHER', 'password123')
+      })
+
+      expect(success!).toBe(false)
+      expect(result.current.error).toBe('このメールアドレスは既に登録されています')
+    })
+
+    it('409以外のApiErrorのときは従来どおりメッセージをそのまま設定する', async () => {
+      vi.mocked(api.createMember).mockRejectedValueOnce(new api.ApiError('サーバーエラー', 500))
+
+      const { result } = renderHook(() => useMembers())
+
+      let success: boolean
+      await act(async () => {
+        success = await result.current.addMember('次郎', 'jiro@example.com', 'BROTHER', 'password123')
+      })
+
+      expect(success!).toBe(false)
+      expect(result.current.error).toBe('サーバーエラー')
+    })
   })
 
   describe('editMember', () => {
@@ -196,6 +224,34 @@ describe('useMembers', () => {
 
       expect(success!).toBe(false)
       expect(result.current.error).toBe('更新失敗')
+    })
+
+    it('409エラー(メール重複)のときは専用メッセージを設定する', async () => {
+      vi.mocked(api.updateMember).mockRejectedValueOnce(new api.ApiError('Conflict', 409))
+
+      const { result } = renderHook(() => useMembers(mockMembers))
+
+      let success: boolean
+      await act(async () => {
+        success = await result.current.editMember('member-1', '更新', 'FATHER')
+      })
+
+      expect(success!).toBe(false)
+      expect(result.current.error).toBe('このメールアドレスは既に登録されています')
+    })
+
+    it('409以外のApiErrorのときは従来どおりメッセージをそのまま設定する', async () => {
+      vi.mocked(api.updateMember).mockRejectedValueOnce(new api.ApiError('サーバーエラー', 500))
+
+      const { result } = renderHook(() => useMembers(mockMembers))
+
+      let success: boolean
+      await act(async () => {
+        success = await result.current.editMember('member-1', '更新', 'FATHER')
+      })
+
+      expect(success!).toBe(false)
+      expect(result.current.error).toBe('サーバーエラー')
     })
   })
 

@@ -8,10 +8,8 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 SET timezone = 'Asia/Tokyo';
 
 -- 確認メッセージ
+-- housework_appロールの作成はV21__apply_multi_tenant.sqlに一本化したためここでは行わない
 DO $$
 BEGIN
     RAISE NOTICE 'Database initialized successfully!';
-    IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'housework_app') THEN
-        CREATE ROLE housework_app WITH LOGIN PASSWORD 'housework_app_password';
-    END IF;
 END $$;

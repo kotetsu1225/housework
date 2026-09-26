@@ -14,6 +14,8 @@ plugins {
 val dbUrl: String = (findProperty("dbUrl") as String?) ?: "jdbc:postgresql://localhost:5432/housework"
 val dbUser: String = (findProperty("dbUser") as String?) ?: "housework"
 val dbPassword: String = (findProperty("dbPassword") as String?) ?: "housework_password"
+// V21のhousework_appロール作成に使うパスワード（-PappRolePasswordで上書き。既定はローカル用の値）
+val appRolePassword: String = (findProperty("appRolePassword") as String?) ?: "housework_app_password"
 
 group = "com.task"
 version = "0.0.1"
@@ -98,6 +100,8 @@ flyway {
     password = dbPassword
     locations = arrayOf("filesystem:db/migration")
     cleanDisabled = false
+    // V21のhousework_appロール作成に使う（flywayMigrate/generateJooqは引き続きオーナーで接続する）
+    placeholders = mapOf("appRolePassword" to appRolePassword)
 }
 
 // JOOQ configuration

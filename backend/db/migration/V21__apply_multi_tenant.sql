@@ -12,10 +12,12 @@
 -- housework_app は非オーナーのため RLS が自動適用される
 -- housework（オーナー）はログイン・スケジューラ用（RLSバイパス）
 -- ============================================================
+-- パスワードはFlywayのplaceholder appRolePassword から渡す（アプリは database.app.password、
+-- Gradleは -PappRolePassword）。リポジトリにパスワードを直書きしないため。
 DO $$
 BEGIN
     IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'housework_app') THEN
-        CREATE ROLE housework_app WITH LOGIN PASSWORD 'housework_app_password';
+        CREATE ROLE housework_app WITH LOGIN PASSWORD '${appRolePassword}';
     END IF;
 END $$;
 

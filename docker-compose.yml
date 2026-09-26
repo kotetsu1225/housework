@@ -39,6 +39,9 @@ services:
       JDBC_DATABASE_URL: jdbc:postgresql://postgres:5432/housework
       PGUSER: housework
       PGPASSWORD: housework_password
+      # RLS適用接続（housework_app）。ローカル専用の値
+      APP_PGUSER: housework_app
+      APP_PGPASSWORD: housework_app_password
       TZ: Asia/Tokyo
     ports:
       - "8080:8080"

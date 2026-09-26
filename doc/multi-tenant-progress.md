@@ -2,7 +2,7 @@
 
 [multi-tenant-handoff.md](multi-tenant-handoff.md) §6.4 に従い、**issue の着手時と完了時に必ず更新する**。コンテキストが切れた別のエージェントが、このファイルだけを見て再開できる粒度で書く。
 
-最終更新: 2026-09-26(H1 承認・#35 完了・#36 実装中・#69 は apply の承認待ち)
+最終更新: 2026-09-26(#35 #36 完了、#37 #39 実装中、#69 は apply の承認待ち)
 
 ## 現在の状態
 
@@ -13,7 +13,7 @@
 
 ## ビルドと DB の決まり(全 issue 共通。必ず守る)
 
-- **ビルドは `cd backend && ./gradlew build -x generateJooq -x flywayMigrate`。** 素の `./gradlew build` は、nu.studer.jooq の既定動作でコンパイル前に `generateJooq`(→ `flywayMigrate`)を走らせ、ポート 5432 の DB に migration を当てて生成物を上書きする。#36 がマージされると自動生成は止まる予定。
+- **ビルドは `cd backend && ./gradlew build`。** #36(2026-09-26 マージ)でコンパイル時の jOOQ 自動生成を止めたので、素の build は DB に触れない。#36 より前のブランチでは `-x generateJooq -x flywayMigrate` を付けること。
 - **ポート 5432 の `housework-db` には触らない。** shopping の V22〜V25 が適用済みで、shopping の作業データがある。
 - **マルチテナント作業の DB は `housework-mt-db`**(`postgres:17-alpine`、ホストのポート 5433、ユーザー `housework`、パスワード `housework_password`、ボリューム `housework_mt_data`)。issue ごとに DB を分ける(例 `createdb -U housework mt36_gen`)。Gradle の Flyway / jOOQ は #36 以降 `-PdbUrl=jdbc:postgresql://localhost:5433/<DB名>` で接続先を指定する。
 - コンテナが無ければ次で作り直せる:
@@ -26,14 +26,17 @@
 | `~/Desktop/housework` | `mt/catchup-report`(マージ済み) | オーナーの作業ツリー。触らない |
 | `~/Desktop/housework-wt/integration` | `feature/topic-multitenant` | 進捗ファイルの更新、統合後のビルド |
 | `~/Desktop/housework-wt/mt-35` | `mt/35-tenant-id`(マージ済み) | 削除してよい |
-| `~/Desktop/housework-wt/mt-36` | `mt/36-migrations` | #36 |
+| `~/Desktop/housework-wt/mt-36` | `mt/36-migrations`(マージ済み) | 削除してよい |
+| `~/Desktop/housework-wt/mt-37` | `mt/37-app-role-pool` | #37 |
+| `~/Desktop/housework-wt/mt-39` | `mt/39-tenant-aggregate` | #39 |
 | `~/Desktop/housework-wt/mt-69` | `mt/69-gcp-foundation` | #69 |
 
 ## 着手中
 
 | issue | 担当 | ブランチ | 状況・次の一手 |
 |---|---|---|---|
-| #36 F1 | Sonnet(ファイル編集)+ 親(Gradle 実行・検証・レビュー) | `mt/36-migrations` | 1 回目の Sonnet は通信停止で進捗ゼロ(2026-09-25)。作業を分割して再開: Sonnet が build.gradle.kts・V21 コメント・V22 backfill・V23 複製・検証用 seed SQL を編集 → 親が `git mv`、jOOQ 再生成、ビルド、受け入れ条件の検証。作業メモは親セッションの scratchpad `mt36/` |
+| #37 F2 | Sonnet(ファイル編集)+ 親(ビルド・Docker での起動確認・fail-closed 確認・レビュー) | `mt/37-app-role-pool`(worktree `~/Desktop/housework-wt/mt-37`) | 編集中。V21 のパスワードを placeholder に、2 本目のプール、起動時の初期化、本番で既定パスワードのままなら起動を止める安全策、.env.example の修正 |
+| #39 F4 | Sonnet(ファイル編集)+ 親(ビルド・テスト・レビュー) | `mt/39-tenant-aggregate`(worktree `~/Desktop/housework-wt/mt-39`) | 編集中。Tenant 集約・FamilyName・TenantRepository(Impl)・Config.kt の bind・単体テスト |
 | #69 G0 | 親(人間と伴走) | `mt/69-gcp-foundation`(push 済み、PR 未作成) | state バケット作成済み。`infra/terraform/` を push 済み。plan は 5 件追加。**オーナーの承認後に apply → plan で差分なしを確認 → PR** |
 
 ## 完了(統合ブランチにマージ済み)
@@ -42,6 +45,7 @@
 |---|---|---|---|
 | §5 キャッチアップ | #74 | 2026-09-24 | オーナーの LGTM(会話上)を H1 承認とした。5.1 の推奨も承認 |
 | #35 F0 | #78 | 2026-09-26 | `TenantId` を `@JvmInline value class` で追加 |
+| #36 F1 | #79 | 2026-09-26 | V22 backfill 新規、V23 に rename、jOOQ 再生成。**素の `./gradlew build` はもう DB に触れない**(コンパイル時の自動生成を停止)。生成は `./gradlew generateJooq -PdbUrl=jdbc:postgresql://localhost:5433/<DB名>` |
 
 ## ブロック中・未解決の疑問
 
@@ -77,7 +81,7 @@
 
 ## 次にやること(優先順)
 
-1. #36 を完成させる(編集のレビュー → jOOQ 再生成 → ビルド → 受け入れ条件の検証 → PR → マージ)
+1. #37 と #39 の編集をレビュー → ビルド・検証 → PR → マージ
 2. #69: オーナーの承認後に apply → PR
-3. #36 マージ後: #37(2 本目のプールと placeholder)→ #40(接続点の分離)→ #41(テスト基盤)。並行して #38(V24)、#39(Tenant 集約)
+3. #37 マージ後: #38(V24。V21 を触るので #37 の後)、#40(接続点の分離)→ #41(テスト基盤)
 4. 並行可能: #62 #63 #64(フロント)、#71(Pub/Sub クライアント基盤)

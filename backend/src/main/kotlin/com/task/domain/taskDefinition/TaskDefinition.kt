@@ -4,11 +4,13 @@ import com.task.domain.AggregateRoot
 import com.task.domain.member.MemberId
 import com.task.domain.taskDefinition.event.TaskDefinitionCreated
 import com.task.domain.taskDefinition.event.TaskDefinitionDeleted
+import com.task.domain.tenant.TenantId
 import java.time.Instant
 import java.util.UUID
 
 class TaskDefinition private constructor(
     val id: TaskDefinitionId,
+    val tenantId: TenantId,
     val name: TaskDefinitionName,
     val description: TaskDefinitionDescription,
     val scheduledTimeRange: ScheduledTimeRange,
@@ -40,6 +42,7 @@ class TaskDefinition private constructor(
     ): TaskDefinition {
         return TaskDefinition(
             id = id,
+            tenantId = this.tenantId,
             name = name ?: this.name,
             description = description ?: this.description,
             scheduledTimeRange = scheduledTimeRange ?: this.scheduledTimeRange,
@@ -55,6 +58,7 @@ class TaskDefinition private constructor(
     fun delete(): TaskDefinition {
         val taskDefinition = TaskDefinition(
             id = this.id,
+            tenantId = this.tenantId,
             name = this.name,
             description = this.description,
             scheduledTimeRange = this.scheduledTimeRange,
@@ -84,6 +88,7 @@ class TaskDefinition private constructor(
 
     companion object {
         fun create(
+            tenantId: TenantId,
             name: TaskDefinitionName,
             description: TaskDefinitionDescription,
             scheduledTimeRange: ScheduledTimeRange,
@@ -94,6 +99,7 @@ class TaskDefinition private constructor(
         ): TaskDefinition {
             val taskDefinition = TaskDefinition(
                 id = TaskDefinitionId.generate(),
+                tenantId = tenantId,
                 name = name,
                 description = description,
                 scheduledTimeRange = scheduledTimeRange,
@@ -123,6 +129,7 @@ class TaskDefinition private constructor(
 
         fun reconstruct(
             id: TaskDefinitionId,
+            tenantId: TenantId,
             name: TaskDefinitionName,
             description: TaskDefinitionDescription,
             scheduledTimeRange: ScheduledTimeRange,
@@ -135,6 +142,7 @@ class TaskDefinition private constructor(
         ): TaskDefinition {
             return TaskDefinition(
                 id = id,
+                tenantId = tenantId,
                 name = name,
                 description = description,
                 scheduledTimeRange = scheduledTimeRange,

@@ -17,6 +17,7 @@ class CreateTaskDefinitionUseCaseImpl @Inject constructor(
     override fun execute(input: CreateTaskDefinitionUseCase.Input): CreateTaskDefinitionUseCase.Output {
         return database.withTransaction { session ->
             val newTaskDefinition = TaskDefinition.create(
+                tenantId = input.tenantId,
                 name = input.name,
                 description = input.description,
                 scheduledTimeRange = input.scheduledTimeRange,

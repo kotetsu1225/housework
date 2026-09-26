@@ -5,7 +5,9 @@ package com.task.infra.database.jooq.tables
 
 
 import com.task.infra.database.jooq.Public
+import com.task.infra.database.jooq.indexes.IDX_TASK_SNAPSHOTS_TENANT_ID
 import com.task.infra.database.jooq.keys.TASK_SNAPSHOTS_PKEY
+import com.task.infra.database.jooq.keys.TASK_SNAPSHOTS__FK_TASK_SNAPSHOTS_TENANT
 import com.task.infra.database.jooq.keys.TASK_SNAPSHOTS__TASK_SNAPSHOTS_TASK_EXECUTION_ID_FKEY
 import com.task.infra.database.jooq.tables.records.TaskSnapshotsRecord
 
@@ -18,10 +20,11 @@ import kotlin.collections.List
 import org.jooq.Check
 import org.jooq.Field
 import org.jooq.ForeignKey
+import org.jooq.Index
 import org.jooq.Name
 import org.jooq.Record
 import org.jooq.Records
-import org.jooq.Row8
+import org.jooq.Row9
 import org.jooq.Schema
 import org.jooq.SelectField
 import org.jooq.Table
@@ -112,6 +115,11 @@ open class TaskSnapshots(
      */
     val FROZEN_POINT: TableField<TaskSnapshotsRecord, Int?> = createField(DSL.name("frozen_point"), SQLDataType.INTEGER.nullable(false).defaultValue(DSL.field(DSL.raw("0"), SQLDataType.INTEGER)), this, "タスク開始時点で凍結されたポイント")
 
+    /**
+     * The column <code>public.task_snapshots.tenant_id</code>.
+     */
+    val TENANT_ID: TableField<TaskSnapshotsRecord, UUID?> = createField(DSL.name("tenant_id"), SQLDataType.UUID.nullable(false), this, "")
+
     private constructor(alias: Name, aliased: Table<TaskSnapshotsRecord>?): this(alias, null, null, aliased, null)
     private constructor(alias: Name, aliased: Table<TaskSnapshotsRecord>?, parameters: Array<Field<*>?>?): this(alias, null, null, aliased, parameters)
 
@@ -132,10 +140,12 @@ open class TaskSnapshots(
 
     constructor(child: Table<out Record>, key: ForeignKey<out Record, TaskSnapshotsRecord>): this(Internal.createPathAlias(child, key), child, key, TASK_SNAPSHOTS, null)
     override fun getSchema(): Schema? = if (aliased()) null else Public.PUBLIC
+    override fun getIndexes(): List<Index> = listOf(IDX_TASK_SNAPSHOTS_TENANT_ID)
     override fun getPrimaryKey(): UniqueKey<TaskSnapshotsRecord> = TASK_SNAPSHOTS_PKEY
-    override fun getReferences(): List<ForeignKey<TaskSnapshotsRecord, *>> = listOf(TASK_SNAPSHOTS__TASK_SNAPSHOTS_TASK_EXECUTION_ID_FKEY)
+    override fun getReferences(): List<ForeignKey<TaskSnapshotsRecord, *>> = listOf(TASK_SNAPSHOTS__TASK_SNAPSHOTS_TASK_EXECUTION_ID_FKEY, TASK_SNAPSHOTS__FK_TASK_SNAPSHOTS_TENANT)
 
     private lateinit var _taskExecutions: TaskExecutions
+    private lateinit var _tenants: Tenants
 
     /**
      * Get the implicit join path to the <code>public.task_executions</code>
@@ -150,6 +160,19 @@ open class TaskSnapshots(
 
     val taskExecutions: TaskExecutions
         get(): TaskExecutions = taskExecutions()
+
+    /**
+     * Get the implicit join path to the <code>public.tenants</code> table.
+     */
+    fun tenants(): Tenants {
+        if (!this::_tenants.isInitialized)
+            _tenants = Tenants(this, TASK_SNAPSHOTS__FK_TASK_SNAPSHOTS_TENANT)
+
+        return _tenants;
+    }
+
+    val tenants: Tenants
+        get(): Tenants = tenants()
     override fun getChecks(): List<Check<TaskSnapshotsRecord>> = listOf(
         Internal.createCheck(this, DSL.name("chk_snapshot_scheduled_time_range"), "((scheduled_start_time < scheduled_end_time))", true)
     )
@@ -173,18 +196,18 @@ open class TaskSnapshots(
     override fun rename(name: Table<*>): TaskSnapshots = TaskSnapshots(name.getQualifiedName(), null)
 
     // -------------------------------------------------------------------------
-    // Row8 type methods
+    // Row9 type methods
     // -------------------------------------------------------------------------
-    override fun fieldsRow(): Row8<UUID?, String?, String?, Int?, OffsetDateTime?, OffsetDateTime?, OffsetDateTime?, Int?> = super.fieldsRow() as Row8<UUID?, String?, String?, Int?, OffsetDateTime?, OffsetDateTime?, OffsetDateTime?, Int?>
+    override fun fieldsRow(): Row9<UUID?, String?, String?, Int?, OffsetDateTime?, OffsetDateTime?, OffsetDateTime?, Int?, UUID?> = super.fieldsRow() as Row9<UUID?, String?, String?, Int?, OffsetDateTime?, OffsetDateTime?, OffsetDateTime?, Int?, UUID?>
 
     /**
      * Convenience mapping calling {@link SelectField#convertFrom(Function)}.
      */
-    fun <U> mapping(from: (UUID?, String?, String?, Int?, OffsetDateTime?, OffsetDateTime?, OffsetDateTime?, Int?) -> U): SelectField<U> = convertFrom(Records.mapping(from))
+    fun <U> mapping(from: (UUID?, String?, String?, Int?, OffsetDateTime?, OffsetDateTime?, OffsetDateTime?, Int?, UUID?) -> U): SelectField<U> = convertFrom(Records.mapping(from))
 
     /**
      * Convenience mapping calling {@link SelectField#convertFrom(Class,
      * Function)}.
      */
-    fun <U> mapping(toType: Class<U>, from: (UUID?, String?, String?, Int?, OffsetDateTime?, OffsetDateTime?, OffsetDateTime?, Int?) -> U): SelectField<U> = convertFrom(toType, Records.mapping(from))
+    fun <U> mapping(toType: Class<U>, from: (UUID?, String?, String?, Int?, OffsetDateTime?, OffsetDateTime?, OffsetDateTime?, Int?, UUID?) -> U): SelectField<U> = convertFrom(toType, Records.mapping(from))
 }

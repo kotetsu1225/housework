@@ -20,7 +20,8 @@ data class Members(
     val createdAt: OffsetDateTime? = null,
     val updatedAt: OffsetDateTime? = null,
     val passwordHash: String,
-    val email: String
+    val email: String,
+    val tenantId: UUID
 ): Serializable {
 
     override fun equals(other: Any?): Boolean {
@@ -57,6 +58,8 @@ data class Members(
             return false
         if (this.email != o.email)
             return false
+        if (this.tenantId != o.tenantId)
+            return false
         return true
     }
 
@@ -70,6 +73,7 @@ data class Members(
         result = prime * result + (if (this.updatedAt == null) 0 else this.updatedAt.hashCode())
         result = prime * result + this.passwordHash.hashCode()
         result = prime * result + this.email.hashCode()
+        result = prime * result + this.tenantId.hashCode()
         return result
     }
 
@@ -83,6 +87,7 @@ data class Members(
         sb.append(", ").append(updatedAt)
         sb.append(", ").append(passwordHash)
         sb.append(", ").append(email)
+        sb.append(", ").append(tenantId)
 
         sb.append(")")
         return sb.toString()

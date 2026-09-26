@@ -11,7 +11,9 @@ import com.task.infra.database.jooq.indexes.IDX_TASK_DEFINITIONS_SCHEDULED_END_T
 import com.task.infra.database.jooq.indexes.IDX_TASK_DEFINITIONS_SCHEDULED_START_TIME
 import com.task.infra.database.jooq.indexes.IDX_TASK_DEFINITIONS_SCHEDULE_TYPE
 import com.task.infra.database.jooq.indexes.IDX_TASK_DEFINITIONS_SCOPE
+import com.task.infra.database.jooq.indexes.IDX_TASK_DEFINITIONS_TENANT_ID
 import com.task.infra.database.jooq.keys.TASK_DEFINITIONS_PKEY
+import com.task.infra.database.jooq.keys.TASK_DEFINITIONS__FK_TASK_DEFINITIONS_TENANT
 import com.task.infra.database.jooq.keys.TASK_DEFINITIONS__TASK_DEFINITIONS_OWNER_MEMBER_ID_FKEY
 import com.task.infra.database.jooq.tables.records.TaskDefinitionsRecord
 
@@ -29,7 +31,7 @@ import org.jooq.Index
 import org.jooq.Name
 import org.jooq.Record
 import org.jooq.Records
-import org.jooq.Row14
+import org.jooq.Row15
 import org.jooq.Schema
 import org.jooq.SelectField
 import org.jooq.Table
@@ -151,6 +153,11 @@ open class TaskDefinitions(
      */
     val POINT: TableField<TaskDefinitionsRecord, Int?> = createField(DSL.name("point"), SQLDataType.INTEGER.nullable(false).defaultValue(DSL.field(DSL.raw("0"), SQLDataType.INTEGER)), this, "タスク完了時に獲得できるポイント")
 
+    /**
+     * The column <code>public.task_definitions.tenant_id</code>.
+     */
+    val TENANT_ID: TableField<TaskDefinitionsRecord, UUID?> = createField(DSL.name("tenant_id"), SQLDataType.UUID.nullable(false), this, "")
+
     private constructor(alias: Name, aliased: Table<TaskDefinitionsRecord>?): this(alias, null, null, aliased, null)
     private constructor(alias: Name, aliased: Table<TaskDefinitionsRecord>?, parameters: Array<Field<*>?>?): this(alias, null, null, aliased, parameters)
 
@@ -171,11 +178,12 @@ open class TaskDefinitions(
 
     constructor(child: Table<out Record>, key: ForeignKey<out Record, TaskDefinitionsRecord>): this(Internal.createPathAlias(child, key), child, key, TASK_DEFINITIONS, null)
     override fun getSchema(): Schema? = if (aliased()) null else Public.PUBLIC
-    override fun getIndexes(): List<Index> = listOf(IDX_TASK_DEFINITIONS_IS_DELETED, IDX_TASK_DEFINITIONS_OWNER, IDX_TASK_DEFINITIONS_SCHEDULE_TYPE, IDX_TASK_DEFINITIONS_SCHEDULED_END_TIME, IDX_TASK_DEFINITIONS_SCHEDULED_START_TIME, IDX_TASK_DEFINITIONS_SCOPE)
+    override fun getIndexes(): List<Index> = listOf(IDX_TASK_DEFINITIONS_IS_DELETED, IDX_TASK_DEFINITIONS_OWNER, IDX_TASK_DEFINITIONS_SCHEDULE_TYPE, IDX_TASK_DEFINITIONS_SCHEDULED_END_TIME, IDX_TASK_DEFINITIONS_SCHEDULED_START_TIME, IDX_TASK_DEFINITIONS_SCOPE, IDX_TASK_DEFINITIONS_TENANT_ID)
     override fun getPrimaryKey(): UniqueKey<TaskDefinitionsRecord> = TASK_DEFINITIONS_PKEY
-    override fun getReferences(): List<ForeignKey<TaskDefinitionsRecord, *>> = listOf(TASK_DEFINITIONS__TASK_DEFINITIONS_OWNER_MEMBER_ID_FKEY)
+    override fun getReferences(): List<ForeignKey<TaskDefinitionsRecord, *>> = listOf(TASK_DEFINITIONS__TASK_DEFINITIONS_OWNER_MEMBER_ID_FKEY, TASK_DEFINITIONS__FK_TASK_DEFINITIONS_TENANT)
 
     private lateinit var _members: Members
+    private lateinit var _tenants: Tenants
 
     /**
      * Get the implicit join path to the <code>public.members</code> table.
@@ -189,6 +197,19 @@ open class TaskDefinitions(
 
     val members: Members
         get(): Members = members()
+
+    /**
+     * Get the implicit join path to the <code>public.tenants</code> table.
+     */
+    fun tenants(): Tenants {
+        if (!this::_tenants.isInitialized)
+            _tenants = Tenants(this, TASK_DEFINITIONS__FK_TASK_DEFINITIONS_TENANT)
+
+        return _tenants;
+    }
+
+    val tenants: Tenants
+        get(): Tenants = tenants()
     override fun getChecks(): List<Check<TaskDefinitionsRecord>> = listOf(
         Internal.createCheck(this, DSL.name("chk_onetime_deadline"), "(((((schedule_type)::text = 'RECURRING'::text) AND (one_time_deadline IS NULL)) OR (((schedule_type)::text = 'ONE_TIME'::text) AND (one_time_deadline IS NOT NULL))))", true),
         Internal.createCheck(this, DSL.name("chk_personal_owner"), "(((((scope)::text = 'FAMILY'::text) AND (owner_member_id IS NULL)) OR (((scope)::text = 'PERSONAL'::text) AND (owner_member_id IS NOT NULL))))", true),
@@ -216,18 +237,18 @@ open class TaskDefinitions(
     override fun rename(name: Table<*>): TaskDefinitions = TaskDefinitions(name.getQualifiedName(), null)
 
     // -------------------------------------------------------------------------
-    // Row14 type methods
+    // Row15 type methods
     // -------------------------------------------------------------------------
-    override fun fieldsRow(): Row14<UUID?, String?, String?, String?, UUID?, String?, LocalDate?, Int?, Boolean?, OffsetDateTime?, OffsetDateTime?, OffsetDateTime?, OffsetDateTime?, Int?> = super.fieldsRow() as Row14<UUID?, String?, String?, String?, UUID?, String?, LocalDate?, Int?, Boolean?, OffsetDateTime?, OffsetDateTime?, OffsetDateTime?, OffsetDateTime?, Int?>
+    override fun fieldsRow(): Row15<UUID?, String?, String?, String?, UUID?, String?, LocalDate?, Int?, Boolean?, OffsetDateTime?, OffsetDateTime?, OffsetDateTime?, OffsetDateTime?, Int?, UUID?> = super.fieldsRow() as Row15<UUID?, String?, String?, String?, UUID?, String?, LocalDate?, Int?, Boolean?, OffsetDateTime?, OffsetDateTime?, OffsetDateTime?, OffsetDateTime?, Int?, UUID?>
 
     /**
      * Convenience mapping calling {@link SelectField#convertFrom(Function)}.
      */
-    fun <U> mapping(from: (UUID?, String?, String?, String?, UUID?, String?, LocalDate?, Int?, Boolean?, OffsetDateTime?, OffsetDateTime?, OffsetDateTime?, OffsetDateTime?, Int?) -> U): SelectField<U> = convertFrom(Records.mapping(from))
+    fun <U> mapping(from: (UUID?, String?, String?, String?, UUID?, String?, LocalDate?, Int?, Boolean?, OffsetDateTime?, OffsetDateTime?, OffsetDateTime?, OffsetDateTime?, Int?, UUID?) -> U): SelectField<U> = convertFrom(Records.mapping(from))
 
     /**
      * Convenience mapping calling {@link SelectField#convertFrom(Class,
      * Function)}.
      */
-    fun <U> mapping(toType: Class<U>, from: (UUID?, String?, String?, String?, UUID?, String?, LocalDate?, Int?, Boolean?, OffsetDateTime?, OffsetDateTime?, OffsetDateTime?, OffsetDateTime?, Int?) -> U): SelectField<U> = convertFrom(toType, Records.mapping(from))
+    fun <U> mapping(toType: Class<U>, from: (UUID?, String?, String?, String?, UUID?, String?, LocalDate?, Int?, Boolean?, OffsetDateTime?, OffsetDateTime?, OffsetDateTime?, OffsetDateTime?, Int?, UUID?) -> U): SelectField<U> = convertFrom(toType, Records.mapping(from))
 }

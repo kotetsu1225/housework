@@ -12,8 +12,8 @@ import java.util.UUID
 import org.jooq.Field
 import org.jooq.JSONB
 import org.jooq.Record1
-import org.jooq.Record11
-import org.jooq.Row11
+import org.jooq.Record12
+import org.jooq.Row12
 import org.jooq.impl.UpdatableRecordImpl
 
 
@@ -21,7 +21,7 @@ import org.jooq.impl.UpdatableRecordImpl
  * ドメインイベントのOutboxテーブル（結果整合性用）
  */
 @Suppress("UNCHECKED_CAST")
-open class OutboxRecord private constructor() : UpdatableRecordImpl<OutboxRecord>(Outbox.OUTBOX), Record11<UUID?, String?, String?, UUID?, JSONB?, String?, Int?, Int?, OffsetDateTime?, OffsetDateTime?, String?> {
+open class OutboxRecord private constructor() : UpdatableRecordImpl<OutboxRecord>(Outbox.OUTBOX), Record12<UUID?, String?, String?, UUID?, JSONB?, String?, Int?, Int?, OffsetDateTime?, OffsetDateTime?, String?, UUID?> {
 
     open var id: UUID?
         set(value): Unit = set(0, value)
@@ -67,6 +67,10 @@ open class OutboxRecord private constructor() : UpdatableRecordImpl<OutboxRecord
         set(value): Unit = set(10, value)
         get(): String? = get(10) as String?
 
+    open var tenantId: UUID
+        set(value): Unit = set(11, value)
+        get(): UUID = get(11) as UUID
+
     // -------------------------------------------------------------------------
     // Primary key information
     // -------------------------------------------------------------------------
@@ -74,11 +78,11 @@ open class OutboxRecord private constructor() : UpdatableRecordImpl<OutboxRecord
     override fun key(): Record1<UUID?> = super.key() as Record1<UUID?>
 
     // -------------------------------------------------------------------------
-    // Record11 type implementation
+    // Record12 type implementation
     // -------------------------------------------------------------------------
 
-    override fun fieldsRow(): Row11<UUID?, String?, String?, UUID?, JSONB?, String?, Int?, Int?, OffsetDateTime?, OffsetDateTime?, String?> = super.fieldsRow() as Row11<UUID?, String?, String?, UUID?, JSONB?, String?, Int?, Int?, OffsetDateTime?, OffsetDateTime?, String?>
-    override fun valuesRow(): Row11<UUID?, String?, String?, UUID?, JSONB?, String?, Int?, Int?, OffsetDateTime?, OffsetDateTime?, String?> = super.valuesRow() as Row11<UUID?, String?, String?, UUID?, JSONB?, String?, Int?, Int?, OffsetDateTime?, OffsetDateTime?, String?>
+    override fun fieldsRow(): Row12<UUID?, String?, String?, UUID?, JSONB?, String?, Int?, Int?, OffsetDateTime?, OffsetDateTime?, String?, UUID?> = super.fieldsRow() as Row12<UUID?, String?, String?, UUID?, JSONB?, String?, Int?, Int?, OffsetDateTime?, OffsetDateTime?, String?, UUID?>
+    override fun valuesRow(): Row12<UUID?, String?, String?, UUID?, JSONB?, String?, Int?, Int?, OffsetDateTime?, OffsetDateTime?, String?, UUID?> = super.valuesRow() as Row12<UUID?, String?, String?, UUID?, JSONB?, String?, Int?, Int?, OffsetDateTime?, OffsetDateTime?, String?, UUID?>
     override fun field1(): Field<UUID?> = Outbox.OUTBOX.ID
     override fun field2(): Field<String?> = Outbox.OUTBOX.EVENT_TYPE
     override fun field3(): Field<String?> = Outbox.OUTBOX.AGGREGATE_TYPE
@@ -90,6 +94,7 @@ open class OutboxRecord private constructor() : UpdatableRecordImpl<OutboxRecord
     override fun field9(): Field<OffsetDateTime?> = Outbox.OUTBOX.CREATED_AT
     override fun field10(): Field<OffsetDateTime?> = Outbox.OUTBOX.PROCESSED_AT
     override fun field11(): Field<String?> = Outbox.OUTBOX.ERROR_MESSAGE
+    override fun field12(): Field<UUID?> = Outbox.OUTBOX.TENANT_ID
     override fun component1(): UUID? = id
     override fun component2(): String = eventType
     override fun component3(): String = aggregateType
@@ -101,6 +106,7 @@ open class OutboxRecord private constructor() : UpdatableRecordImpl<OutboxRecord
     override fun component9(): OffsetDateTime? = createdAt
     override fun component10(): OffsetDateTime? = processedAt
     override fun component11(): String? = errorMessage
+    override fun component12(): UUID = tenantId
     override fun value1(): UUID? = id
     override fun value2(): String = eventType
     override fun value3(): String = aggregateType
@@ -112,6 +118,7 @@ open class OutboxRecord private constructor() : UpdatableRecordImpl<OutboxRecord
     override fun value9(): OffsetDateTime? = createdAt
     override fun value10(): OffsetDateTime? = processedAt
     override fun value11(): String? = errorMessage
+    override fun value12(): UUID = tenantId
 
     override fun value1(value: UUID?): OutboxRecord {
         set(0, value)
@@ -168,7 +175,12 @@ open class OutboxRecord private constructor() : UpdatableRecordImpl<OutboxRecord
         return this
     }
 
-    override fun values(value1: UUID?, value2: String?, value3: String?, value4: UUID?, value5: JSONB?, value6: String?, value7: Int?, value8: Int?, value9: OffsetDateTime?, value10: OffsetDateTime?, value11: String?): OutboxRecord {
+    override fun value12(value: UUID?): OutboxRecord {
+        set(11, value)
+        return this
+    }
+
+    override fun values(value1: UUID?, value2: String?, value3: String?, value4: UUID?, value5: JSONB?, value6: String?, value7: Int?, value8: Int?, value9: OffsetDateTime?, value10: OffsetDateTime?, value11: String?, value12: UUID?): OutboxRecord {
         this.value1(value1)
         this.value2(value2)
         this.value3(value3)
@@ -180,13 +192,14 @@ open class OutboxRecord private constructor() : UpdatableRecordImpl<OutboxRecord
         this.value9(value9)
         this.value10(value10)
         this.value11(value11)
+        this.value12(value12)
         return this
     }
 
     /**
      * Create a detached, initialised OutboxRecord
      */
-    constructor(id: UUID? = null, eventType: String, aggregateType: String, aggregateId: UUID, payload: JSONB, status: String? = null, retryCount: Int? = null, maxRetries: Int? = null, createdAt: OffsetDateTime? = null, processedAt: OffsetDateTime? = null, errorMessage: String? = null): this() {
+    constructor(id: UUID? = null, eventType: String, aggregateType: String, aggregateId: UUID, payload: JSONB, status: String? = null, retryCount: Int? = null, maxRetries: Int? = null, createdAt: OffsetDateTime? = null, processedAt: OffsetDateTime? = null, errorMessage: String? = null, tenantId: UUID): this() {
         this.id = id
         this.eventType = eventType
         this.aggregateType = aggregateType
@@ -198,6 +211,7 @@ open class OutboxRecord private constructor() : UpdatableRecordImpl<OutboxRecord
         this.createdAt = createdAt
         this.processedAt = processedAt
         this.errorMessage = errorMessage
+        this.tenantId = tenantId
         resetChangedOnNotNull()
     }
 
@@ -217,6 +231,7 @@ open class OutboxRecord private constructor() : UpdatableRecordImpl<OutboxRecord
             this.createdAt = value.createdAt
             this.processedAt = value.processedAt
             this.errorMessage = value.errorMessage
+            this.tenantId = value.tenantId
             resetChangedOnNotNull()
         }
     }

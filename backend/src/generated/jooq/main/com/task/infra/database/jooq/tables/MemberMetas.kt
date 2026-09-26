@@ -6,7 +6,9 @@ package com.task.infra.database.jooq.tables
 
 import com.task.infra.database.jooq.Public
 import com.task.infra.database.jooq.indexes.IDX_MEMBER_METAS_MEMBER_ID
+import com.task.infra.database.jooq.indexes.IDX_MEMBER_METAS_TENANT_ID
 import com.task.infra.database.jooq.keys.MEMBER_METAS_PKEY
+import com.task.infra.database.jooq.keys.MEMBER_METAS__FK_MEMBER_METAS_TENANT
 import com.task.infra.database.jooq.keys.MEMBER_METAS__MEMBER_METAS_MEMBER_ID_FKEY
 import com.task.infra.database.jooq.tables.records.MemberMetasRecord
 
@@ -22,7 +24,7 @@ import org.jooq.Index
 import org.jooq.Name
 import org.jooq.Record
 import org.jooq.Records
-import org.jooq.Row5
+import org.jooq.Row6
 import org.jooq.Schema
 import org.jooq.SelectField
 import org.jooq.Table
@@ -93,6 +95,11 @@ open class MemberMetas(
      */
     val UPDATED_AT: TableField<MemberMetasRecord, OffsetDateTime?> = createField(DSL.name("updated_at"), SQLDataType.TIMESTAMPWITHTIMEZONE(6).nullable(false).defaultValue(DSL.field(DSL.raw("CURRENT_TIMESTAMP"), SQLDataType.TIMESTAMPWITHTIMEZONE)), this, "")
 
+    /**
+     * The column <code>public.member_metas.tenant_id</code>.
+     */
+    val TENANT_ID: TableField<MemberMetasRecord, UUID?> = createField(DSL.name("tenant_id"), SQLDataType.UUID.nullable(false), this, "")
+
     private constructor(alias: Name, aliased: Table<MemberMetasRecord>?): this(alias, null, null, aliased, null)
     private constructor(alias: Name, aliased: Table<MemberMetasRecord>?, parameters: Array<Field<*>?>?): this(alias, null, null, aliased, parameters)
 
@@ -113,11 +120,12 @@ open class MemberMetas(
 
     constructor(child: Table<out Record>, key: ForeignKey<out Record, MemberMetasRecord>): this(Internal.createPathAlias(child, key), child, key, MEMBER_METAS, null)
     override fun getSchema(): Schema? = if (aliased()) null else Public.PUBLIC
-    override fun getIndexes(): List<Index> = listOf(IDX_MEMBER_METAS_MEMBER_ID)
+    override fun getIndexes(): List<Index> = listOf(IDX_MEMBER_METAS_MEMBER_ID, IDX_MEMBER_METAS_TENANT_ID)
     override fun getPrimaryKey(): UniqueKey<MemberMetasRecord> = MEMBER_METAS_PKEY
-    override fun getReferences(): List<ForeignKey<MemberMetasRecord, *>> = listOf(MEMBER_METAS__MEMBER_METAS_MEMBER_ID_FKEY)
+    override fun getReferences(): List<ForeignKey<MemberMetasRecord, *>> = listOf(MEMBER_METAS__MEMBER_METAS_MEMBER_ID_FKEY, MEMBER_METAS__FK_MEMBER_METAS_TENANT)
 
     private lateinit var _members: Members
+    private lateinit var _tenants: Tenants
 
     /**
      * Get the implicit join path to the <code>public.members</code> table.
@@ -131,6 +139,19 @@ open class MemberMetas(
 
     val members: Members
         get(): Members = members()
+
+    /**
+     * Get the implicit join path to the <code>public.tenants</code> table.
+     */
+    fun tenants(): Tenants {
+        if (!this::_tenants.isInitialized)
+            _tenants = Tenants(this, MEMBER_METAS__FK_MEMBER_METAS_TENANT)
+
+        return _tenants;
+    }
+
+    val tenants: Tenants
+        get(): Tenants = tenants()
     override fun `as`(alias: String): MemberMetas = MemberMetas(DSL.name(alias), this)
     override fun `as`(alias: Name): MemberMetas = MemberMetas(alias, this)
     override fun `as`(alias: Table<*>): MemberMetas = MemberMetas(alias.getQualifiedName(), this)
@@ -151,18 +172,18 @@ open class MemberMetas(
     override fun rename(name: Table<*>): MemberMetas = MemberMetas(name.getQualifiedName(), null)
 
     // -------------------------------------------------------------------------
-    // Row5 type methods
+    // Row6 type methods
     // -------------------------------------------------------------------------
-    override fun fieldsRow(): Row5<UUID?, String?, Boolean?, OffsetDateTime?, OffsetDateTime?> = super.fieldsRow() as Row5<UUID?, String?, Boolean?, OffsetDateTime?, OffsetDateTime?>
+    override fun fieldsRow(): Row6<UUID?, String?, Boolean?, OffsetDateTime?, OffsetDateTime?, UUID?> = super.fieldsRow() as Row6<UUID?, String?, Boolean?, OffsetDateTime?, OffsetDateTime?, UUID?>
 
     /**
      * Convenience mapping calling {@link SelectField#convertFrom(Function)}.
      */
-    fun <U> mapping(from: (UUID?, String?, Boolean?, OffsetDateTime?, OffsetDateTime?) -> U): SelectField<U> = convertFrom(Records.mapping(from))
+    fun <U> mapping(from: (UUID?, String?, Boolean?, OffsetDateTime?, OffsetDateTime?, UUID?) -> U): SelectField<U> = convertFrom(Records.mapping(from))
 
     /**
      * Convenience mapping calling {@link SelectField#convertFrom(Class,
      * Function)}.
      */
-    fun <U> mapping(toType: Class<U>, from: (UUID?, String?, Boolean?, OffsetDateTime?, OffsetDateTime?) -> U): SelectField<U> = convertFrom(toType, Records.mapping(from))
+    fun <U> mapping(toType: Class<U>, from: (UUID?, String?, Boolean?, OffsetDateTime?, OffsetDateTime?, UUID?) -> U): SelectField<U> = convertFrom(toType, Records.mapping(from))
 }

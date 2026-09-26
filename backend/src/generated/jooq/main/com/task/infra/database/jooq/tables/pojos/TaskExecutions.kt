@@ -22,7 +22,8 @@ data class TaskExecutions(
     val startedAt: OffsetDateTime? = null,
     val completedAt: OffsetDateTime? = null,
     val createdAt: OffsetDateTime? = null,
-    val updatedAt: OffsetDateTime? = null
+    val updatedAt: OffsetDateTime? = null,
+    val tenantId: UUID
 ): Serializable {
 
     override fun equals(other: Any?): Boolean {
@@ -73,6 +74,8 @@ data class TaskExecutions(
         }
         else if (this.updatedAt != o.updatedAt)
             return false
+        if (this.tenantId != o.tenantId)
+            return false
         return true
     }
 
@@ -87,6 +90,7 @@ data class TaskExecutions(
         result = prime * result + (if (this.completedAt == null) 0 else this.completedAt.hashCode())
         result = prime * result + (if (this.createdAt == null) 0 else this.createdAt.hashCode())
         result = prime * result + (if (this.updatedAt == null) 0 else this.updatedAt.hashCode())
+        result = prime * result + this.tenantId.hashCode()
         return result
     }
 
@@ -101,6 +105,7 @@ data class TaskExecutions(
         sb.append(", ").append(completedAt)
         sb.append(", ").append(createdAt)
         sb.append(", ").append(updatedAt)
+        sb.append(", ").append(tenantId)
 
         sb.append(")")
         return sb.toString()

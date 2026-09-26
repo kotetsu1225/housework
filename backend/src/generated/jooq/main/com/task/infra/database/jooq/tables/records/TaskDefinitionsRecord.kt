@@ -12,8 +12,8 @@ import java.util.UUID
 
 import org.jooq.Field
 import org.jooq.Record1
-import org.jooq.Record14
-import org.jooq.Row14
+import org.jooq.Record15
+import org.jooq.Row15
 import org.jooq.impl.UpdatableRecordImpl
 
 
@@ -21,7 +21,7 @@ import org.jooq.impl.UpdatableRecordImpl
  * タスク定義（カタログ）
  */
 @Suppress("UNCHECKED_CAST")
-open class TaskDefinitionsRecord private constructor() : UpdatableRecordImpl<TaskDefinitionsRecord>(TaskDefinitions.TASK_DEFINITIONS), Record14<UUID?, String?, String?, String?, UUID?, String?, LocalDate?, Int?, Boolean?, OffsetDateTime?, OffsetDateTime?, OffsetDateTime?, OffsetDateTime?, Int?> {
+open class TaskDefinitionsRecord private constructor() : UpdatableRecordImpl<TaskDefinitionsRecord>(TaskDefinitions.TASK_DEFINITIONS), Record15<UUID?, String?, String?, String?, UUID?, String?, LocalDate?, Int?, Boolean?, OffsetDateTime?, OffsetDateTime?, OffsetDateTime?, OffsetDateTime?, Int?, UUID?> {
 
     open var id: UUID?
         set(value): Unit = set(0, value)
@@ -81,6 +81,10 @@ open class TaskDefinitionsRecord private constructor() : UpdatableRecordImpl<Tas
         set(value): Unit = set(13, value)
         get(): Int? = get(13) as Int?
 
+    open var tenantId: UUID
+        set(value): Unit = set(14, value)
+        get(): UUID = get(14) as UUID
+
     // -------------------------------------------------------------------------
     // Primary key information
     // -------------------------------------------------------------------------
@@ -88,11 +92,11 @@ open class TaskDefinitionsRecord private constructor() : UpdatableRecordImpl<Tas
     override fun key(): Record1<UUID?> = super.key() as Record1<UUID?>
 
     // -------------------------------------------------------------------------
-    // Record14 type implementation
+    // Record15 type implementation
     // -------------------------------------------------------------------------
 
-    override fun fieldsRow(): Row14<UUID?, String?, String?, String?, UUID?, String?, LocalDate?, Int?, Boolean?, OffsetDateTime?, OffsetDateTime?, OffsetDateTime?, OffsetDateTime?, Int?> = super.fieldsRow() as Row14<UUID?, String?, String?, String?, UUID?, String?, LocalDate?, Int?, Boolean?, OffsetDateTime?, OffsetDateTime?, OffsetDateTime?, OffsetDateTime?, Int?>
-    override fun valuesRow(): Row14<UUID?, String?, String?, String?, UUID?, String?, LocalDate?, Int?, Boolean?, OffsetDateTime?, OffsetDateTime?, OffsetDateTime?, OffsetDateTime?, Int?> = super.valuesRow() as Row14<UUID?, String?, String?, String?, UUID?, String?, LocalDate?, Int?, Boolean?, OffsetDateTime?, OffsetDateTime?, OffsetDateTime?, OffsetDateTime?, Int?>
+    override fun fieldsRow(): Row15<UUID?, String?, String?, String?, UUID?, String?, LocalDate?, Int?, Boolean?, OffsetDateTime?, OffsetDateTime?, OffsetDateTime?, OffsetDateTime?, Int?, UUID?> = super.fieldsRow() as Row15<UUID?, String?, String?, String?, UUID?, String?, LocalDate?, Int?, Boolean?, OffsetDateTime?, OffsetDateTime?, OffsetDateTime?, OffsetDateTime?, Int?, UUID?>
+    override fun valuesRow(): Row15<UUID?, String?, String?, String?, UUID?, String?, LocalDate?, Int?, Boolean?, OffsetDateTime?, OffsetDateTime?, OffsetDateTime?, OffsetDateTime?, Int?, UUID?> = super.valuesRow() as Row15<UUID?, String?, String?, String?, UUID?, String?, LocalDate?, Int?, Boolean?, OffsetDateTime?, OffsetDateTime?, OffsetDateTime?, OffsetDateTime?, Int?, UUID?>
     override fun field1(): Field<UUID?> = TaskDefinitions.TASK_DEFINITIONS.ID
     override fun field2(): Field<String?> = TaskDefinitions.TASK_DEFINITIONS.NAME
     override fun field3(): Field<String?> = TaskDefinitions.TASK_DEFINITIONS.DESCRIPTION
@@ -107,6 +111,7 @@ open class TaskDefinitionsRecord private constructor() : UpdatableRecordImpl<Tas
     override fun field12(): Field<OffsetDateTime?> = TaskDefinitions.TASK_DEFINITIONS.SCHEDULED_START_TIME
     override fun field13(): Field<OffsetDateTime?> = TaskDefinitions.TASK_DEFINITIONS.SCHEDULED_END_TIME
     override fun field14(): Field<Int?> = TaskDefinitions.TASK_DEFINITIONS.POINT
+    override fun field15(): Field<UUID?> = TaskDefinitions.TASK_DEFINITIONS.TENANT_ID
     override fun component1(): UUID? = id
     override fun component2(): String = name
     override fun component3(): String? = description
@@ -121,6 +126,7 @@ open class TaskDefinitionsRecord private constructor() : UpdatableRecordImpl<Tas
     override fun component12(): OffsetDateTime = scheduledStartTime
     override fun component13(): OffsetDateTime = scheduledEndTime
     override fun component14(): Int? = point
+    override fun component15(): UUID = tenantId
     override fun value1(): UUID? = id
     override fun value2(): String = name
     override fun value3(): String? = description
@@ -135,6 +141,7 @@ open class TaskDefinitionsRecord private constructor() : UpdatableRecordImpl<Tas
     override fun value12(): OffsetDateTime = scheduledStartTime
     override fun value13(): OffsetDateTime = scheduledEndTime
     override fun value14(): Int? = point
+    override fun value15(): UUID = tenantId
 
     override fun value1(value: UUID?): TaskDefinitionsRecord {
         set(0, value)
@@ -206,7 +213,12 @@ open class TaskDefinitionsRecord private constructor() : UpdatableRecordImpl<Tas
         return this
     }
 
-    override fun values(value1: UUID?, value2: String?, value3: String?, value4: String?, value5: UUID?, value6: String?, value7: LocalDate?, value8: Int?, value9: Boolean?, value10: OffsetDateTime?, value11: OffsetDateTime?, value12: OffsetDateTime?, value13: OffsetDateTime?, value14: Int?): TaskDefinitionsRecord {
+    override fun value15(value: UUID?): TaskDefinitionsRecord {
+        set(14, value)
+        return this
+    }
+
+    override fun values(value1: UUID?, value2: String?, value3: String?, value4: String?, value5: UUID?, value6: String?, value7: LocalDate?, value8: Int?, value9: Boolean?, value10: OffsetDateTime?, value11: OffsetDateTime?, value12: OffsetDateTime?, value13: OffsetDateTime?, value14: Int?, value15: UUID?): TaskDefinitionsRecord {
         this.value1(value1)
         this.value2(value2)
         this.value3(value3)
@@ -221,13 +233,14 @@ open class TaskDefinitionsRecord private constructor() : UpdatableRecordImpl<Tas
         this.value12(value12)
         this.value13(value13)
         this.value14(value14)
+        this.value15(value15)
         return this
     }
 
     /**
      * Create a detached, initialised TaskDefinitionsRecord
      */
-    constructor(id: UUID? = null, name: String, description: String? = null, scope: String, ownerMemberId: UUID? = null, scheduleType: String, oneTimeDeadline: LocalDate? = null, version: Int? = null, isDeleted: Boolean? = null, createdAt: OffsetDateTime? = null, updatedAt: OffsetDateTime? = null, scheduledStartTime: OffsetDateTime, scheduledEndTime: OffsetDateTime, point: Int? = null): this() {
+    constructor(id: UUID? = null, name: String, description: String? = null, scope: String, ownerMemberId: UUID? = null, scheduleType: String, oneTimeDeadline: LocalDate? = null, version: Int? = null, isDeleted: Boolean? = null, createdAt: OffsetDateTime? = null, updatedAt: OffsetDateTime? = null, scheduledStartTime: OffsetDateTime, scheduledEndTime: OffsetDateTime, point: Int? = null, tenantId: UUID): this() {
         this.id = id
         this.name = name
         this.description = description
@@ -242,6 +255,7 @@ open class TaskDefinitionsRecord private constructor() : UpdatableRecordImpl<Tas
         this.scheduledStartTime = scheduledStartTime
         this.scheduledEndTime = scheduledEndTime
         this.point = point
+        this.tenantId = tenantId
         resetChangedOnNotNull()
     }
 
@@ -264,6 +278,7 @@ open class TaskDefinitionsRecord private constructor() : UpdatableRecordImpl<Tas
             this.scheduledStartTime = value.scheduledStartTime
             this.scheduledEndTime = value.scheduledEndTime
             this.point = value.point
+            this.tenantId = value.tenantId
             resetChangedOnNotNull()
         }
     }

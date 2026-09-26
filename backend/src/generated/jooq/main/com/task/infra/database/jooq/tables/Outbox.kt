@@ -7,7 +7,9 @@ package com.task.infra.database.jooq.tables
 import com.task.infra.database.jooq.Public
 import com.task.infra.database.jooq.indexes.IDX_OUTBOX_AGGREGATE
 import com.task.infra.database.jooq.indexes.IDX_OUTBOX_PENDING
+import com.task.infra.database.jooq.indexes.IDX_OUTBOX_TENANT_ID
 import com.task.infra.database.jooq.keys.OUTBOX_PKEY
+import com.task.infra.database.jooq.keys.OUTBOX__FK_OUTBOX_TENANT
 import com.task.infra.database.jooq.tables.records.OutboxRecord
 
 import java.time.OffsetDateTime
@@ -23,7 +25,7 @@ import org.jooq.JSONB
 import org.jooq.Name
 import org.jooq.Record
 import org.jooq.Records
-import org.jooq.Row11
+import org.jooq.Row12
 import org.jooq.Schema
 import org.jooq.SelectField
 import org.jooq.Table
@@ -127,6 +129,11 @@ open class Outbox(
      */
     val ERROR_MESSAGE: TableField<OutboxRecord, String?> = createField(DSL.name("error_message"), SQLDataType.CLOB, this, "エラーメッセージ（FAILED時）")
 
+    /**
+     * The column <code>public.outbox.tenant_id</code>.
+     */
+    val TENANT_ID: TableField<OutboxRecord, UUID?> = createField(DSL.name("tenant_id"), SQLDataType.UUID.nullable(false), this, "")
+
     private constructor(alias: Name, aliased: Table<OutboxRecord>?): this(alias, null, null, aliased, null)
     private constructor(alias: Name, aliased: Table<OutboxRecord>?, parameters: Array<Field<*>?>?): this(alias, null, null, aliased, parameters)
 
@@ -147,8 +154,24 @@ open class Outbox(
 
     constructor(child: Table<out Record>, key: ForeignKey<out Record, OutboxRecord>): this(Internal.createPathAlias(child, key), child, key, OUTBOX, null)
     override fun getSchema(): Schema? = if (aliased()) null else Public.PUBLIC
-    override fun getIndexes(): List<Index> = listOf(IDX_OUTBOX_AGGREGATE, IDX_OUTBOX_PENDING)
+    override fun getIndexes(): List<Index> = listOf(IDX_OUTBOX_AGGREGATE, IDX_OUTBOX_PENDING, IDX_OUTBOX_TENANT_ID)
     override fun getPrimaryKey(): UniqueKey<OutboxRecord> = OUTBOX_PKEY
+    override fun getReferences(): List<ForeignKey<OutboxRecord, *>> = listOf(OUTBOX__FK_OUTBOX_TENANT)
+
+    private lateinit var _tenants: Tenants
+
+    /**
+     * Get the implicit join path to the <code>public.tenants</code> table.
+     */
+    fun tenants(): Tenants {
+        if (!this::_tenants.isInitialized)
+            _tenants = Tenants(this, OUTBOX__FK_OUTBOX_TENANT)
+
+        return _tenants;
+    }
+
+    val tenants: Tenants
+        get(): Tenants = tenants()
     override fun `as`(alias: String): Outbox = Outbox(DSL.name(alias), this)
     override fun `as`(alias: Name): Outbox = Outbox(alias, this)
     override fun `as`(alias: Table<*>): Outbox = Outbox(alias.getQualifiedName(), this)
@@ -169,18 +192,18 @@ open class Outbox(
     override fun rename(name: Table<*>): Outbox = Outbox(name.getQualifiedName(), null)
 
     // -------------------------------------------------------------------------
-    // Row11 type methods
+    // Row12 type methods
     // -------------------------------------------------------------------------
-    override fun fieldsRow(): Row11<UUID?, String?, String?, UUID?, JSONB?, String?, Int?, Int?, OffsetDateTime?, OffsetDateTime?, String?> = super.fieldsRow() as Row11<UUID?, String?, String?, UUID?, JSONB?, String?, Int?, Int?, OffsetDateTime?, OffsetDateTime?, String?>
+    override fun fieldsRow(): Row12<UUID?, String?, String?, UUID?, JSONB?, String?, Int?, Int?, OffsetDateTime?, OffsetDateTime?, String?, UUID?> = super.fieldsRow() as Row12<UUID?, String?, String?, UUID?, JSONB?, String?, Int?, Int?, OffsetDateTime?, OffsetDateTime?, String?, UUID?>
 
     /**
      * Convenience mapping calling {@link SelectField#convertFrom(Function)}.
      */
-    fun <U> mapping(from: (UUID?, String?, String?, UUID?, JSONB?, String?, Int?, Int?, OffsetDateTime?, OffsetDateTime?, String?) -> U): SelectField<U> = convertFrom(Records.mapping(from))
+    fun <U> mapping(from: (UUID?, String?, String?, UUID?, JSONB?, String?, Int?, Int?, OffsetDateTime?, OffsetDateTime?, String?, UUID?) -> U): SelectField<U> = convertFrom(Records.mapping(from))
 
     /**
      * Convenience mapping calling {@link SelectField#convertFrom(Class,
      * Function)}.
      */
-    fun <U> mapping(toType: Class<U>, from: (UUID?, String?, String?, UUID?, JSONB?, String?, Int?, Int?, OffsetDateTime?, OffsetDateTime?, String?) -> U): SelectField<U> = convertFrom(toType, Records.mapping(from))
+    fun <U> mapping(toType: Class<U>, from: (UUID?, String?, String?, UUID?, JSONB?, String?, Int?, Int?, OffsetDateTime?, OffsetDateTime?, String?, UUID?) -> U): SelectField<U> = convertFrom(toType, Records.mapping(from))
 }

@@ -18,7 +18,8 @@ data class MemberMetas(
     val key: String,
     val value: Boolean,
     val createdAt: OffsetDateTime? = null,
-    val updatedAt: OffsetDateTime? = null
+    val updatedAt: OffsetDateTime? = null,
+    val tenantId: UUID
 ): Serializable {
 
     override fun equals(other: Any?): Boolean {
@@ -47,6 +48,8 @@ data class MemberMetas(
         }
         else if (this.updatedAt != o.updatedAt)
             return false
+        if (this.tenantId != o.tenantId)
+            return false
         return true
     }
 
@@ -58,6 +61,7 @@ data class MemberMetas(
         result = prime * result + this.value.hashCode()
         result = prime * result + (if (this.createdAt == null) 0 else this.createdAt.hashCode())
         result = prime * result + (if (this.updatedAt == null) 0 else this.updatedAt.hashCode())
+        result = prime * result + this.tenantId.hashCode()
         return result
     }
 
@@ -69,6 +73,7 @@ data class MemberMetas(
         sb.append(", ").append(value)
         sb.append(", ").append(createdAt)
         sb.append(", ").append(updatedAt)
+        sb.append(", ").append(tenantId)
 
         sb.append(")")
         return sb.toString()

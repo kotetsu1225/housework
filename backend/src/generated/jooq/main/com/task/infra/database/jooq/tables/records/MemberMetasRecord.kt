@@ -11,8 +11,8 @@ import java.util.UUID
 
 import org.jooq.Field
 import org.jooq.Record2
-import org.jooq.Record5
-import org.jooq.Row5
+import org.jooq.Record6
+import org.jooq.Row6
 import org.jooq.impl.UpdatableRecordImpl
 
 
@@ -20,7 +20,7 @@ import org.jooq.impl.UpdatableRecordImpl
  * メンバーのメタ情報（回答済みフラグなど）
  */
 @Suppress("UNCHECKED_CAST")
-open class MemberMetasRecord private constructor() : UpdatableRecordImpl<MemberMetasRecord>(MemberMetas.MEMBER_METAS), Record5<UUID?, String?, Boolean?, OffsetDateTime?, OffsetDateTime?> {
+open class MemberMetasRecord private constructor() : UpdatableRecordImpl<MemberMetasRecord>(MemberMetas.MEMBER_METAS), Record6<UUID?, String?, Boolean?, OffsetDateTime?, OffsetDateTime?, UUID?> {
 
     open var memberId: UUID
         set(value): Unit = set(0, value)
@@ -42,6 +42,10 @@ open class MemberMetasRecord private constructor() : UpdatableRecordImpl<MemberM
         set(value): Unit = set(4, value)
         get(): OffsetDateTime? = get(4) as OffsetDateTime?
 
+    open var tenantId: UUID
+        set(value): Unit = set(5, value)
+        get(): UUID = get(5) as UUID
+
     // -------------------------------------------------------------------------
     // Primary key information
     // -------------------------------------------------------------------------
@@ -49,26 +53,29 @@ open class MemberMetasRecord private constructor() : UpdatableRecordImpl<MemberM
     override fun key(): Record2<UUID?, String?> = super.key() as Record2<UUID?, String?>
 
     // -------------------------------------------------------------------------
-    // Record5 type implementation
+    // Record6 type implementation
     // -------------------------------------------------------------------------
 
-    override fun fieldsRow(): Row5<UUID?, String?, Boolean?, OffsetDateTime?, OffsetDateTime?> = super.fieldsRow() as Row5<UUID?, String?, Boolean?, OffsetDateTime?, OffsetDateTime?>
-    override fun valuesRow(): Row5<UUID?, String?, Boolean?, OffsetDateTime?, OffsetDateTime?> = super.valuesRow() as Row5<UUID?, String?, Boolean?, OffsetDateTime?, OffsetDateTime?>
+    override fun fieldsRow(): Row6<UUID?, String?, Boolean?, OffsetDateTime?, OffsetDateTime?, UUID?> = super.fieldsRow() as Row6<UUID?, String?, Boolean?, OffsetDateTime?, OffsetDateTime?, UUID?>
+    override fun valuesRow(): Row6<UUID?, String?, Boolean?, OffsetDateTime?, OffsetDateTime?, UUID?> = super.valuesRow() as Row6<UUID?, String?, Boolean?, OffsetDateTime?, OffsetDateTime?, UUID?>
     override fun field1(): Field<UUID?> = MemberMetas.MEMBER_METAS.MEMBER_ID
     override fun field2(): Field<String?> = MemberMetas.MEMBER_METAS.KEY
     override fun field3(): Field<Boolean?> = MemberMetas.MEMBER_METAS.VALUE
     override fun field4(): Field<OffsetDateTime?> = MemberMetas.MEMBER_METAS.CREATED_AT
     override fun field5(): Field<OffsetDateTime?> = MemberMetas.MEMBER_METAS.UPDATED_AT
+    override fun field6(): Field<UUID?> = MemberMetas.MEMBER_METAS.TENANT_ID
     override fun component1(): UUID = memberId
     override fun component2(): String = key
     override fun component3(): Boolean = value
     override fun component4(): OffsetDateTime? = createdAt
     override fun component5(): OffsetDateTime? = updatedAt
+    override fun component6(): UUID = tenantId
     override fun value1(): UUID = memberId
     override fun value2(): String = key
     override fun value3(): Boolean = value
     override fun value4(): OffsetDateTime? = createdAt
     override fun value5(): OffsetDateTime? = updatedAt
+    override fun value6(): UUID = tenantId
 
     override fun value1(value: UUID?): MemberMetasRecord {
         set(0, value)
@@ -95,24 +102,31 @@ open class MemberMetasRecord private constructor() : UpdatableRecordImpl<MemberM
         return this
     }
 
-    override fun values(value1: UUID?, value2: String?, value3: Boolean?, value4: OffsetDateTime?, value5: OffsetDateTime?): MemberMetasRecord {
+    override fun value6(value: UUID?): MemberMetasRecord {
+        set(5, value)
+        return this
+    }
+
+    override fun values(value1: UUID?, value2: String?, value3: Boolean?, value4: OffsetDateTime?, value5: OffsetDateTime?, value6: UUID?): MemberMetasRecord {
         this.value1(value1)
         this.value2(value2)
         this.value3(value3)
         this.value4(value4)
         this.value5(value5)
+        this.value6(value6)
         return this
     }
 
     /**
      * Create a detached, initialised MemberMetasRecord
      */
-    constructor(memberId: UUID, key: String, value: Boolean, createdAt: OffsetDateTime? = null, updatedAt: OffsetDateTime? = null): this() {
+    constructor(memberId: UUID, key: String, value: Boolean, createdAt: OffsetDateTime? = null, updatedAt: OffsetDateTime? = null, tenantId: UUID): this() {
         this.memberId = memberId
         this.key = key
         this.value = value
         this.createdAt = createdAt
         this.updatedAt = updatedAt
+        this.tenantId = tenantId
         resetChangedOnNotNull()
     }
 
@@ -126,6 +140,7 @@ open class MemberMetasRecord private constructor() : UpdatableRecordImpl<MemberM
             this.value = value.value
             this.createdAt = value.createdAt
             this.updatedAt = value.updatedAt
+            this.tenantId = value.tenantId
             resetChangedOnNotNull()
         }
     }

@@ -26,7 +26,8 @@ data class Outbox(
     val maxRetries: Int? = null,
     val createdAt: OffsetDateTime? = null,
     val processedAt: OffsetDateTime? = null,
-    val errorMessage: String? = null
+    val errorMessage: String? = null,
+    val tenantId: UUID
 ): Serializable {
 
     override fun equals(other: Any?): Boolean {
@@ -87,6 +88,8 @@ data class Outbox(
         }
         else if (this.errorMessage != o.errorMessage)
             return false
+        if (this.tenantId != o.tenantId)
+            return false
         return true
     }
 
@@ -104,6 +107,7 @@ data class Outbox(
         result = prime * result + (if (this.createdAt == null) 0 else this.createdAt.hashCode())
         result = prime * result + (if (this.processedAt == null) 0 else this.processedAt.hashCode())
         result = prime * result + (if (this.errorMessage == null) 0 else this.errorMessage.hashCode())
+        result = prime * result + this.tenantId.hashCode()
         return result
     }
 
@@ -121,6 +125,7 @@ data class Outbox(
         sb.append(", ").append(createdAt)
         sb.append(", ").append(processedAt)
         sb.append(", ").append(errorMessage)
+        sb.append(", ").append(tenantId)
 
         sb.append(")")
         return sb.toString()

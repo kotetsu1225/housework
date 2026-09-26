@@ -9,12 +9,12 @@ import com.task.infra.database.jooq.tables.MemberMetas
 import com.task.infra.database.jooq.tables.Members
 import com.task.infra.database.jooq.tables.Outbox
 import com.task.infra.database.jooq.tables.PushSubscriptions
-import com.task.infra.database.jooq.tables.ScheduledNotifications
 import com.task.infra.database.jooq.tables.TaskDefinitions
 import com.task.infra.database.jooq.tables.TaskExecutionParticipants
 import com.task.infra.database.jooq.tables.TaskExecutions
 import com.task.infra.database.jooq.tables.TaskRecurrences
 import com.task.infra.database.jooq.tables.TaskSnapshots
+import com.task.infra.database.jooq.tables.Tenants
 
 import kotlin.collections.List
 
@@ -62,11 +62,6 @@ open class Public : SchemaImpl("public", DefaultCatalog.DEFAULT_CATALOG) {
     val PUSH_SUBSCRIPTIONS: PushSubscriptions get() = PushSubscriptions.PUSH_SUBSCRIPTIONS
 
     /**
-     * 予定された通知
-     */
-    val SCHEDULED_NOTIFICATIONS: ScheduledNotifications get() = ScheduledNotifications.SCHEDULED_NOTIFICATIONS
-
-    /**
      * タスク定義（カタログ）
      */
     val TASK_DEFINITIONS: TaskDefinitions get() = TaskDefinitions.TASK_DEFINITIONS
@@ -91,6 +86,11 @@ open class Public : SchemaImpl("public", DefaultCatalog.DEFAULT_CATALOG) {
      */
     val TASK_SNAPSHOTS: TaskSnapshots get() = TaskSnapshots.TASK_SNAPSHOTS
 
+    /**
+     * テナント（家族）情報
+     */
+    val TENANTS: Tenants get() = Tenants.TENANTS
+
     override fun getCatalog(): Catalog = DefaultCatalog.DEFAULT_CATALOG
 
     override fun getTables(): List<Table<*>> = listOf(
@@ -99,11 +99,11 @@ open class Public : SchemaImpl("public", DefaultCatalog.DEFAULT_CATALOG) {
         Members.MEMBERS,
         Outbox.OUTBOX,
         PushSubscriptions.PUSH_SUBSCRIPTIONS,
-        ScheduledNotifications.SCHEDULED_NOTIFICATIONS,
         TaskDefinitions.TASK_DEFINITIONS,
         TaskExecutionParticipants.TASK_EXECUTION_PARTICIPANTS,
         TaskExecutions.TASK_EXECUTIONS,
         TaskRecurrences.TASK_RECURRENCES,
-        TaskSnapshots.TASK_SNAPSHOTS
+        TaskSnapshots.TASK_SNAPSHOTS,
+        Tenants.TENANTS
     )
 }

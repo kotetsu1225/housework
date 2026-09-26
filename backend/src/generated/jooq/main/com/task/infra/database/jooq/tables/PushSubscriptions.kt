@@ -7,7 +7,9 @@ package com.task.infra.database.jooq.tables
 import com.task.infra.database.jooq.Public
 import com.task.infra.database.jooq.indexes.IDX_PUSH_SUBSCRIPTIONS_ACTIVE
 import com.task.infra.database.jooq.indexes.IDX_PUSH_SUBSCRIPTIONS_MEMBER
+import com.task.infra.database.jooq.indexes.IDX_PUSH_SUBSCRIPTIONS_TENANT_ID
 import com.task.infra.database.jooq.keys.PUSH_SUBSCRIPTIONS_PKEY
+import com.task.infra.database.jooq.keys.PUSH_SUBSCRIPTIONS__FK_PUSH_SUBSCRIPTIONS_TENANT
 import com.task.infra.database.jooq.keys.PUSH_SUBSCRIPTIONS__PUSH_SUBSCRIPTIONS_MEMBER_ID_FKEY
 import com.task.infra.database.jooq.keys.UQ_PUSH_SUBSCRIPTIONS_ENDPOINT
 import com.task.infra.database.jooq.tables.records.PushSubscriptionsRecord
@@ -24,7 +26,7 @@ import org.jooq.Index
 import org.jooq.Name
 import org.jooq.Record
 import org.jooq.Records
-import org.jooq.Row10
+import org.jooq.Row11
 import org.jooq.Schema
 import org.jooq.SelectField
 import org.jooq.Table
@@ -124,6 +126,11 @@ open class PushSubscriptions(
      */
     val UPDATED_AT: TableField<PushSubscriptionsRecord, OffsetDateTime?> = createField(DSL.name("updated_at"), SQLDataType.TIMESTAMPWITHTIMEZONE(6).nullable(false).defaultValue(DSL.field(DSL.raw("CURRENT_TIMESTAMP"), SQLDataType.TIMESTAMPWITHTIMEZONE)), this, "")
 
+    /**
+     * The column <code>public.push_subscriptions.tenant_id</code>.
+     */
+    val TENANT_ID: TableField<PushSubscriptionsRecord, UUID?> = createField(DSL.name("tenant_id"), SQLDataType.UUID.nullable(false), this, "")
+
     private constructor(alias: Name, aliased: Table<PushSubscriptionsRecord>?): this(alias, null, null, aliased, null)
     private constructor(alias: Name, aliased: Table<PushSubscriptionsRecord>?, parameters: Array<Field<*>?>?): this(alias, null, null, aliased, parameters)
 
@@ -144,12 +151,13 @@ open class PushSubscriptions(
 
     constructor(child: Table<out Record>, key: ForeignKey<out Record, PushSubscriptionsRecord>): this(Internal.createPathAlias(child, key), child, key, PUSH_SUBSCRIPTIONS, null)
     override fun getSchema(): Schema? = if (aliased()) null else Public.PUBLIC
-    override fun getIndexes(): List<Index> = listOf(IDX_PUSH_SUBSCRIPTIONS_ACTIVE, IDX_PUSH_SUBSCRIPTIONS_MEMBER)
+    override fun getIndexes(): List<Index> = listOf(IDX_PUSH_SUBSCRIPTIONS_ACTIVE, IDX_PUSH_SUBSCRIPTIONS_MEMBER, IDX_PUSH_SUBSCRIPTIONS_TENANT_ID)
     override fun getPrimaryKey(): UniqueKey<PushSubscriptionsRecord> = PUSH_SUBSCRIPTIONS_PKEY
     override fun getUniqueKeys(): List<UniqueKey<PushSubscriptionsRecord>> = listOf(UQ_PUSH_SUBSCRIPTIONS_ENDPOINT)
-    override fun getReferences(): List<ForeignKey<PushSubscriptionsRecord, *>> = listOf(PUSH_SUBSCRIPTIONS__PUSH_SUBSCRIPTIONS_MEMBER_ID_FKEY)
+    override fun getReferences(): List<ForeignKey<PushSubscriptionsRecord, *>> = listOf(PUSH_SUBSCRIPTIONS__PUSH_SUBSCRIPTIONS_MEMBER_ID_FKEY, PUSH_SUBSCRIPTIONS__FK_PUSH_SUBSCRIPTIONS_TENANT)
 
     private lateinit var _members: Members
+    private lateinit var _tenants: Tenants
 
     /**
      * Get the implicit join path to the <code>public.members</code> table.
@@ -163,6 +171,19 @@ open class PushSubscriptions(
 
     val members: Members
         get(): Members = members()
+
+    /**
+     * Get the implicit join path to the <code>public.tenants</code> table.
+     */
+    fun tenants(): Tenants {
+        if (!this::_tenants.isInitialized)
+            _tenants = Tenants(this, PUSH_SUBSCRIPTIONS__FK_PUSH_SUBSCRIPTIONS_TENANT)
+
+        return _tenants;
+    }
+
+    val tenants: Tenants
+        get(): Tenants = tenants()
     override fun `as`(alias: String): PushSubscriptions = PushSubscriptions(DSL.name(alias), this)
     override fun `as`(alias: Name): PushSubscriptions = PushSubscriptions(alias, this)
     override fun `as`(alias: Table<*>): PushSubscriptions = PushSubscriptions(alias.getQualifiedName(), this)
@@ -183,18 +204,18 @@ open class PushSubscriptions(
     override fun rename(name: Table<*>): PushSubscriptions = PushSubscriptions(name.getQualifiedName(), null)
 
     // -------------------------------------------------------------------------
-    // Row10 type methods
+    // Row11 type methods
     // -------------------------------------------------------------------------
-    override fun fieldsRow(): Row10<UUID?, UUID?, String?, String?, String?, OffsetDateTime?, String?, Boolean?, OffsetDateTime?, OffsetDateTime?> = super.fieldsRow() as Row10<UUID?, UUID?, String?, String?, String?, OffsetDateTime?, String?, Boolean?, OffsetDateTime?, OffsetDateTime?>
+    override fun fieldsRow(): Row11<UUID?, UUID?, String?, String?, String?, OffsetDateTime?, String?, Boolean?, OffsetDateTime?, OffsetDateTime?, UUID?> = super.fieldsRow() as Row11<UUID?, UUID?, String?, String?, String?, OffsetDateTime?, String?, Boolean?, OffsetDateTime?, OffsetDateTime?, UUID?>
 
     /**
      * Convenience mapping calling {@link SelectField#convertFrom(Function)}.
      */
-    fun <U> mapping(from: (UUID?, UUID?, String?, String?, String?, OffsetDateTime?, String?, Boolean?, OffsetDateTime?, OffsetDateTime?) -> U): SelectField<U> = convertFrom(Records.mapping(from))
+    fun <U> mapping(from: (UUID?, UUID?, String?, String?, String?, OffsetDateTime?, String?, Boolean?, OffsetDateTime?, OffsetDateTime?, UUID?) -> U): SelectField<U> = convertFrom(Records.mapping(from))
 
     /**
      * Convenience mapping calling {@link SelectField#convertFrom(Class,
      * Function)}.
      */
-    fun <U> mapping(toType: Class<U>, from: (UUID?, UUID?, String?, String?, String?, OffsetDateTime?, String?, Boolean?, OffsetDateTime?, OffsetDateTime?) -> U): SelectField<U> = convertFrom(toType, Records.mapping(from))
+    fun <U> mapping(toType: Class<U>, from: (UUID?, UUID?, String?, String?, String?, OffsetDateTime?, String?, Boolean?, OffsetDateTime?, OffsetDateTime?, UUID?) -> U): SelectField<U> = convertFrom(toType, Records.mapping(from))
 }

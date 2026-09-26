@@ -11,8 +11,8 @@ import java.util.UUID
 
 import org.jooq.Field
 import org.jooq.Record1
-import org.jooq.Record3
-import org.jooq.Row3
+import org.jooq.Record4
+import org.jooq.Row4
 import org.jooq.impl.UpdatableRecordImpl
 
 
@@ -20,7 +20,7 @@ import org.jooq.impl.UpdatableRecordImpl
  * 処理済みドメインイベント（冪等性担保用）
  */
 @Suppress("UNCHECKED_CAST")
-open class CompletedDomainEventsRecord private constructor() : UpdatableRecordImpl<CompletedDomainEventsRecord>(CompletedDomainEvents.COMPLETED_DOMAIN_EVENTS), Record3<UUID?, String?, OffsetDateTime?> {
+open class CompletedDomainEventsRecord private constructor() : UpdatableRecordImpl<CompletedDomainEventsRecord>(CompletedDomainEvents.COMPLETED_DOMAIN_EVENTS), Record4<UUID?, String?, OffsetDateTime?, UUID?> {
 
     open var eventId: UUID
         set(value): Unit = set(0, value)
@@ -34,6 +34,10 @@ open class CompletedDomainEventsRecord private constructor() : UpdatableRecordIm
         set(value): Unit = set(2, value)
         get(): OffsetDateTime? = get(2) as OffsetDateTime?
 
+    open var tenantId: UUID
+        set(value): Unit = set(3, value)
+        get(): UUID = get(3) as UUID
+
     // -------------------------------------------------------------------------
     // Primary key information
     // -------------------------------------------------------------------------
@@ -41,20 +45,23 @@ open class CompletedDomainEventsRecord private constructor() : UpdatableRecordIm
     override fun key(): Record1<UUID?> = super.key() as Record1<UUID?>
 
     // -------------------------------------------------------------------------
-    // Record3 type implementation
+    // Record4 type implementation
     // -------------------------------------------------------------------------
 
-    override fun fieldsRow(): Row3<UUID?, String?, OffsetDateTime?> = super.fieldsRow() as Row3<UUID?, String?, OffsetDateTime?>
-    override fun valuesRow(): Row3<UUID?, String?, OffsetDateTime?> = super.valuesRow() as Row3<UUID?, String?, OffsetDateTime?>
+    override fun fieldsRow(): Row4<UUID?, String?, OffsetDateTime?, UUID?> = super.fieldsRow() as Row4<UUID?, String?, OffsetDateTime?, UUID?>
+    override fun valuesRow(): Row4<UUID?, String?, OffsetDateTime?, UUID?> = super.valuesRow() as Row4<UUID?, String?, OffsetDateTime?, UUID?>
     override fun field1(): Field<UUID?> = CompletedDomainEvents.COMPLETED_DOMAIN_EVENTS.EVENT_ID
     override fun field2(): Field<String?> = CompletedDomainEvents.COMPLETED_DOMAIN_EVENTS.EVENT_TYPE
     override fun field3(): Field<OffsetDateTime?> = CompletedDomainEvents.COMPLETED_DOMAIN_EVENTS.PROCESSED_AT
+    override fun field4(): Field<UUID?> = CompletedDomainEvents.COMPLETED_DOMAIN_EVENTS.TENANT_ID
     override fun component1(): UUID = eventId
     override fun component2(): String = eventType
     override fun component3(): OffsetDateTime? = processedAt
+    override fun component4(): UUID = tenantId
     override fun value1(): UUID = eventId
     override fun value2(): String = eventType
     override fun value3(): OffsetDateTime? = processedAt
+    override fun value4(): UUID = tenantId
 
     override fun value1(value: UUID?): CompletedDomainEventsRecord {
         set(0, value)
@@ -71,20 +78,27 @@ open class CompletedDomainEventsRecord private constructor() : UpdatableRecordIm
         return this
     }
 
-    override fun values(value1: UUID?, value2: String?, value3: OffsetDateTime?): CompletedDomainEventsRecord {
+    override fun value4(value: UUID?): CompletedDomainEventsRecord {
+        set(3, value)
+        return this
+    }
+
+    override fun values(value1: UUID?, value2: String?, value3: OffsetDateTime?, value4: UUID?): CompletedDomainEventsRecord {
         this.value1(value1)
         this.value2(value2)
         this.value3(value3)
+        this.value4(value4)
         return this
     }
 
     /**
      * Create a detached, initialised CompletedDomainEventsRecord
      */
-    constructor(eventId: UUID, eventType: String, processedAt: OffsetDateTime? = null): this() {
+    constructor(eventId: UUID, eventType: String, processedAt: OffsetDateTime? = null, tenantId: UUID): this() {
         this.eventId = eventId
         this.eventType = eventType
         this.processedAt = processedAt
+        this.tenantId = tenantId
         resetChangedOnNotNull()
     }
 
@@ -96,6 +110,7 @@ open class CompletedDomainEventsRecord private constructor() : UpdatableRecordIm
             this.eventId = value.eventId
             this.eventType = value.eventType
             this.processedAt = value.processedAt
+            this.tenantId = value.tenantId
             resetChangedOnNotNull()
         }
     }

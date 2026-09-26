@@ -11,8 +11,8 @@ import java.util.UUID
 
 import org.jooq.Field
 import org.jooq.Record1
-import org.jooq.Record10
-import org.jooq.Row10
+import org.jooq.Record11
+import org.jooq.Row11
 import org.jooq.impl.UpdatableRecordImpl
 
 
@@ -20,7 +20,7 @@ import org.jooq.impl.UpdatableRecordImpl
  * Web Push通知の購読情報
  */
 @Suppress("UNCHECKED_CAST")
-open class PushSubscriptionsRecord private constructor() : UpdatableRecordImpl<PushSubscriptionsRecord>(PushSubscriptions.PUSH_SUBSCRIPTIONS), Record10<UUID?, UUID?, String?, String?, String?, OffsetDateTime?, String?, Boolean?, OffsetDateTime?, OffsetDateTime?> {
+open class PushSubscriptionsRecord private constructor() : UpdatableRecordImpl<PushSubscriptionsRecord>(PushSubscriptions.PUSH_SUBSCRIPTIONS), Record11<UUID?, UUID?, String?, String?, String?, OffsetDateTime?, String?, Boolean?, OffsetDateTime?, OffsetDateTime?, UUID?> {
 
     open var id: UUID?
         set(value): Unit = set(0, value)
@@ -64,6 +64,10 @@ open class PushSubscriptionsRecord private constructor() : UpdatableRecordImpl<P
         set(value): Unit = set(9, value)
         get(): OffsetDateTime? = get(9) as OffsetDateTime?
 
+    open var tenantId: UUID
+        set(value): Unit = set(10, value)
+        get(): UUID = get(10) as UUID
+
     // -------------------------------------------------------------------------
     // Primary key information
     // -------------------------------------------------------------------------
@@ -71,11 +75,11 @@ open class PushSubscriptionsRecord private constructor() : UpdatableRecordImpl<P
     override fun key(): Record1<UUID?> = super.key() as Record1<UUID?>
 
     // -------------------------------------------------------------------------
-    // Record10 type implementation
+    // Record11 type implementation
     // -------------------------------------------------------------------------
 
-    override fun fieldsRow(): Row10<UUID?, UUID?, String?, String?, String?, OffsetDateTime?, String?, Boolean?, OffsetDateTime?, OffsetDateTime?> = super.fieldsRow() as Row10<UUID?, UUID?, String?, String?, String?, OffsetDateTime?, String?, Boolean?, OffsetDateTime?, OffsetDateTime?>
-    override fun valuesRow(): Row10<UUID?, UUID?, String?, String?, String?, OffsetDateTime?, String?, Boolean?, OffsetDateTime?, OffsetDateTime?> = super.valuesRow() as Row10<UUID?, UUID?, String?, String?, String?, OffsetDateTime?, String?, Boolean?, OffsetDateTime?, OffsetDateTime?>
+    override fun fieldsRow(): Row11<UUID?, UUID?, String?, String?, String?, OffsetDateTime?, String?, Boolean?, OffsetDateTime?, OffsetDateTime?, UUID?> = super.fieldsRow() as Row11<UUID?, UUID?, String?, String?, String?, OffsetDateTime?, String?, Boolean?, OffsetDateTime?, OffsetDateTime?, UUID?>
+    override fun valuesRow(): Row11<UUID?, UUID?, String?, String?, String?, OffsetDateTime?, String?, Boolean?, OffsetDateTime?, OffsetDateTime?, UUID?> = super.valuesRow() as Row11<UUID?, UUID?, String?, String?, String?, OffsetDateTime?, String?, Boolean?, OffsetDateTime?, OffsetDateTime?, UUID?>
     override fun field1(): Field<UUID?> = PushSubscriptions.PUSH_SUBSCRIPTIONS.ID
     override fun field2(): Field<UUID?> = PushSubscriptions.PUSH_SUBSCRIPTIONS.MEMBER_ID
     override fun field3(): Field<String?> = PushSubscriptions.PUSH_SUBSCRIPTIONS.ENDPOINT
@@ -86,6 +90,7 @@ open class PushSubscriptionsRecord private constructor() : UpdatableRecordImpl<P
     override fun field8(): Field<Boolean?> = PushSubscriptions.PUSH_SUBSCRIPTIONS.IS_ACTIVE
     override fun field9(): Field<OffsetDateTime?> = PushSubscriptions.PUSH_SUBSCRIPTIONS.CREATED_AT
     override fun field10(): Field<OffsetDateTime?> = PushSubscriptions.PUSH_SUBSCRIPTIONS.UPDATED_AT
+    override fun field11(): Field<UUID?> = PushSubscriptions.PUSH_SUBSCRIPTIONS.TENANT_ID
     override fun component1(): UUID? = id
     override fun component2(): UUID = memberId
     override fun component3(): String = endpoint
@@ -96,6 +101,7 @@ open class PushSubscriptionsRecord private constructor() : UpdatableRecordImpl<P
     override fun component8(): Boolean? = isActive
     override fun component9(): OffsetDateTime? = createdAt
     override fun component10(): OffsetDateTime? = updatedAt
+    override fun component11(): UUID = tenantId
     override fun value1(): UUID? = id
     override fun value2(): UUID = memberId
     override fun value3(): String = endpoint
@@ -106,6 +112,7 @@ open class PushSubscriptionsRecord private constructor() : UpdatableRecordImpl<P
     override fun value8(): Boolean? = isActive
     override fun value9(): OffsetDateTime? = createdAt
     override fun value10(): OffsetDateTime? = updatedAt
+    override fun value11(): UUID = tenantId
 
     override fun value1(value: UUID?): PushSubscriptionsRecord {
         set(0, value)
@@ -157,7 +164,12 @@ open class PushSubscriptionsRecord private constructor() : UpdatableRecordImpl<P
         return this
     }
 
-    override fun values(value1: UUID?, value2: UUID?, value3: String?, value4: String?, value5: String?, value6: OffsetDateTime?, value7: String?, value8: Boolean?, value9: OffsetDateTime?, value10: OffsetDateTime?): PushSubscriptionsRecord {
+    override fun value11(value: UUID?): PushSubscriptionsRecord {
+        set(10, value)
+        return this
+    }
+
+    override fun values(value1: UUID?, value2: UUID?, value3: String?, value4: String?, value5: String?, value6: OffsetDateTime?, value7: String?, value8: Boolean?, value9: OffsetDateTime?, value10: OffsetDateTime?, value11: UUID?): PushSubscriptionsRecord {
         this.value1(value1)
         this.value2(value2)
         this.value3(value3)
@@ -168,13 +180,14 @@ open class PushSubscriptionsRecord private constructor() : UpdatableRecordImpl<P
         this.value8(value8)
         this.value9(value9)
         this.value10(value10)
+        this.value11(value11)
         return this
     }
 
     /**
      * Create a detached, initialised PushSubscriptionsRecord
      */
-    constructor(id: UUID? = null, memberId: UUID, endpoint: String, p256dhKey: String, authKey: String, expirationTime: OffsetDateTime? = null, userAgent: String? = null, isActive: Boolean? = null, createdAt: OffsetDateTime? = null, updatedAt: OffsetDateTime? = null): this() {
+    constructor(id: UUID? = null, memberId: UUID, endpoint: String, p256dhKey: String, authKey: String, expirationTime: OffsetDateTime? = null, userAgent: String? = null, isActive: Boolean? = null, createdAt: OffsetDateTime? = null, updatedAt: OffsetDateTime? = null, tenantId: UUID): this() {
         this.id = id
         this.memberId = memberId
         this.endpoint = endpoint
@@ -185,6 +198,7 @@ open class PushSubscriptionsRecord private constructor() : UpdatableRecordImpl<P
         this.isActive = isActive
         this.createdAt = createdAt
         this.updatedAt = updatedAt
+        this.tenantId = tenantId
         resetChangedOnNotNull()
     }
 
@@ -203,6 +217,7 @@ open class PushSubscriptionsRecord private constructor() : UpdatableRecordImpl<P
             this.isActive = value.isActive
             this.createdAt = value.createdAt
             this.updatedAt = value.updatedAt
+            this.tenantId = value.tenantId
             resetChangedOnNotNull()
         }
     }

@@ -16,7 +16,8 @@ import java.util.UUID
 data class CompletedDomainEvents(
     val eventId: UUID,
     val eventType: String,
-    val processedAt: OffsetDateTime? = null
+    val processedAt: OffsetDateTime? = null,
+    val tenantId: UUID
 ): Serializable {
 
     override fun equals(other: Any?): Boolean {
@@ -37,6 +38,8 @@ data class CompletedDomainEvents(
         }
         else if (this.processedAt != o.processedAt)
             return false
+        if (this.tenantId != o.tenantId)
+            return false
         return true
     }
 
@@ -46,6 +49,7 @@ data class CompletedDomainEvents(
         result = prime * result + this.eventId.hashCode()
         result = prime * result + this.eventType.hashCode()
         result = prime * result + (if (this.processedAt == null) 0 else this.processedAt.hashCode())
+        result = prime * result + this.tenantId.hashCode()
         return result
     }
 
@@ -55,6 +59,7 @@ data class CompletedDomainEvents(
         sb.append(eventId)
         sb.append(", ").append(eventType)
         sb.append(", ").append(processedAt)
+        sb.append(", ").append(tenantId)
 
         sb.append(")")
         return sb.toString()

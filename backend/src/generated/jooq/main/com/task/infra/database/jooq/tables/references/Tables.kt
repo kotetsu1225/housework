@@ -9,12 +9,12 @@ import com.task.infra.database.jooq.tables.MemberMetas
 import com.task.infra.database.jooq.tables.Members
 import com.task.infra.database.jooq.tables.Outbox
 import com.task.infra.database.jooq.tables.PushSubscriptions
-import com.task.infra.database.jooq.tables.ScheduledNotifications
 import com.task.infra.database.jooq.tables.TaskDefinitions
 import com.task.infra.database.jooq.tables.TaskExecutionParticipants
 import com.task.infra.database.jooq.tables.TaskExecutions
 import com.task.infra.database.jooq.tables.TaskRecurrences
 import com.task.infra.database.jooq.tables.TaskSnapshots
+import com.task.infra.database.jooq.tables.Tenants
 
 
 
@@ -44,11 +44,6 @@ val OUTBOX: Outbox = Outbox.OUTBOX
 val PUSH_SUBSCRIPTIONS: PushSubscriptions = PushSubscriptions.PUSH_SUBSCRIPTIONS
 
 /**
- * 予定された通知
- */
-val SCHEDULED_NOTIFICATIONS: ScheduledNotifications = ScheduledNotifications.SCHEDULED_NOTIFICATIONS
-
-/**
  * タスク定義（カタログ）
  */
 val TASK_DEFINITIONS: TaskDefinitions = TaskDefinitions.TASK_DEFINITIONS
@@ -72,3 +67,8 @@ val TASK_RECURRENCES: TaskRecurrences = TaskRecurrences.TASK_RECURRENCES
  * タスクスナップショット（実行時点の凍結情報）
  */
 val TASK_SNAPSHOTS: TaskSnapshots = TaskSnapshots.TASK_SNAPSHOTS
+
+/**
+ * テナント（家族）情報
+ */
+val TENANTS: Tenants = Tenants.TENANTS

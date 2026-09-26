@@ -22,6 +22,9 @@ vi.mock('../../api', () => ({
   },
 }))
 
+// AuthContext.tsx の STORAGE_KEYS.CURRENT_USER と同じ値(export されていないため)
+const STORAGE_KEY_CURRENT_USER = 'housework_currentUser'
+
 // テスト用コンポーネント
 function TestComponent() {
   const { user, isAuthenticated, login, logout, register, error } = useAuth()
@@ -31,8 +34,13 @@ function TestComponent() {
       <div data-testid="is-authenticated">{isAuthenticated ? 'true' : 'false'}</div>
       <div data-testid="user-name">{user?.name || 'none'}</div>
       <div data-testid="user-role">{user?.role || 'none'}</div>
+      <div data-testid="user-tenant">{user?.tenantId || 'none'}</div>
       <div data-testid="error">{error || 'none'}</div>
-      <button onClick={() => register('新規ユーザー', 'new@example.com', 'FATHER', 'password')}>
+      <button
+        onClick={() =>
+          register('山田家', '新規ユーザー', 'new@example.com', 'FATHER', 'password')
+        }
+      >
         登録
       </button>
       <button onClick={() => login('existing@example.com', 'password')}>ログイン</button>
@@ -48,16 +56,23 @@ function TestWithoutProvider() {
 }
 
 // JWTペイロードのモック作成ヘルパー
-const createMockToken = (sub: string, role: string, expSeconds = 3600) => {
+const createMockToken = (
+  sub: string,
+  role: string,
+  expSeconds = 3600,
+  tenantId: string | null = 'tenant-1'
+) => {
   const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }))
-  const payload = btoa(
-    JSON.stringify({
-      sub,
-      name: 'Test User',
-      role,
-      exp: Math.floor(Date.now() / 1000) + expSeconds,
-    })
-  )
+  const payloadObj: Record<string, unknown> = {
+    sub,
+    name: 'Test User',
+    role,
+    exp: Math.floor(Date.now() / 1000) + expSeconds,
+  }
+  if (tenantId !== null) {
+    payloadObj.tenantId = tenantId
+  }
+  const payload = btoa(JSON.stringify(payloadObj))
   return `${header}.${payload}.signature`
 }
 
@@ -112,6 +127,57 @@ describe('AuthContext', () => {
       })
     })
 
+    it('保存済みユーザーに tenantId が無くても、トークンの tenantId で復元される', async () => {
+      const token = createMockToken('user-1', 'MOTHER', 3600, 'tenant-from-token')
+      vi.mocked(api.getStoredToken).mockReturnValue(token)
+      // マルチテナント化より前に保存されたユーザー情報(tenantId なし)
+      localStorage.setItem(
+        STORAGE_KEY_CURRENT_USER,
+        JSON.stringify({ id: 'user-1', name: '保存済みユーザー', email: 'saved@example.com', role: 'MOTHER', createdAt: '2026-01-01T00:00:00Z' })
+      )
+
+      render(
+        <AuthProvider>
+          <TestComponent />
+        </AuthProvider>
+      )
+
+      await waitFor(() => {
+        expect(screen.getByTestId('user-name')).toHaveTextContent('保存済みユーザー')
+        expect(screen.getByTestId('user-tenant')).toHaveTextContent('tenant-from-token')
+      })
+      expect(api.getMember).not.toHaveBeenCalled()
+    })
+
+    it('保存済みユーザーがトークンと別のメンバーなら使わず、APIから取得する', async () => {
+      const token = createMockToken('user-1', 'MOTHER')
+      vi.mocked(api.getStoredToken).mockReturnValue(token)
+      localStorage.setItem(
+        STORAGE_KEY_CURRENT_USER,
+        JSON.stringify({ id: 'other-user', name: '別の人', email: 'other@example.com', role: 'FATHER', tenantId: 'other-tenant', createdAt: '2026-01-01T00:00:00Z' })
+      )
+      vi.mocked(api.getMember).mockResolvedValue({
+        id: 'user-1',
+        name: 'APIのユーザー',
+        email: 'api@example.com',
+        familyRole: 'MOTHER',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      })
+
+      render(
+        <AuthProvider>
+          <TestComponent />
+        </AuthProvider>
+      )
+
+      await waitFor(() => {
+        expect(screen.getByTestId('user-name')).toHaveTextContent('APIのユーザー')
+        expect(screen.getByTestId('user-tenant')).toHaveTextContent('tenant-1')
+      })
+      expect(api.getMember).toHaveBeenCalledWith('user-1')
+    })
+
     it('トークンが無効ならセッションがクリアされる', async () => {
       // 期限切れトークン
       const token = createMockToken('user-1', 'MOTHER', -3600)
@@ -127,6 +193,26 @@ describe('AuthContext', () => {
         expect(screen.getByTestId('is-authenticated')).toHaveTextContent('false')
         expect(api.removeStoredToken).toHaveBeenCalled()
       })
+    })
+
+    it('tenantIdの無い旧トークンならセッションがクリアされログイン画面に戻る', async () => {
+      // tenantIdクレームの無い旧トークン
+      const token = createMockToken('user-1', 'MOTHER', 3600, null)
+      vi.mocked(api.getStoredToken).mockReturnValue(token)
+
+      render(
+        <AuthProvider>
+          <TestComponent />
+        </AuthProvider>
+      )
+
+      await waitFor(() => {
+        expect(screen.getByTestId('is-authenticated')).toHaveTextContent('false')
+        expect(screen.getByTestId('user-name')).toHaveTextContent('none')
+        expect(api.removeStoredToken).toHaveBeenCalled()
+      })
+      // tenantIdが無い時点で無効と判定するため、メンバー情報のAPI取得は行われない
+      expect(api.getMember).not.toHaveBeenCalled()
     })
   })
 
@@ -173,6 +259,52 @@ describe('AuthContext', () => {
       await waitFor(() => {
         expect(screen.getByTestId('is-authenticated')).toHaveTextContent('false')
         expect(screen.getByTestId('error')).toHaveTextContent('登録エラー')
+      })
+    })
+
+    it('家族名を含めて登録APIが呼ばれる', async () => {
+      vi.mocked(api.getStoredToken).mockReturnValue(null)
+      const token = createMockToken('new-user', 'FATHER')
+
+      vi.mocked(api.registerApi).mockResolvedValue({
+        token,
+        memberId: 'new-user',
+        memberName: '新規ユーザー',
+        role: 'FATHER',
+      })
+
+      render(
+        <AuthProvider>
+          <TestComponent />
+        </AuthProvider>
+      )
+
+      fireEvent.click(screen.getByText('登録'))
+
+      await waitFor(() => {
+        expect(api.registerApi).toHaveBeenCalledWith(
+          expect.objectContaining({ familyName: '山田家' })
+        )
+      })
+    })
+
+    it('メールアドレスが重複している場合(409)は専用のメッセージが表示される', async () => {
+      vi.mocked(api.getStoredToken).mockReturnValue(null)
+      vi.mocked(api.registerApi).mockRejectedValue(new api.ApiError('Conflict', 409))
+
+      render(
+        <AuthProvider>
+          <TestComponent />
+        </AuthProvider>
+      )
+
+      fireEvent.click(screen.getByText('登録'))
+
+      await waitFor(() => {
+        expect(screen.getByTestId('is-authenticated')).toHaveTextContent('false')
+        expect(screen.getByTestId('error')).toHaveTextContent(
+          'このメールアドレスは既に登録されています'
+        )
       })
     })
   })

@@ -38,6 +38,8 @@ function decodeJwtPayload(token: string): {
   sub: string // memberId
   name: string
   role: string
+  /** テナント（家族）ID。旧トークンには存在しない場合がある */
+  tenantId?: string
   exp: number
 } | null {
   try {
@@ -56,13 +58,15 @@ function decodeJwtPayload(token: string): {
 }
 
 /**
- * トークンが有効期限内かチェックする
+ * トークンが有効期限内かつ有効なtenantIdを持つかチェックする
  * @param token - JWTトークン
- * @returns 有効期限内ならtrue
+ * @returns 有効ならtrue
  */
 function isTokenValid(token: string): boolean {
   const payload = decodeJwtPayload(token)
   if (!payload) return false
+  // tenantId の無い（または空の）トークンは旧トークンとして無効扱いにする
+  if (!payload.tenantId) return false
   // exp はUNIXタイムスタンプ（秒単位）
   return payload.exp * 1000 > Date.now()
 }
@@ -92,13 +96,20 @@ interface AuthContextType {
   logout: () => void
   /**
    * 新規登録（バックエンドの/api/auth/registerを使用）
+   * @param familyName - 家族の名前
    * @param name - メンバー名
    * @param email - メールアドレス
    * @param role - 家族の役割
    * @param password - パスワード
    * @returns 登録成功したかどうか
    */
-  register: (name: string, email: string, role: FamilyRole, password: string) => Promise<boolean>
+  register: (
+    familyName: string,
+    name: string,
+    email: string,
+    role: FamilyRole,
+    password: string
+  ) => Promise<boolean>
   /** エラーをクリア */
   clearError: () => void
 }
@@ -150,12 +161,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const restoreUserFromToken = useCallback(async (token: string): Promise<User | null> => {
     const payload = decodeJwtPayload(token)
     if (!payload) return null
+    // tenantId の無いトークンは無効（呼び出し元のisTokenValidでも弾かれるが念のため）
+    if (!payload.tenantId) return null
 
     // ローカルストレージからユーザー情報を取得
     const storedUser = localStorage.getItem(STORAGE_KEYS.CURRENT_USER)
     if (storedUser) {
       try {
-        return JSON.parse(storedUser) as User
+        const parsed = JSON.parse(storedUser) as User
+        // 保存済みユーザーはトークンと同じメンバーのときだけ使い、tenantId は常にトークンの値にする
+        // (マルチテナント化より前に保存されたデータには tenantId が無いため)
+        if (parsed.id === payload.sub) {
+          return { ...parsed, tenantId: payload.tenantId }
+        }
       } catch {
         // パース失敗時はAPIから取得
       }
@@ -169,6 +187,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         name: member.name,
         email: member.email,
         role: member.familyRole,
+        tenantId: payload.tenantId,
         createdAt: new Date().toISOString(),
       }
     } catch {
@@ -222,7 +241,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         // トークンからユーザー情報を取得
         const payload = decodeJwtPayload(response.token)
-        if (!payload) {
+        if (!payload || !payload.tenantId) {
           setError('トークンの解析に失敗しました')
           return false
         }
@@ -234,6 +253,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           name: response.memberName,
           email: member.email,
           role: payload.role as FamilyRole,
+          tenantId: payload.tenantId,
           createdAt: new Date().toISOString(),
         }
 
@@ -267,13 +287,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
    * メンバーを作成してJWTトークンを取得します。
    */
   const register = useCallback(
-    async (name: string, email: string, role: FamilyRole, password: string): Promise<boolean> => {
+    async (
+      familyName: string,
+      name: string,
+      email: string,
+      role: FamilyRole,
+      password: string
+    ): Promise<boolean> => {
       setLoading(true)
       setError(null)
 
       try {
         // バックエンドに登録リクエスト
         const response = await registerApi({
+          familyName,
           name,
           email,
           familyRole: role,
@@ -285,7 +312,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         // トークンからユーザー情報を取得
         const payload = decodeJwtPayload(response.token)
-        if (!payload) {
+        if (!payload || !payload.tenantId) {
           setError('トークンの解析に失敗しました')
           return false
         }
@@ -295,6 +322,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           name: response.memberName,
           email: email,
           role: payload.role as FamilyRole,
+          tenantId: payload.tenantId,
           createdAt: new Date().toISOString(),
         }
 
@@ -303,9 +331,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return true
       } catch (err) {
         if (err instanceof ApiError) {
-          // 名前重複エラーなどをユーザーにわかりやすく表示
-          if (err.message.includes('重複') || err.message.includes('already exists')) {
-            setError('この名前は既に使用されています')
+          if (err.status === 409) {
+            // email重複エラーをユーザーにわかりやすく表示
+            setError('このメールアドレスは既に登録されています')
           } else {
             setError(err.message)
           }

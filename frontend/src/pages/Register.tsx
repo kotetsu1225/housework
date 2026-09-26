@@ -23,10 +23,13 @@ import type { FamilyRole } from '../types'
 const PASSWORD_MIN_LENGTH = 5
 /** パスワードの最大文字数（バックエンドと同期） */
 const PASSWORD_MAX_LENGTH = 72
+/** 家族の名前の最大文字数（バックエンドと同期） */
+const FAMILY_NAME_MAX_LENGTH = 255
 
 export function Register() {
   const navigate = useNavigate()
   const { register, loading, error, clearError } = useAuth()
+  const [familyName, setFamilyName] = useState('')
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [selectedRole, setSelectedRole] = useState<FamilyRole>('FATHER')
@@ -42,6 +45,20 @@ export function Register() {
   useEffect(() => {
     clearError()
   }, [clearError])
+
+  /**
+   * 家族の名前バリデーション
+   */
+  const validateFamilyName = (value: string): string | null => {
+    const trimmed = value.trim()
+    if (!trimmed) {
+      return '家族の名前を入力してください'
+    }
+    if (trimmed.length > FAMILY_NAME_MAX_LENGTH) {
+      return `家族の名前は${FAMILY_NAME_MAX_LENGTH}文字以内で入力してください`
+    }
+    return null
+  }
 
   /**
    * メールアドレスバリデーション
@@ -81,6 +98,12 @@ export function Register() {
     e.preventDefault()
     setLocalError('')
 
+    const familyNameError = validateFamilyName(familyName)
+    if (familyNameError) {
+      setLocalError(familyNameError)
+      return
+    }
+
     if (!name.trim()) {
       setLocalError('名前を入力してください')
       return
@@ -103,7 +126,13 @@ export function Register() {
       return
     }
 
-    const success = await register(name.trim(), email.trim(), selectedRole, password)
+    const success = await register(
+      familyName.trim(),
+      name.trim(),
+      email.trim(),
+      selectedRole,
+      password
+    )
 
     if (success) {
       navigate('/')
@@ -129,7 +158,10 @@ export function Register() {
 
   // フォームが有効かどうか
   const isEmailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())
+  const isFamilyNameValid =
+    familyName.trim().length > 0 && familyName.trim().length <= FAMILY_NAME_MAX_LENGTH
   const isFormValid =
+    isFamilyNameValid &&
     name.trim() &&
     isEmailValid &&
     password.length >= PASSWORD_MIN_LENGTH &&
@@ -146,10 +178,14 @@ export function Register() {
           <Card variant="gradient" className="relative overflow-hidden">
             <div className="absolute top-0 right-0 w-32 h-32 bg-coral-500/20 rounded-full blur-3xl" />
             <div className="relative">
-              <div className="flex items-center gap-2 mb-6">
+              <div className="flex items-center gap-2 mb-2">
                 <UserPlus className="w-5 h-5 text-coral-400" />
-                <h2 className="text-lg font-bold text-white">アカウント作成</h2>
+                <h2 className="text-lg font-bold text-white">家族を新しく作る</h2>
               </div>
+              <p className="text-sm text-dark-400 mb-6">
+                ここではあなたを最初のメンバーとする新しい家族を登録します。
+                2人目以降の家族は、ログイン後にメンバー画面から追加します。
+              </p>
 
               {displayError && (
                 <Alert variant="error" className="mb-4">
@@ -158,6 +194,16 @@ export function Register() {
               )}
 
               <form onSubmit={handleSubmit} className="space-y-6">
+                <Input
+                  label="家族の名前"
+                  placeholder="例: 山田家"
+                  value={familyName}
+                  onChange={(e) => setFamilyName(e.target.value)}
+                  disabled={loading}
+                  autoComplete="off"
+                  maxLength={FAMILY_NAME_MAX_LENGTH}
+                />
+
                 <Input
                   label="名前"
                   placeholder="名前を入力"

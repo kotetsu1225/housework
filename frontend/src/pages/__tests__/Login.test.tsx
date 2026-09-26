@@ -23,16 +23,18 @@ vi.mock('../../api', () => ({
 }))
 
 // JWTペイロードのモック作成ヘルパー
-const createMockToken = (sub: string, role: string) => {
+const createMockToken = (sub: string, role: string, tenantId: string | null = 'tenant-1') => {
   const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }))
-  const payload = btoa(
-    JSON.stringify({
-      sub,
-      name: 'Test User',
-      role,
-      exp: Math.floor(Date.now() / 1000) + 3600,
-    })
-  )
+  const payloadObj: Record<string, unknown> = {
+    sub,
+    name: 'Test User',
+    role,
+    exp: Math.floor(Date.now() / 1000) + 3600,
+  }
+  if (tenantId !== null) {
+    payloadObj.tenantId = tenantId
+  }
+  const payload = btoa(JSON.stringify(payloadObj))
   return `${header}.${payload}.signature`
 }
 

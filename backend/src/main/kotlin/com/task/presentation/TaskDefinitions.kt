@@ -260,6 +260,10 @@ fun Route.taskDefinitions() {
 
         val output = instance<CreateTaskDefinitionUseCase>().execute(
             CreateTaskDefinitionUseCase.Input(
+                // TODO(#53): 呼び出し元メンバーの tenantId を JWT(#42 の AuthenticatedMember)から渡す。
+                // マルチテナント化の途中の暫定で、ここに来ると NotImplementedError(500)になる。
+                // 統合ブランチは全 issue 完了まで本番に出ない。
+                tenantId = TODO("#53: 呼び出し元メンバーの tenantId を JWT から渡す"),
                 name = TaskDefinitionName(request.name),
                 description = TaskDefinitionDescription(request.description),
                 scheduledTimeRange = request.scheduledTimeRange.toDomain(),

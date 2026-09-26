@@ -3,10 +3,12 @@ package com.task.usecase.taskDefinition.create
 import com.google.inject.ImplementedBy
 import com.task.domain.member.MemberId
 import com.task.domain.taskDefinition.*
+import com.task.domain.tenant.TenantId
 
 @ImplementedBy(CreateTaskDefinitionUseCaseImpl::class)
 interface CreateTaskDefinitionUseCase {
     data class Input(
+        val tenantId: TenantId,
         val name: TaskDefinitionName,
         val description: TaskDefinitionDescription,
         val scheduledTimeRange: ScheduledTimeRange,

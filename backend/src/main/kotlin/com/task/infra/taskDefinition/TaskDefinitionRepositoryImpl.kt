@@ -4,6 +4,7 @@ import com.google.inject.Singleton
 import com.task.domain.AppTimeZone
 import com.task.domain.member.MemberId
 import com.task.domain.taskDefinition.*
+import com.task.domain.tenant.TenantId
 import com.task.infra.database.jooq.tables.TaskDefinitions.Companion.TASK_DEFINITIONS
 import com.task.infra.database.jooq.tables.TaskRecurrences.Companion.TASK_RECURRENCES
 import com.task.infra.database.jooq.tables.TaskExecutions.Companion.TASK_EXECUTIONS
@@ -38,6 +39,7 @@ class TaskDefinitionRepositoryImpl : TaskDefinitionRepository {
 
         val record = session.newRecord(TASK_DEFINITIONS).apply {
             id = taskDefinition.id.value
+            tenantId = taskDefinition.tenantId.value
             name = taskDefinition.name.value
             description = taskDefinition.description.value
             scheduledStartTime = taskDefinition.scheduledTimeRange.startTime.toOffsetDateTime()
@@ -64,7 +66,7 @@ class TaskDefinitionRepositoryImpl : TaskDefinitionRepository {
         record.store()
 
         if (taskDefinition.schedule is TaskSchedule.Recurring) {
-            saveRecurrence(taskDefinition.id, taskDefinition.schedule, session, now)
+            saveRecurrence(taskDefinition.id, taskDefinition.tenantId, taskDefinition.schedule, session, now)
         }
 
         return taskDefinition
@@ -106,7 +108,7 @@ class TaskDefinitionRepositoryImpl : TaskDefinitionRepository {
             .execute()
 
         if (taskDefinition.schedule is TaskSchedule.Recurring) {
-            saveRecurrence(taskDefinition.id, taskDefinition.schedule, session, now)
+            saveRecurrence(taskDefinition.id, taskDefinition.tenantId, taskDefinition.schedule, session, now)
         }
 
         return taskDefinition
@@ -273,6 +275,7 @@ class TaskDefinitionRepositoryImpl : TaskDefinitionRepository {
 
         return TaskDefinition.reconstruct(
             id = TaskDefinitionId(definitionRecord.id!!),
+            tenantId = TenantId(definitionRecord.tenantId),
             name = TaskDefinitionName(definitionRecord.name),
             description = TaskDefinitionDescription(definitionRecord.description ?: ""),
             scheduledTimeRange = ScheduledTimeRange(
@@ -290,12 +293,15 @@ class TaskDefinitionRepositoryImpl : TaskDefinitionRepository {
 
     private fun saveRecurrence(
         taskDefinitionId: TaskDefinitionId,
+        tenantId: TenantId,
         recurring: TaskSchedule.Recurring,
         session: DSLContext,
         now: OffsetDateTime
     ) {
+        // task_recurrences.tenant_id は子テーブル単独では持たず、親集約(TaskDefinition)の tenantId をそのまま書き込む方針
         session.insertInto(TASK_RECURRENCES)
             .set(TASK_RECURRENCES.TASK_DEFINITION_ID, taskDefinitionId.value)
+            .set(TASK_RECURRENCES.TENANT_ID, tenantId.value)
             .set(TASK_RECURRENCES.START_DATE, recurring.startDate)
             .set(TASK_RECURRENCES.END_DATE, recurring.endDate)
             .set(TASK_RECURRENCES.CREATED_AT, now)

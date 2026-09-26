@@ -60,11 +60,11 @@ CREATE INDEX idx_push_subscriptions_tenant_id ON push_subscriptions(tenant_id);
 ALTER TABLE member_metas ADD COLUMN tenant_id UUID;
 CREATE INDEX idx_member_metas_tenant_id ON member_metas(tenant_id);
 
--- outbox（RLSは適用しない: スケジューラが全テナント横断で処理するため）
+-- outbox（RLSはV24で適用する。2026-09-19の決定で方針変更: 横断処理はオーナー接続=RLSバイパスで行う）
 ALTER TABLE outbox ADD COLUMN tenant_id UUID;
 CREATE INDEX idx_outbox_tenant_id ON outbox(tenant_id);
 
--- completed_domain_events（RLSは適用しない: 同上）
+-- completed_domain_events（RLSはV24で適用する。理由は同上）
 ALTER TABLE completed_domain_events ADD COLUMN tenant_id UUID;
 CREATE INDEX idx_completed_domain_events_tenant_id ON completed_domain_events(tenant_id);
 
@@ -81,7 +81,7 @@ CREATE UNIQUE INDEX idx_members_tenant_name ON members(tenant_id, name);
 
 -- ============================================================
 -- Step 4: RLS有効化 + ポリシー作成
--- outbox, completed_domain_events は除外
+-- ここでは8テーブルのみ。outbox / completed_domain_events / tenants はV24で適用
 -- ============================================================
 
 ALTER TABLE members ENABLE ROW LEVEL SECURITY;

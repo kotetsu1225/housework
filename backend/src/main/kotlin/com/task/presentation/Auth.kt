@@ -4,11 +4,9 @@ import com.task.domain.member.FamilyRole
 import com.task.domain.member.MemberEmail
 import com.task.domain.member.MemberName
 import com.task.domain.member.PlainPassword
-import com.task.domain.member.MemberRepository
-import com.task.infra.database.Database
-import com.task.infra.security.JwtService
+import com.task.domain.tenant.FamilyName
 import com.task.usecase.auth.LoginUseCase
-import com.task.usecase.member.CreateMemberUseCase
+import com.task.usecase.auth.RegisterFamilyUseCase
 import io.ktor.http.HttpStatusCode
 import io.ktor.resources.Resource
 import io.ktor.server.application.call
@@ -33,6 +31,7 @@ class Auth {
     class Register(val parent: Auth = Auth()) {
         @Serializable
         data class Request(
+            val familyName: String,
             val name: String,
             val email: String,
             val familyRole: String,
@@ -68,18 +67,14 @@ class Auth {
 fun Route.auth() {
 
     // POST /api/auth/register - 新規登録
-    // CreateMemberUseCaseでメンバー作成 → JwtServiceでトークン発行
+    // RegisterFamilyUseCaseで「家族(tenant)+ 最初のメンバー」を作成 → 戻り値のtokenをそのまま返す
     post<Auth.Register> {
         val request = call.receive<Auth.Register.Request>()
 
         try {
-            // 1. メンバーを作成
-            val createOutput = instance<CreateMemberUseCase>().execute(
-                CreateMemberUseCase.Input(
-                    // TODO(#44): register は「家族(tenant)+ 最初のメンバーの作成」に置き換える。
-                    // マルチテナント化の途中の暫定で、ここに来ると NotImplementedError(500)になる。
-                    // 統合ブランチは全 issue 完了まで本番に出ない。
-                    tenantId = TODO("#44: register は家族(tenant)+ 最初のメンバーの作成に置き換える"),
+            val output = instance<RegisterFamilyUseCase>().execute(
+                RegisterFamilyUseCase.Input(
+                    familyName = FamilyName(request.familyName),
                     name = MemberName(request.name),
                     email = MemberEmail(request.email),
                     familyRole = FamilyRole.get(request.familyRole),
@@ -87,22 +82,11 @@ fun Route.auth() {
                 )
             )
 
-            // 2. 作成したメンバーを取得してJWTを生成
-            val database = instance<Database>()
-            val memberRepository = instance<MemberRepository>()
-            val jwtService = instance<JwtService>()
-
-            val member = database.withTransaction { session ->
-                memberRepository.findById(createOutput.id, session)
-            } ?: throw IllegalStateException("作成したメンバーが見つかりません")
-
-            val token = jwtService.generateToken(member)
-
             call.respond(
                 HttpStatusCode.Created,
                 Auth.Register.Response(
-                    token = token,
-                    memberName = member.name.value
+                    token = output.token,
+                    memberName = output.memberName.value
                 )
             )
         } catch (e: IllegalArgumentException) {

@@ -50,7 +50,7 @@ class Auth {
     class Login(val parent: Auth = Auth()) {
         @Serializable
         data class Request(
-            val name: String,
+            val email: String,
             val password: String,
         )
 
@@ -120,7 +120,7 @@ fun Route.auth() {
         try {
             val output = instance<LoginUseCase>().execute(
                 LoginUseCase.Input(
-                    name = MemberName(request.name),
+                    email = MemberEmail(request.email),
                     password = PlainPassword(request.password)
                 )
             )
@@ -133,9 +133,13 @@ fun Route.auth() {
                 )
             )
         } catch (e: IllegalArgumentException) {
+            // MemberEmail の形式不正(バリデーション例外)も含め、失敗理由によらず
+            // 同じメッセージを返す。e.message をそのまま返すと、失敗理由の違い
+            // (email形式不正/該当メンバー無し/パスワード不一致/tenant無効)から
+            // アカウントの存在有無が推測できてしまうため。
             call.respond(
                 HttpStatusCode.Unauthorized,
-                mapOf("error" to (e.message ?: "ログインに失敗しました"))
+                mapOf("error" to LoginUseCase.INVALID_CREDENTIALS_MESSAGE)
             )
         }
     }

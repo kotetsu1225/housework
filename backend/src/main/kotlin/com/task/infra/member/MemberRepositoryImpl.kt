@@ -67,15 +67,15 @@ class MemberRepositoryImpl : MemberRepository {
         return records.map { record -> record.toDomain() }
     }
 
-    override fun findByName(name: MemberName, session: DSLContext): Member? {
+    override fun findByEmail(email: MemberEmail, session: DSLContext): Member? {
         val record = session
             .selectFrom(MEMBERS)
-            .where(MEMBERS.NAME.eq(name.value))
+            .where(MEMBERS.EMAIL.eq(email.value))
             .fetchOne()
 
         return record?.toDomain()
     }
-    
+
     override fun findAllNames(session: DSLContext): List<MemberName> {
         return session
             .select(MEMBERS.NAME)

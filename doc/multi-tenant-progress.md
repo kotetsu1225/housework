@@ -2,7 +2,7 @@
 
 [multi-tenant-handoff.md](multi-tenant-handoff.md) §6.4 に従い、**issue の着手時と完了時に必ず更新する**。コンテキストが切れた別のエージェントが、このファイルだけを見て再開できる粒度で書く。
 
-最終更新: 2026-09-26(完了 12 件。#42 #47 #49 実装中。#69 apply と #48 の方針はオーナーの判断待ち)
+最終更新: 2026-09-27(完了 16 件。#43 #44 #56 #71 実装中。#69 apply と #48 の方針はオーナーの判断待ち)
 
 ## 現在の状態
 
@@ -35,9 +35,10 @@
 
 | issue | 担当 | ブランチ(worktree は `~/Desktop/housework-wt/mt-<番号>`) | 状況・次の一手 |
 |---|---|---|---|
-| #42 A1 | Sonnet(編集)+ 親(テスト・レビュー) | `mt/42-jwt-tenant-claim` | JWT の tenantId クレーム、validate で 401、AuthenticatedMember、principal 6 箇所の置き換え、testApplication のテスト |
-| #47 D3 | Sonnet(編集)+ 親(DB テスト・レビュー) | `mt/47-taskexecution-tenant-id` | TaskExecution の 4 状態と 3 テーブルに tenantId。create は TaskDefinition から引き継ぐ |
-| #49 D5 | Sonnet(編集)+ 親(DB テスト・レビュー) | `mt/49-outbox-tenant-id` | OutboxRecord / completed_domain_events に tenantId(エンベロープ方式) |
+| #43 A2 | Sonnet(編集)+ 親(DB テスト・レビュー) | `mt/43-email-login` | email ログイン、DatabaseWithoutRLS、失敗メッセージ統一、tenant が ACTIVE でなければ 401 |
+| #44 A3 | Sonnet(編集)+ 親(DB テスト・レビュー) | `mt/44-register-family` | RegisterFamilyUseCase(1 トランザクション)、EmailAlreadyUsedException → 409(一意制約違反で判定)。**#43 と Auth.kt の別の部分を触る。後にマージする方が取り込む** |
+| #56 B0 | Sonnet(編集)+ 親(DB テスト・レビュー) | `mt/56-tenant-batch-runner` | TenantBatchRunner。既存スケジューラは変えない |
+| #71 G2 | Sonnet(編集)+ 親(エミュレータのテスト・起動確認) | `mt/71-pubsub-client` | libraries-bom 26.89.0、testcontainers-gcloud 2.0.5、エミュレータ `google-cloud-cli:586.0.0-emulators` |
 | #48 D4 | — | 未着手 | **endpoint の他テナント衝突の扱いがオーナーの判断待ち**(#48 にコメント。推奨は「409 で断る」) |
 | #69 G0 | 親(人間と伴走) | `mt/69-gcp-foundation`(push 済み、PR 未作成) | plan は 5 件追加。**オーナーの承認後に apply → PR** |
 
@@ -57,6 +58,9 @@
 | #45 D1 | #88 | 2026-09-26 | Member に tenantId。register(#44)と member/create(#51)は暫定で `tenantId = TODO(...)` |
 | #46 D2 | #89 | 2026-09-26 | TaskDefinition に tenantId。task-definitions/create(#53)は暫定で `tenantId = TODO(...)` |
 | #63 FE2 | #90 | 2026-09-26 | 家族名、JWT tenantId、旧トークン破棄、409。保存済みユーザーの復元はトークンと同じメンバーのときだけ |
+| #42 A1 | #92 | 2026-09-27 | JWT の tenantId クレーム、validate で 401、AuthenticatedMember。principal 6 箇所を置き換え |
+| #47 D3 | #93 | 2026-09-27 | TaskExecution の 4 状態と 3 テーブルに tenantId。create は TaskDefinition から引き継ぐ |
+| #49 D5 | #91 | 2026-09-26 | OutboxRecord / completed_domain_events に tenantId(エンベロープ方式) |
 | #36 F1 | #79 | 2026-09-26 | V22 backfill 新規、V23 に rename、jOOQ 再生成。**素の `./gradlew build` はもう DB に触れない**(コンパイル時の自動生成を停止)。生成は `./gradlew generateJooq -PdbUrl=jdbc:postgresql://localhost:5433/<DB名>` |
 
 ## ブロック中・未解決の疑問
@@ -95,16 +99,23 @@
 |---|---|---|
 | 2026-09-26 | 決定事項「GCP の管理」: $300 トライアル → 通常の請求先アカウント + Always Free + プロジェクト単位の予算アラート | オーナーの確認に基づく事実の更新(型・API・番号・環境変数の変更ではない) |
 
+## テストを書くときの注意(全 issue 共通)
+
+- **Ktor の `testApplication` には必ず `environment { config = MapApplicationConfig() }` を付ける。** 付けないと `src/main/resources/application.conf` を読み、本物の `Application.module` を起動して、既定の DB(ポート 5432、shopping のデータ入り)に接続し Flyway とスケジューラまで動かそうとする(#42 のレビューで発覚。DB は変わっていないことを確認済み)。
+- DB のテストは `PostgresTestDatabase`(Testcontainers の postgres:17)を使う。fail-closed のエラーは、新しい接続では「設定が無い」、使い回した接続では「uuid に変換できない」になる。両方を受け入れる。
+- 例外のテストは型だけでなく、メッセージで原因(RLS 違反など)まで確かめる。
+
 ## 運用上の教訓
 
 - 2026-09-23: 16 並列の読解ワークフローが利用上限に達し、22 体すべてが成果物を返さずに終わった(約 102 万トークン消費)。以後は、エージェントに作業ごとのファイル保存をさせ、読むファイルを明示的に限定し、並列数を抑える。
+- 2026-09-27: Mac がスリープするとビルドやエージェントが止まったように見える(ビルドが 15 分かかったのはこのため)。プロセスが生きているか確かめてから判断する。scratchpad(/private/tmp)の書き出したファイルは消えることがある。消えたら作り直す。
 - 2026-09-25: #36 を 1 体の Sonnet にまとめて任せたところ、通信が 10 分止まって進捗ゼロで終わった。以後は、Sonnet にはファイル編集だけを任せ、時間のかかる Gradle・DB 操作は親が実行する。
 
 ## 次にやること(優先順)
 
-1. #42 #47 #49 をレビュー → DB テスト → PR → マージ
-2. #42 の後: #43(email ログイン)→ #44(サインアップ)。#44 → #51 の順
+1. #43 #44 #56 #71 をレビュー → テスト → PR → マージ
+2. U 系(#51〜#55。#51 は #44 の後)、B 系(#57〜#60。#56 の後)、#72(outbox リレー。#71 の後)→ #61(subscriber)、#50(same-tenant。U 系の後)
 3. #48: オーナーの判断後
-4. #69: オーナーの承認後に apply → PR
-5. #71(Pub/Sub 基盤)、#50(same-tenant)、U 系(#51〜#55)、B 系(#56〜#60)
+4. #69: オーナーの承認後に apply → PR → #70(Pub/Sub の Terraform)
+5. Wave 3: #65(互換パス撤去)、#66(隔離の統合テスト)、#68(ドキュメント)、#67 #73(人間と一緒に)
 4. 並行可能: #62 #63 #64(フロント)、#71(Pub/Sub クライアント基盤)

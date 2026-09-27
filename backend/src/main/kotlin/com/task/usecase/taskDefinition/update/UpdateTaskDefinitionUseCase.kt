@@ -3,11 +3,13 @@ package com.task.usecase.taskDefinition.update
 import com.google.inject.ImplementedBy
 import com.task.domain.member.MemberId
 import com.task.domain.taskDefinition.*
+import com.task.domain.tenant.TenantId
 
 @ImplementedBy(UpdateTaskDefinitionUseCaseImpl::class)
 interface UpdateTaskDefinitionUseCase {
     data class Input(
         val id: TaskDefinitionId,
+        val tenantId: TenantId,
         val requesterId: MemberId,
         val name: TaskDefinitionName? = null,
         val description: TaskDefinitionDescription? = null,

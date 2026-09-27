@@ -14,7 +14,7 @@ class GetTaskDefinitionsUseCaseImpl @Inject constructor(
 ) : GetTaskDefinitionsUseCase {
 
     override fun execute(input: GetTaskDefinitionsUseCase.Input): GetTaskDefinitionsUseCase.Output {
-        return database.withTransaction { session ->
+        return database.withTransaction(input.tenantId) { session ->
             fun toOutput(definitions: List<TaskDefinition>) =
                 definitions.map { taskDefinition ->
                     GetTaskDefinitionsUseCase.TaskDefinitionOutput(

@@ -13,7 +13,7 @@ class UpdateTaskDefinitionUseCaseImpl @Inject constructor(
     private val authorizationService: TaskDefinitionAuthService,
 ) : UpdateTaskDefinitionUseCase {
     override fun execute(input: UpdateTaskDefinitionUseCase.Input): UpdateTaskDefinitionUseCase.Output {
-        return database.withTransaction { session ->
+        return database.withTransaction(input.tenantId) { session ->
             val targetTaskDefinition = taskDefinitionRepository.findById(input.id, session)
                 ?: throw IllegalArgumentException("TaskDefinition with id ${input.id.value} が見つかりませんでした。")
 

@@ -12,7 +12,7 @@ class GetTaskDefinitionUseCaseImpl @Inject constructor(
 ) : GetTaskDefinitionUseCase {
 
     override fun execute(input: GetTaskDefinitionUseCase.Input): GetTaskDefinitionUseCase.Output? {
-        val taskDefinition = database.withTransaction { session ->
+        val taskDefinition = database.withTransaction(input.tenantId) { session ->
             taskDefinitionRepository.findById(input.id, session)
         }
 

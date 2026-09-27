@@ -52,7 +52,7 @@ class TaskDefinitionRepositoryTenantTest {
             description = TaskDefinitionDescription("夕食後に皿を洗う"),
             scheduledTimeRange = ScheduledTimeRange(startTime = now, endTime = now.plus(30, ChronoUnit.MINUTES)),
             scope = TaskScope.FAMILY,
-            ownerMemberId = null,
+            owner = null,
             schedule = TaskSchedule.Recurring(
                 pattern = RecurrencePattern.Weekly(DayOfWeek.MONDAY),
                 startDate = LocalDate.now(),
@@ -101,7 +101,7 @@ class TaskDefinitionRepositoryTenantTest {
             description = null,
             scheduledTimeRange = null,
             scope = null,
-            ownerMemberId = null,
+            owner = null,
             schedule = TaskSchedule.Recurring(
                 pattern = RecurrencePattern.Monthly(dayOfMonth = 15),
                 startDate = LocalDate.now(),

@@ -11,6 +11,7 @@ import com.task.domain.taskDefinition.TaskScope
 import com.task.domain.taskExecution.TaskExecution
 import com.task.domain.tenant.TenantId
 import com.task.infra.database.Database
+import com.task.infra.member.MemberRepositoryImpl
 import com.task.infra.query.CompletedTaskQueryServiceImpl
 import com.task.infra.query.DashboardQueryServiceImpl
 import com.task.infra.taskDefinition.TaskDefinitionRepositoryImpl
@@ -41,6 +42,7 @@ class QueryTenantScopeTest {
     private val database = Database(PostgresTestDatabase.ownerDataSource, PostgresTestDatabase.appDataSource)
     private val definitionRepository = TaskDefinitionRepositoryImpl()
     private val executionRepository = TaskExecutionRepositoryImpl()
+    private val memberRepository = MemberRepositoryImpl()
     private val dashboardQueryService = DashboardQueryServiceImpl(database)
     private val completedTaskQueryService = CompletedTaskQueryServiceImpl()
     private val getCompletedTasksUseCase = GetCompletedTasksUseCaseImpl(database, completedTaskQueryService)
@@ -67,7 +69,7 @@ class QueryTenantScopeTest {
             description = TaskDefinitionDescription("リビングの掃除機がけ"),
             scheduledTimeRange = ScheduledTimeRange(startTime = now, endTime = now.plus(30, ChronoUnit.MINUTES)),
             scope = TaskScope.FAMILY,
-            ownerMemberId = null,
+            owner = null,
             schedule = TaskSchedule.OneTime(deadline = today),
             point = 10,
         )
@@ -76,10 +78,12 @@ class QueryTenantScopeTest {
         val notStarted = TaskExecution.create(definition, now).newState
         PostgresTestDatabase.inTenantTransaction(tenantId) { session -> executionRepository.create(notStarted, session) }
 
-        val inProgress = notStarted.start(listOf(memberId), definition).newState
+        val member = PostgresTestDatabase.inTenantTransaction(tenantId) { session -> memberRepository.findById(memberId, session) }
+            ?: throw IllegalStateException("テストフィクスチャのメンバーが見つかりません: $memberId")
+        val inProgress = notStarted.start(listOf(member), definition).newState
         PostgresTestDatabase.inTenantTransaction(tenantId) { session -> executionRepository.update(inProgress, session) }
 
-        val completed = inProgress.complete(definitionIsDeleted = false, taskScope = TaskScope.FAMILY).newState
+        val completed = inProgress.complete(definition).newState
         PostgresTestDatabase.inTenantTransaction(tenantId) { session -> executionRepository.update(completed, session) }
 
         return completed

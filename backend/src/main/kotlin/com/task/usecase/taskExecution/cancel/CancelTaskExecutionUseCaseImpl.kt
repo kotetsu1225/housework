@@ -31,7 +31,7 @@ class CancelTaskExecutionUseCaseImpl @Inject constructor(
                 }
                 is TaskExecution.InProgress -> {
                     taskExecution.cancel(
-                        taskDefinition.isDeleted
+                        taskDefinition
                     )
                 }
                 is TaskExecution.Completed -> {

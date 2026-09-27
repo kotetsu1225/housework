@@ -1,12 +1,12 @@
 package com.task.domain.taskExecution
 
+import com.task.domain.member.Member
 import com.task.domain.member.MemberId
 import com.task.domain.taskDefinition.ScheduledTimeRange
 import com.task.domain.taskDefinition.TaskDefinition
 import com.task.domain.taskDefinition.TaskDefinitionDescription
 import com.task.domain.taskDefinition.TaskDefinitionId
 import com.task.domain.taskDefinition.TaskDefinitionName
-import com.task.domain.taskDefinition.TaskScope
 import com.task.domain.taskExecution.event.TaskExecutionCancelled
 import com.task.domain.taskExecution.event.TaskExecutionCompleted
 import com.task.domain.taskExecution.event.TaskExecutionCreated
@@ -15,12 +15,29 @@ import com.task.domain.tenant.TenantId
 import java.time.Instant
 import java.util.UUID
 
+/**
+ * RLS(Row Level Security)はDBレベルのアクセス制御であり、「関連付ける相手が同じテナントであること」
+ * という意味的な整合性を保証するものではない。バイパス接続の経路(バッチ、outbox処理)や将来の変更に対しても
+ * 不変条件が守られるよう、集約間の関連付け(taskDefinition・assignee Member)は状態遷移メソッドが
+ * `require` でドメインの不変条件として検証する(ADR #19 決定4、issue #50)。
+ * なお `create` は親の TaskDefinition の tenantId をそのまま引き継ぐため、構造的に same-tenant が保証されている(#47)。
+ */
 sealed class TaskExecution {
     abstract val id: TaskExecutionId
     abstract val tenantId: TenantId
     abstract val taskDefinitionId: TaskDefinitionId
     abstract val scheduledDate: Instant
     abstract val assigneeMemberIds: List<MemberId>
+
+    /**
+     * 担当者として割り当てようとしているメンバーが自分と同じテナントであることを検証する。
+     * ドメインにメンバー割り当てを直接行うメソッドが無い操作(担当者変更)から呼び出すための、小さな検証関数。
+     */
+    fun requireSameTenant(members: List<Member>) {
+        require(members.all { it.tenantId == this.tenantId }) {
+            "別の家族のメンバーは指定できません。"
+        }
+    }
 
     data class NotStarted(
         override val id: TaskExecutionId,
@@ -31,13 +48,20 @@ sealed class TaskExecution {
     ) : TaskExecution() {
 
         fun start(
-            assigneeMemberIds: List<MemberId>,
+            assignees: List<Member>,
             taskDefinition: TaskDefinition
         ): StateChange<InProgress> {
             require(!taskDefinition.isDeleted) {
                 "削除されたタスクは開始できません。"
             }
+            require(taskDefinition.tenantId == this.tenantId) {
+                "別の家族のタスク定義は指定できません。"
+            }
+            require(assignees.all { it.tenantId == this.tenantId }) {
+                "別の家族のメンバーは指定できません。"
+            }
 
+            val assigneeMemberIds = assignees.map { it.id }
             val now = Instant.now()
 
             val newInProgressState = InProgress(
@@ -64,6 +88,9 @@ sealed class TaskExecution {
         fun cancel(taskDefinition: TaskDefinition): StateChange<Cancelled> {
             require(!taskDefinition.isDeleted) {
                 "削除されたタスクはキャンセルできません。"
+            }
+            require(taskDefinition.tenantId == this.tenantId) {
+                "別の家族のタスク定義は指定できません。"
             }
             return toCancelledState(taskDefinition.name)
         }
@@ -108,11 +135,13 @@ sealed class TaskExecution {
             }
         }
         fun complete(
-            definitionIsDeleted: Boolean,
-            taskScope: TaskScope
+            taskDefinition: TaskDefinition
         ): StateChange<Completed> {
-            require(!definitionIsDeleted) {
+            require(!taskDefinition.isDeleted) {
                 "削除されたタスクは完了できません。"
+            }
+            require(taskDefinition.tenantId == this.tenantId) {
+                "別の家族のタスク定義は指定できません。"
             }
 
             val now = Instant.now()
@@ -137,15 +166,18 @@ sealed class TaskExecution {
                 assigneeMemberIds = this.assigneeMemberIds,
                 taskName = this.taskSnapshot.frozenName,
                 occurredAt = now,
-                taskScope = taskScope
+                taskScope = taskDefinition.scope
             )
 
             return StateChange(newCompletedState, completedEvent)
         }
 
-        fun cancel(definitionIsDeleted: Boolean): StateChange<Cancelled> {
-            require(!definitionIsDeleted) {
+        fun cancel(taskDefinition: TaskDefinition): StateChange<Cancelled> {
+            require(!taskDefinition.isDeleted) {
                 "削除されたタスクはキャンセルできません。"
+            }
+            require(taskDefinition.tenantId == this.tenantId) {
+                "別の家族のタスク定義は指定できません。"
             }
             return toCancelledState()
         }

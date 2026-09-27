@@ -21,7 +21,7 @@ class TaskDefinitionTest {
                 endTime = now.plus(30, ChronoUnit.MINUTES),
             ),
             scope = TaskScope.FAMILY,
-            ownerMemberId = null,
+            owner = null,
             schedule = TaskSchedule.OneTime(deadline = LocalDate.now().plusDays(1)),
             point = 10,
         )
@@ -47,7 +47,7 @@ class TaskDefinitionTest {
             description = null,
             scheduledTimeRange = null,
             scope = null,
-            ownerMemberId = null,
+            owner = null,
             schedule = null,
             point = null,
         )

@@ -86,7 +86,7 @@ class GenerateDailyExecutionsTenantTest {
             description = TaskDefinitionDescription("テスト用の毎日タスク"),
             scheduledTimeRange = ScheduledTimeRange(startTime = now, endTime = now.plus(30, ChronoUnit.MINUTES)),
             scope = TaskScope.FAMILY,
-            ownerMemberId = null,
+            owner = null,
             schedule = TaskSchedule.Recurring(
                 pattern = RecurrencePattern.Daily(skipWeekends = false),
                 startDate = today.minusDays(1),

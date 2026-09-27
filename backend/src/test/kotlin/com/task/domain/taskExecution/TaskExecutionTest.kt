@@ -1,6 +1,10 @@
 package com.task.domain.taskExecution
 
-import com.task.domain.member.MemberId
+import com.task.domain.member.FamilyRole
+import com.task.domain.member.Member
+import com.task.domain.member.MemberEmail
+import com.task.domain.member.MemberName
+import com.task.domain.member.PasswordHash
 import com.task.domain.taskDefinition.ScheduledTimeRange
 import com.task.domain.taskDefinition.TaskDefinition
 import com.task.domain.taskDefinition.TaskDefinitionDescription
@@ -27,9 +31,20 @@ class TaskExecutionTest {
                 endTime = now.plus(30, ChronoUnit.MINUTES),
             ),
             scope = TaskScope.FAMILY,
-            ownerMemberId = null,
+            owner = null,
             schedule = TaskSchedule.OneTime(deadline = LocalDate.now().plusDays(1)),
             point = 10,
+        )
+    }
+
+    private fun buildMember(tenantId: TenantId): Member {
+        return Member.create(
+            tenantId = tenantId,
+            name = MemberName("山田太郎"),
+            email = MemberEmail("taro-${java.util.UUID.randomUUID()}@example.com"),
+            familyRole = FamilyRole.FATHER,
+            password = PasswordHash("hashed-password"),
+            existingMembersName = emptyList(),
         )
     }
 
@@ -57,15 +72,12 @@ class TaskExecutionTest {
         val notStarted = buildNotStarted(taskDefinition)
 
         val inProgress = notStarted.start(
-            assigneeMemberIds = listOf(MemberId.generate()),
+            assignees = listOf(buildMember(tenantId)),
             taskDefinition = taskDefinition,
         ).newState
         assertEquals(tenantId, inProgress.tenantId)
 
-        val completed = inProgress.complete(
-            definitionIsDeleted = false,
-            taskScope = taskDefinition.scope,
-        ).newState
+        val completed = inProgress.complete(taskDefinition).newState
 
         assertEquals(tenantId, completed.tenantId)
     }
@@ -77,12 +89,12 @@ class TaskExecutionTest {
         val notStarted = buildNotStarted(taskDefinition)
 
         val inProgress = notStarted.start(
-            assigneeMemberIds = listOf(MemberId.generate()),
+            assignees = listOf(buildMember(tenantId)),
             taskDefinition = taskDefinition,
         ).newState
         assertEquals(tenantId, inProgress.tenantId)
 
-        val cancelled = inProgress.cancel(definitionIsDeleted = false).newState
+        val cancelled = inProgress.cancel(taskDefinition).newState
 
         assertEquals(tenantId, cancelled.tenantId)
     }

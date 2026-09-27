@@ -89,13 +89,13 @@ class TaskExecutionUseCasesTenantTest {
     private val getListUseCase: GetTaskExecutionsUseCase =
         GetTaskExecutionsUseCaseImpl(database, taskExecutionRepository)
     private val startUseCase: StartTaskExecutionUseCase =
-        StartTaskExecutionUseCaseImpl(database, taskExecutionRepository, taskDefinitionRepository, dispatcher)
+        StartTaskExecutionUseCaseImpl(database, taskExecutionRepository, taskDefinitionRepository, memberRepository, dispatcher)
     private val completeUseCase: CompleteTaskExecutionUseCase =
         CompleteTaskExecutionUseCaseImpl(database, taskExecutionRepository, taskDefinitionRepository, dispatcher)
     private val cancelUseCase: CancelTaskExecutionUseCase =
         CancelTaskExecutionUseCaseImpl(database, taskExecutionRepository, taskDefinitionRepository, dispatcher)
     private val assignUseCase: UpdateAssignTaskExecutionUseCase =
-        UpdateAssignTaskExecutionUseCaseImpl(database, taskExecutionRepository)
+        UpdateAssignTaskExecutionUseCaseImpl(database, taskExecutionRepository, memberRepository)
 
     @AfterEach
     fun cleanup() {
@@ -160,7 +160,7 @@ class TaskExecutionUseCasesTenantTest {
             description = TaskDefinitionDescription("テスト用タスク"),
             scheduledTimeRange = ScheduledTimeRange(startTime = now, endTime = now.plus(30, ChronoUnit.MINUTES)),
             scope = TaskScope.FAMILY,
-            ownerMemberId = null,
+            owner = null,
             schedule = TaskSchedule.OneTime(deadline = LocalDate.now().plusDays(1)),
             point = 10,
         )

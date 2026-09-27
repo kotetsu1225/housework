@@ -216,8 +216,9 @@ class TaskDefinitionUseCasesTenantTest {
             InMemoryDomainEventDispatcher(setOf<DomainEventHandler<*>>(createExecutionHandler, emailHandler))
                 .also { lazyDispatcher.delegate = it }
 
-        val createUseCase = CreateTaskDefinitionUseCaseImpl(database, taskDefinitionRepository, dispatcher)
-        val updateUseCase = UpdateTaskDefinitionUseCaseImpl(database, taskDefinitionRepository, authorizationService)
+        val createUseCase = CreateTaskDefinitionUseCaseImpl(database, taskDefinitionRepository, memberRepository, dispatcher)
+        val updateUseCase =
+            UpdateTaskDefinitionUseCaseImpl(database, taskDefinitionRepository, memberRepository, authorizationService)
         val deleteUseCase =
             DeleteTaskDefinitionUseCaseImpl(database, taskDefinitionRepository, authorizationService, outboxRepository)
         val getUseCase = GetTaskDefinitionUseCaseImpl(database, taskDefinitionRepository)

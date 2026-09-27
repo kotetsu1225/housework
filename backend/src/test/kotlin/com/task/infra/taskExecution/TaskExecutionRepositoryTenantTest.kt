@@ -13,6 +13,7 @@ import com.task.infra.database.jooq.tables.references.MEMBERS
 import com.task.infra.database.jooq.tables.references.TASK_EXECUTIONS
 import com.task.infra.database.jooq.tables.references.TASK_EXECUTION_PARTICIPANTS
 import com.task.infra.database.jooq.tables.references.TASK_SNAPSHOTS
+import com.task.infra.member.MemberRepositoryImpl
 import com.task.infra.taskDefinition.TaskDefinitionRepositoryImpl
 import com.task.support.PostgresTestDatabase
 import com.task.support.TestFixtures
@@ -33,6 +34,7 @@ class TaskExecutionRepositoryTenantTest {
 
     private val executionRepository = TaskExecutionRepositoryImpl()
     private val definitionRepository = TaskDefinitionRepositoryImpl()
+    private val memberRepository = MemberRepositoryImpl()
 
     @AfterEach
     fun cleanup() {
@@ -87,7 +89,7 @@ class TaskExecutionRepositoryTenantTest {
             description = TaskDefinitionDescription("夕食後に皿を洗う"),
             scheduledTimeRange = ScheduledTimeRange(startTime = now, endTime = now.plus(30, ChronoUnit.MINUTES)),
             scope = TaskScope.FAMILY,
-            ownerMemberId = null,
+            owner = null,
             schedule = TaskSchedule.OneTime(deadline = LocalDate.now().plusDays(1)),
             point = 10,
         )
@@ -100,7 +102,9 @@ class TaskExecutionRepositoryTenantTest {
         val executionId = notStarted.id.value
 
         // 開始: task_snapshots と task_execution_participants が作られる
-        val inProgress = notStarted.start(listOf(family.memberId), definition).newState
+        val member = PostgresTestDatabase.inTenantTransaction(tenantId) { session -> memberRepository.findById(family.memberId, session) }
+            ?: throw IllegalStateException("テストフィクスチャのメンバーが見つかりません: ${family.memberId}")
+        val inProgress = notStarted.start(listOf(member), definition).newState
         PostgresTestDatabase.inTenantTransaction(tenantId) { session -> executionRepository.update(inProgress, session) }
         assertAllRowsBelongTo(tenantId, executionId, expectSnapshot = true)
 
@@ -111,7 +115,7 @@ class TaskExecutionRepositoryTenantTest {
         assertAllRowsBelongTo(tenantId, executionId, expectSnapshot = true)
 
         // 完了
-        val completed = inProgress.complete(definitionIsDeleted = false, taskScope = TaskScope.FAMILY).newState
+        val completed = inProgress.complete(definition).newState
         PostgresTestDatabase.inTenantTransaction(tenantId) { session -> executionRepository.update(completed, session) }
         assertAllRowsBelongTo(tenantId, executionId, expectSnapshot = true)
 

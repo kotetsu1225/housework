@@ -196,8 +196,11 @@ class TaskDefinitions {
 
 fun Route.taskDefinitions() {
     get<TaskDefinitions.List> { resource ->
+        val tenantId = call.authenticatedMember().tenantId
+
         val output = instance<GetTaskDefinitionsUseCase>().execute(
             GetTaskDefinitionsUseCase.Input(
+                tenantId = tenantId,
                 limit = resource.limit,
                 offset = resource.offset
             )
@@ -226,9 +229,12 @@ fun Route.taskDefinitions() {
     }
 
     get<TaskDefinitions.Get> { resource ->
+        val tenantId = call.authenticatedMember().tenantId
+
         val output = instance<GetTaskDefinitionUseCase>().execute(
             GetTaskDefinitionUseCase.Input(
-                id = TaskDefinitionId(UUID.fromString(resource.taskDefinitionId))
+                id = TaskDefinitionId(UUID.fromString(resource.taskDefinitionId)),
+                tenantId = tenantId,
             )
         )
 
@@ -254,14 +260,13 @@ fun Route.taskDefinitions() {
     }
 
     post<TaskDefinitions.Create> {
+        val tenantId = call.authenticatedMember().tenantId
+
         val request = call.receive<TaskDefinitions.Create.Request>()
 
         val output = instance<CreateTaskDefinitionUseCase>().execute(
             CreateTaskDefinitionUseCase.Input(
-                // TODO(#53): 呼び出し元メンバーの tenantId を JWT(#42 の AuthenticatedMember)から渡す。
-                // マルチテナント化の途中の暫定で、ここに来ると NotImplementedError(500)になる。
-                // 統合ブランチは全 issue 完了まで本番に出ない。
-                tenantId = TODO("#53: 呼び出し元メンバーの tenantId を JWT から渡す"),
+                tenantId = tenantId,
                 name = TaskDefinitionName(request.name),
                 description = TaskDefinitionDescription(request.description),
                 scheduledTimeRange = request.scheduledTimeRange.toDomain(),
@@ -289,14 +294,15 @@ fun Route.taskDefinitions() {
     }
 
     post<TaskDefinitions.Update> { resource ->
-        val requesterId = call.authenticatedMember().memberId
+        val authenticatedMember = call.authenticatedMember()
 
         val request = call.receive<TaskDefinitions.Update.Request>()
 
         val output = instance<UpdateTaskDefinitionUseCase>().execute(
             UpdateTaskDefinitionUseCase.Input(
                 id = TaskDefinitionId(UUID.fromString(resource.taskDefinitionId)),
-                requesterId = requesterId,
+                tenantId = authenticatedMember.tenantId,
+                requesterId = authenticatedMember.memberId,
                 name = request.name?.let { TaskDefinitionName(it) },
                 description = request.description?.let { TaskDefinitionDescription(it) },
                 scheduledTimeRange = request.scheduledTimeRange?.toDomain(),
@@ -324,12 +330,13 @@ fun Route.taskDefinitions() {
     }
 
     post<TaskDefinitions.Delete> { resource ->
-        val requesterId = call.authenticatedMember().memberId
+        val authenticatedMember = call.authenticatedMember()
 
         val output = instance<DeleteTaskDefinitionUseCase>().execute(
             DeleteTaskDefinitionUseCase.Input(
                 id = TaskDefinitionId(UUID.fromString(resource.taskDefinitionId)),
-                requesterId = requesterId,
+                tenantId = authenticatedMember.tenantId,
+                requesterId = authenticatedMember.memberId,
             )
         )
 

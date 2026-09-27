@@ -3,11 +3,13 @@ package com.task.usecase.taskDefinition.get
 import com.google.inject.ImplementedBy
 import com.task.domain.member.MemberId
 import com.task.domain.taskDefinition.*
+import com.task.domain.tenant.TenantId
 
 @ImplementedBy(GetTaskDefinitionUseCaseImpl::class)
 interface GetTaskDefinitionUseCase {
     data class Input(
-        val id: TaskDefinitionId
+        val id: TaskDefinitionId,
+        val tenantId: TenantId,
     )
 
     data class Output(

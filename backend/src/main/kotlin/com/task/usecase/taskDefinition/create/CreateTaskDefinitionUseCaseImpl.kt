@@ -15,7 +15,7 @@ class CreateTaskDefinitionUseCaseImpl @Inject constructor(
 ) : CreateTaskDefinitionUseCase {
 
     override fun execute(input: CreateTaskDefinitionUseCase.Input): CreateTaskDefinitionUseCase.Output {
-        return database.withTransaction { session ->
+        return database.withTransaction(input.tenantId) { session ->
             val newTaskDefinition = TaskDefinition.create(
                 tenantId = input.tenantId,
                 name = input.name,

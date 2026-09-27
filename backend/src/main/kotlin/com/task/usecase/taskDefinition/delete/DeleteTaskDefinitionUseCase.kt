@@ -8,11 +8,13 @@ import com.task.domain.taskDefinition.TaskDefinitionId
 import com.task.domain.taskDefinition.TaskDefinitionName
 import com.task.domain.taskDefinition.TaskSchedule
 import com.task.domain.taskDefinition.TaskScope
+import com.task.domain.tenant.TenantId
 
 @ImplementedBy(DeleteTaskDefinitionUseCaseImpl::class)
 interface DeleteTaskDefinitionUseCase {
     data class Input(
         val id: TaskDefinitionId,
+        val tenantId: TenantId,
         val requesterId: MemberId,
     )
 

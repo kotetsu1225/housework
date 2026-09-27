@@ -19,7 +19,7 @@ class DeleteTaskDefinitionUseCaseImpl @Inject constructor(
 ) : DeleteTaskDefinitionUseCase {
 
     override fun execute(input: DeleteTaskDefinitionUseCase.Input): DeleteTaskDefinitionUseCase.Output {
-        return database.withTransaction { session ->
+        return database.withTransaction(input.tenantId) { session ->
             val targetTaskDefinition = taskDefinitionRepository.findById(input.id, session)
                 ?: throw IllegalArgumentException("TaskDefinition with id ${input.id.value} が見つかりませんでした。")
 

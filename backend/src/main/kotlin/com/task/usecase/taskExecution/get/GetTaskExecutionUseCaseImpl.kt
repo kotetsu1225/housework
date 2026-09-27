@@ -14,7 +14,7 @@ class GetTaskExecutionUseCaseImpl @Inject constructor(
 ) : GetTaskExecutionUseCase {
 
     override fun execute(input: GetTaskExecutionUseCase.Input): GetTaskExecutionUseCase.Output? {
-        val taskExecution = database.withTransaction { session ->
+        val taskExecution = database.withTransaction(input.tenantId) { session ->
             taskExecutionRepository.findById(input.id, session)
         } ?: return null
 

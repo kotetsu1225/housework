@@ -17,7 +17,7 @@ class StartTaskExecutionUseCaseImpl @Inject constructor(
 ) : StartTaskExecutionUseCase {
 
     override fun execute(input: StartTaskExecutionUseCase.Input): StartTaskExecutionUseCase.Output {
-        return database.withTransaction { session ->
+        return database.withTransaction(input.tenantId) { session ->
             val taskExecution = taskExecutionRepository.findById(input.id, session)
                 ?: throw IllegalArgumentException("タスク実行が見つかりません: ${input.id}")
             val taskDefinition = taskDefinitionRepository.findById(taskExecution.taskDefinitionId, session)

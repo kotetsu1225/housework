@@ -12,7 +12,7 @@ class UpdateAssignTaskExecutionUseCaseImpl @Inject constructor(
     private val taskExecutionRepository: TaskExecutionRepository
 ) : UpdateAssignTaskExecutionUseCase {
     override fun execute(input: UpdateAssignTaskExecutionUseCase.Input): UpdateAssignTaskExecutionUseCase.Output {
-        return database.withTransaction { session ->
+        return database.withTransaction(input.tenantId) { session ->
             val existingExecution = taskExecutionRepository.findById(input.id, session)
                 ?: throw IllegalArgumentException("TaskExecution with id ${input.id} does not exist")
 

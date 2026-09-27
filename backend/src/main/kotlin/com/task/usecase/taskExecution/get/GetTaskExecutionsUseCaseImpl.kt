@@ -14,7 +14,7 @@ class GetTaskExecutionsUseCaseImpl @Inject constructor(
 ) : GetTaskExecutionsUseCase {
 
     override fun execute(input: GetTaskExecutionsUseCase.Input): GetTaskExecutionsUseCase.Output {
-        return database.withTransaction { session ->
+        return database.withTransaction(input.tenantId) { session ->
             val (items, totalCount) = if (input.filter.isEmpty()) {
                 val items = taskExecutionRepository.findAll(session, input.limit, input.offset)
                 val count = taskExecutionRepository.count(session)

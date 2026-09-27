@@ -125,6 +125,7 @@ fun Route.taskExecutions() {
 
         val output = instance<GetTaskExecutionsUseCase>().execute(
             GetTaskExecutionsUseCase.Input(
+                tenantId = call.authenticatedMember().tenantId,
                 limit = resource.limit,
                 offset = resource.offset,
                 filter = filter
@@ -166,6 +167,7 @@ fun Route.taskExecutions() {
     get<TaskExecutions.Get> { resource ->
         val output = instance<GetTaskExecutionUseCase>().execute(
             GetTaskExecutionUseCase.Input(
+                tenantId = call.authenticatedMember().tenantId,
                 id = TaskExecutionId.from(resource.taskExecutionId)
             )
         )
@@ -204,6 +206,7 @@ fun Route.taskExecutions() {
 
         val output = instance<StartTaskExecutionUseCase>().execute(
             StartTaskExecutionUseCase.Input(
+                tenantId = call.authenticatedMember().tenantId,
                 id = TaskExecutionId.from(resource.taskExecutionId),
                 assigneeMemberIds = request.memberIds.map { MemberId(UUID.fromString(it)) }
             )
@@ -234,6 +237,7 @@ fun Route.taskExecutions() {
     post<TaskExecutions.Complete> { resource ->
         val output = instance<CompleteTaskExecutionUseCase>().execute(
             CompleteTaskExecutionUseCase.Input(
+                tenantId = call.authenticatedMember().tenantId,
                 id = TaskExecutionId.from(resource.taskExecutionId)
             )
         )
@@ -263,6 +267,7 @@ fun Route.taskExecutions() {
     post<TaskExecutions.Cancel> { resource ->
         val output = instance<CancelTaskExecutionUseCase>().execute(
             CancelTaskExecutionUseCase.Input(
+                tenantId = call.authenticatedMember().tenantId,
                 id = TaskExecutionId.from(resource.taskExecutionId)
             )
         )
@@ -283,6 +288,7 @@ fun Route.taskExecutions() {
 
         val output = instance<UpdateAssignTaskExecutionUseCase>().execute(
             UpdateAssignTaskExecutionUseCase.Input(
+                tenantId = call.authenticatedMember().tenantId,
                 id = TaskExecutionId.from(resource.taskExecutionId),
                 newAssigneeMemberIds = request.memberIds.map { MemberId(UUID.fromString(it)) }
             )

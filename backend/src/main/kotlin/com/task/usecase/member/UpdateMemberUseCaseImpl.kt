@@ -12,7 +12,7 @@ class UpdateMemberUseCaseImpl @Inject constructor(
 ) : UpdateMemberUseCase {
 
     override fun execute(input: UpdateMemberUseCase.Input): UpdateMemberUseCase.Output {
-        val member = database.withTransaction { session ->
+        val member = database.withTransaction(input.tenantId) { session ->
             var targetMember = memberRepository.findById(input.id, session)
                 ?: throw IllegalArgumentException("Member with id ${input.id.value} が見つかりませんでした。")
 

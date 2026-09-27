@@ -12,7 +12,7 @@ class GetMemberUseCaseImpl @Inject constructor(
 ) : GetMemberUseCase {
 
     override fun execute(input: GetMemberUseCase.Input): GetMemberUseCase.Output? {
-        val member = database.withTransaction { session ->
+        val member = database.withTransaction(input.tenantId) { session ->
             memberRepository.findById(input.id, session)
         }
 

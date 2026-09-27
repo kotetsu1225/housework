@@ -9,9 +9,9 @@ import com.task.domain.member.PasswordHasher
 import com.task.domain.tenant.Tenant
 import com.task.domain.tenant.TenantRepository
 import com.task.infra.database.DatabaseWithoutRLS
+import com.task.infra.database.isUniqueViolationOf
 import com.task.infra.security.JwtService
 import org.jooq.exception.DataAccessException
-import org.postgresql.util.PSQLException
 
 @Singleton
 class RegisterFamilyUseCaseImpl @Inject constructor(
@@ -27,7 +27,6 @@ class RegisterFamilyUseCaseImpl @Inject constructor(
         // tenants.email の一意制約はV20で `UNIQUE` を列制約として付けており名前を指定していないため、
         // PostgreSQLのデフォルト命名規則(<table>_<column>_key)により tenants_email_key になる。
         private val EMAIL_UNIQUE_CONSTRAINTS = setOf("members_email_key", "tenants_email_key")
-        private const val UNIQUE_VIOLATION_SQL_STATE = "23505"
     }
 
     override fun execute(input: RegisterFamilyUseCase.Input): RegisterFamilyUseCase.Output {
@@ -76,21 +75,10 @@ class RegisterFamilyUseCaseImpl @Inject constructor(
     }
 
     /**
-     * [e]の原因チェーンをたどり、PostgreSQLの一意制約違反(members_email_key / tenants_email_key)なら
+     * [e]がPostgreSQLの一意制約違反(members_email_key / tenants_email_key)なら
      * [EmailAlreadyUsedException]に変換する。それ以外の原因の場合は[e]をそのまま返す(呼び出し側でthrowし直す)。
      */
     private fun toEmailAlreadyUsedExceptionOrRethrow(e: DataAccessException): RuntimeException {
-        // 原因チェーンにPSQLExceptionが無い、あるいは制約名が取れない場合はemailの一意制約違反と
-        // 判定できないため、そのまま元の例外を返す(呼び出し側でthrowし直す)。
-        val psqlException = generateSequence<Throwable>(e) { it.cause }
-            .filterIsInstance<PSQLException>()
-            .firstOrNull()
-            ?: return e
-        val constraintName = psqlException.serverErrorMessage?.getConstraint() ?: return e
-
-        val isEmailUniqueViolation = psqlException.getSQLState() == UNIQUE_VIOLATION_SQL_STATE &&
-            constraintName in EMAIL_UNIQUE_CONSTRAINTS
-
-        return if (isEmailUniqueViolation) EmailAlreadyUsedException() else e
+        return if (e.isUniqueViolationOf(EMAIL_UNIQUE_CONSTRAINTS)) EmailAlreadyUsedException() else e
     }
 }

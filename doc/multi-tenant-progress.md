@@ -2,7 +2,7 @@
 
 [multi-tenant-handoff.md](multi-tenant-handoff.md) §6.4 に従い、**issue の着手時と完了時に必ず更新する**。コンテキストが切れた別のエージェントが、このファイルだけを見て再開できる粒度で書く。
 
-最終更新: 2026-09-27(完了 20 件。U 系 #51 #53 #54 #55 実装中。#69 apply と #48 の方針はオーナーの判断待ち)
+最終更新: 2026-09-27(完了 26 件。#50 #61 実装中。#69 apply と #48 の方針はオーナーの判断待ち)
 
 ## 現在の状態
 
@@ -35,10 +35,8 @@
 
 | issue | 担当 | ブランチ(worktree は `~/Desktop/housework-wt/mt-<番号>`) | 状況・次の一手 |
 |---|---|---|---|
-| #51 U1 | Sonnet(編集)+ 親(DB テスト・レビュー) | `mt/51-member-usecases-tenant` | Member 系 4 UseCase。member/create の 409(一意制約違反の変換を共通化) |
-| #53 U3 | Sonnet(編集)+ 親(DB テスト・レビュー) | `mt/53-taskdefinition-usecases-tenant` | TaskDefinition 系 5 UseCase。ハンドラ経由の TaskExecution と outbox の tenant_id |
-| #54 U4 | Sonnet(編集)+ 親(DB テスト・レビュー) | `mt/54-taskexecution-usecases-tenant` | TaskExecution 系 7 UseCase。**通知が他テナントに飛ばないこと**をフェイクの送信で確認 |
-| #55 U5 | Sonnet(編集)+ 親(DB テスト・レビュー) | `mt/55-query-usecases-tenant` | Dashboard / CompletedTasks。withSession を撤去 |
+| #50 D6 | Sonnet(編集)+ 親(テスト・レビュー) | `mt/50-same-tenant-invariants` | same-tenant の require。`InProgress.complete / cancel` は TaskDefinition を受け取る形に変える |
+| #61 B5 | Sonnet(編集)+ 親(テスト・レビュー) | `mt/61-pubsub-subscriber` | subscriber。処理は tenant スコープの共通部品に切り出し、pubsub 無効時のアプリ内処理も同じ部品を使う(#61 にコメント) |
 | #48 D4 | — | 未着手 | **endpoint の他テナント衝突の扱いがオーナーの判断待ち**(推奨は「409 で断る」)。#52 #58〜#60 もこれ待ち |
 | #69 G0 | 親(人間と伴走) | `mt/69-gcp-foundation`(push 済み、PR 未作成) | plan は 5 件追加。**オーナーの承認後に apply → PR** |
 
@@ -65,6 +63,12 @@
 | #44 A3 | #96 | 2026-09-27 | RegisterFamilyUseCase(1 トランザクション)、EmailAlreadyUsedException → 409(一意制約違反で判定) |
 | #56 B0 | #94 | 2026-09-27 | TenantBatchRunner |
 | #71 G2 | #97 | 2026-09-27 | Pub/Sub クライアント基盤。エミュレータ `google-cloud-cli:586.0.0-emulators` |
+| #51 U1 | #99 | 2026-09-27 | Member 系。一意制約違反の判定を `infra/database/UniqueViolation.kt` に共通化 |
+| #53 U3 | #100 | 2026-09-27 | TaskDefinition 系。ハンドラは変更不要 |
+| #54 U4 | #101 | 2026-09-27 | TaskExecution 系。通知が他テナントに飛ばないことをフェイクで確認 |
+| #55 U5 | #98 | 2026-09-27 | Dashboard / CompletedTasks |
+| #57 B1 | #102 | 2026-09-27 | 日次生成をテナント単位に |
+| #72 G3 | #103 | 2026-09-27 | outbox リレー。**pubsub 無効時はアプリ内処理を残す**(#72 にコメント)。属性名は `OutboxMessageAttributes` |
 | #36 F1 | #79 | 2026-09-26 | V22 backfill 新規、V23 に rename、jOOQ 再生成。**素の `./gradlew build` はもう DB に触れない**(コンパイル時の自動生成を停止)。生成は `./gradlew generateJooq -PdbUrl=jdbc:postgresql://localhost:5433/<DB名>` |
 
 ## ブロック中・未解決の疑問
@@ -112,14 +116,15 @@
 ## 運用上の教訓
 
 - 2026-09-23: 16 並列の読解ワークフローが利用上限に達し、22 体すべてが成果物を返さずに終わった(約 102 万トークン消費)。以後は、エージェントに作業ごとのファイル保存をさせ、読むファイルを明示的に限定し、並列数を抑える。
+- 2026-09-27: **worktree で `git stash` を使わない。** stash は全 worktree で共有されるので、shopping の退避(`stash@{0}`、pop / drop 禁止)の番号がずれる。#72 の取り込みで衝突し、自分の退避が残った(メッセージで特定して自分の分だけ削除し、shopping の退避は無事)。統合ブランチの取り込みは、先にコミットしてから `git merge` する。
 - 2026-09-27: Mac がスリープするとビルドやエージェントが止まったように見える(ビルドが 15 分かかったのはこのため)。プロセスが生きているか確かめてから判断する。scratchpad(/private/tmp)の書き出したファイルは消えることがある。消えたら作り直す。
 - 2026-09-25: #36 を 1 体の Sonnet にまとめて任せたところ、通信が 10 分止まって進捗ゼロで終わった。以後は、Sonnet にはファイル編集だけを任せ、時間のかかる Gradle・DB 操作は親が実行する。
 
 ## 次にやること(優先順)
 
-1. #51 #53 #54 #55 をレビュー → テスト → PR → マージ
-2. #57(日次生成)、#72(outbox リレー)→ #61(subscriber)、#50(same-tenant。U 系の後)
-3. #48 の判断後: #48 → #52、#58〜#60
+1. #50 #61 をレビュー → テスト → PR → マージ
+2. #48 の判断後: #48 → #52、#58〜#60
+3. Wave 3: #65(互換パス撤去。#52 #58〜#60 の後)、#66(隔離の統合テスト)、#68(ドキュメント)
 3. #48: オーナーの判断後
 4. #69: オーナーの承認後に apply → PR → #70(Pub/Sub の Terraform)
 5. Wave 3: #65(互換パス撤去)、#66(隔離の統合テスト)、#68(ドキュメント)、#67 #73(人間と一緒に)

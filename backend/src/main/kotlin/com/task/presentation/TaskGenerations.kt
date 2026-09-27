@@ -57,9 +57,10 @@ fun Route.taskGenerations() {
     // POST /api/task-generations/daily - 当日分を生成
     post<TaskGenerations.GenerateDaily> {
         val today = LocalDate.now(AppTimeZone.ZONE)
+        val tenantId = call.authenticatedMember().tenantId
 
         val output = instance<GenerateDailyExecutionsUseCase>().execute(
-            GenerateDailyExecutionsUseCase.Input(targetDate = today)
+            GenerateDailyExecutionsUseCase.Input(tenantId = tenantId, targetDate = today)
         )
 
         call.respond(
@@ -75,9 +76,10 @@ fun Route.taskGenerations() {
     // POST /api/task-generations/daily/{date} - 指定日分を生成（テスト用）
     post<TaskGenerations.GenerateDailyForDate> { resource ->
         val targetDate = LocalDate.parse(resource.date)
+        val tenantId = call.authenticatedMember().tenantId
 
         val output = instance<GenerateDailyExecutionsUseCase>().execute(
-            GenerateDailyExecutionsUseCase.Input(targetDate = targetDate)
+            GenerateDailyExecutionsUseCase.Input(tenantId = tenantId, targetDate = targetDate)
         )
 
         call.respond(

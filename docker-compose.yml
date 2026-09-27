@@ -27,6 +27,19 @@ services:
       - housework-network
 
   # ==========================================
+  # Pub/Sub Emulator（ローカル開発用。issue #71）
+  # ==========================================
+  pubsub-emulator:
+    image: gcr.io/google.com/cloudsdktool/google-cloud-cli:586.0.0-emulators
+    container_name: housework-pubsub-emulator
+    command: ["gcloud", "beta", "emulators", "pubsub", "start", "--host-port=0.0.0.0:8085", "--project=housework-local"]
+    ports:
+      - "8085:8085"
+    restart: unless-stopped
+    networks:
+      - housework-network
+
+  # ==========================================
   # Backend API (Kotlin/Ktor)
   # ==========================================
   backend:
@@ -42,12 +55,18 @@ services:
       # RLS適用接続（housework_app）。ローカル専用の値
       APP_PGUSER: housework_app
       APP_PGPASSWORD: housework_app_password
+      # Pub/Sub設定（ローカルはエミュレータに接続。issue #71）
+      PUBSUB_ENABLED: "true"
+      PUBSUB_PROJECT_ID: housework-local
+      PUBSUB_EMULATOR_HOST: pubsub-emulator:8085
       TZ: Asia/Tokyo
     ports:
       - "8080:8080"
     depends_on:
       postgres:
         condition: service_healthy
+      pubsub-emulator:
+        condition: service_started
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:8080/health > /dev/null || exit 1"]
       interval: 30s

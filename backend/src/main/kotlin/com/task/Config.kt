@@ -78,6 +78,7 @@ import com.task.usecase.pushSubscription.RegisterPushSubscriptionUseCase
 import com.task.usecase.pushSubscription.RegisterPushSubscriptionUseCaseImpl
 import com.task.usecase.memberMeta.SaveMemberMetaUseCase
 import com.task.usecase.memberMeta.SaveMemberMetaUseCaseImpl
+import com.task.infra.pubsub.PubSubConfig
 
 class AppModule : AbstractModule() {
     override fun configure() {
@@ -186,5 +187,10 @@ class AppModule : AbstractModule() {
         bind(JwtConfig::class.java).toInstance(jwtConfig)
 
         bind(JwtService::class.java).toInstance(JwtService(jwtConfig))
+
+        // Pub/Subクライアント基盤の設定（issue #71）。PubSubClientFactory自体は
+        // コンストラクタが@Injectされた具象クラスなのでJITバインディングに任せる。
+        val pubSubConfig = PubSubConfig.fromConfig(appConfig)
+        bind(PubSubConfig::class.java).toInstance(pubSubConfig)
     }
 }

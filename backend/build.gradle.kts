@@ -93,6 +93,14 @@ dependencies {
 
     implementation("nl.martijndwars:web-push:5.1.1")
     implementation("org.bouncycastle:bcprov-jdk18on:1.77")
+
+    // Pub/Sub（issue #71。バージョンはBOMで固定する）
+    implementation(platform("com.google.cloud:libraries-bom:26.89.0"))
+    implementation("com.google.cloud:google-cloud-pubsub")
+
+    // Pub/Subエミュレータ（Testcontainers）。docker-compose.ymlのpubsub-emulatorと同じ
+    // イメージ（gcr.io/google.com/cloudsdktool/google-cloud-cli:586.0.0-emulators）を使う。
+    testImplementation("org.testcontainers:testcontainers-gcloud:2.0.5")
 }
 
 // Flyway configuration

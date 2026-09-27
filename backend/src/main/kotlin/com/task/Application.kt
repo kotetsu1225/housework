@@ -3,6 +3,8 @@ package com.task
 import com.task.domain.member.EmailAlreadyUsedException
 import com.task.infra.config.DotenvLoader
 import com.task.infra.database.DatabaseConfig
+import com.task.infra.pubsub.PubSubClientFactory
+import com.task.infra.pubsub.PubSubConfig
 import com.task.infra.security.JwtConfig
 import com.task.presentation.GuicePlugin
 import com.task.presentation.auth
@@ -109,6 +111,19 @@ fun Application.module() {
 
     val injector = attributes[guiceInjectorKey]
 
+    // Pub/Sub(#71): エミュレータはリソースを永続化しないので、エミュレータに接続するときだけ
+    // 起動時に topic と subscription を「無ければ作る」。本番の GCP は Terraform で管理する(#70)。
+    val pubSubConfig = injector.getInstance(PubSubConfig::class.java)
+    if (pubSubConfig.enabled && pubSubConfig.emulatorHost != null) {
+        injector.getInstance(PubSubClientFactory::class.java).ensureEmulatorResources()
+        environment.log.info(
+            "Pub/Sub エミュレータ(${pubSubConfig.emulatorHost})に topic ${pubSubConfig.topicId} と " +
+                "subscription ${pubSubConfig.subscriptionId} を用意しました(project=${pubSubConfig.projectId})"
+        )
+    } else {
+        environment.log.info("Pub/Sub: enabled=${pubSubConfig.enabled}, emulator=${pubSubConfig.emulatorHost != null}")
+    }
+
     val jwtConfig = injector.getInstance(JwtConfig::class.java)
     configureJwtAuth(jwtConfig)
 
@@ -172,6 +187,7 @@ fun Application.module() {
         notDailyTomorrowNotificationScheduler.stop()
         notDailyTaskReminderScheduler.stop()
         outboxScheduler.stop()
+        injector.getInstance(PubSubClientFactory::class.java).close()
     }
 
     routing {

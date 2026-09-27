@@ -1,5 +1,6 @@
 package com.task.infra.pubsub
 
+import com.google.api.gax.batching.FlowControlSettings
 import com.google.api.gax.core.CredentialsProvider
 import com.google.api.gax.core.FixedCredentialsProvider
 import com.google.api.gax.core.NoCredentialsProvider
@@ -97,12 +98,22 @@ class PubSubClientFactory @Inject constructor(
      * Subscriberを生成する。受信したメッセージは呼び出し側の[receiver]でack/nackすること
      * (このクラスは受信後の処理には関与しない。#61の対象)。
      *
+     * 【flow controlについて(issue #61)】
+     * 同時に受信・処理するメッセージ数を[MAX_OUTSTANDING_ELEMENT_COUNT]件に制限する。
+     * 制限しないと大量のメッセージが同時に処理され、各メッセージの処理が開くDB接続
+     * (tenantスコープのトランザクション)でコネクションプールを使い切ってしまう恐れがあるため。
+     *
      * @throws IllegalStateException `pubsub.enabled = false`のとき。呼び出し側は
      *   [PubSubConfig.enabled]を見て、falseなら本メソッドを呼ばないこと。
      */
     fun createSubscriber(receiver: MessageReceiver): Subscriber {
         check(config.enabled) { "pubsub.enabled = false のため Subscriber を作成できません" }
         val builder = Subscriber.newBuilder(subscriptionName, receiver)
+            .setFlowControlSettings(
+                FlowControlSettings.newBuilder()
+                    .setMaxOutstandingElementCount(MAX_OUTSTANDING_ELEMENT_COUNT)
+                    .build()
+            )
         applyTransport(
             onEmulator = { channelProvider ->
                 builder.setChannelProvider(channelProvider)
@@ -227,5 +238,8 @@ class PubSubClientFactory @Inject constructor(
         private const val GOOGLE_CREDENTIALS_JSON_ENV = "GOOGLE_CREDENTIALS_JSON"
         private const val PUBSUB_SCOPE = "https://www.googleapis.com/auth/pubsub"
         private const val ACK_DEADLINE_SECONDS = 60
+
+        /** 同時処理数の上限(issue #61)。[createSubscriber]のKDoc参照。 */
+        private const val MAX_OUTSTANDING_ELEMENT_COUNT = 10L
     }
 }

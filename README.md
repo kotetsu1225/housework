@@ -144,7 +144,19 @@ NOT_STARTED ──→ IN_PROGRESS ──→ COMPLETED
 | TaskExecutionCompleted | タスク完了時 | メール通知・Web Push（FAMILYタスク） |
 | TaskExecutionCancelled | タスクキャンセル時 | - |
 
-**Outboxパターン**: イベントは `outbox` テーブルに永続化後、10秒間隔のスケジューラで非同期処理されます。処理済みイベントは `completed_domain_events` テーブルで冪等性を保証します。
+**Outboxパターン**: イベントは `outbox` テーブルに永続化されます（テナントの分離のため、行は`tenant_id`を持ちます。payload自体には含みません）。処理済みイベントは `completed_domain_events` テーブルで冪等性を保証します（重複配信されたイベントは何もしません）。
+
+イベントの配信方式は2通りあり、`pubsub.enabled`（環境変数`PUBSUB_ENABLED`、既定`false`）で切り替えます。
+- `false`（既定）: 従来どおりアプリ内のスケジューラが`outbox`のPENDINGを10秒間隔でポーリングして処理します。
+- `true`: リレーが`outbox`のPENDINGをGoogle Cloud Pub/Subのtopic `domain-events` にpublishし、アプリ内のstreaming pull subscriber（subscription `housework-backend`）がテナントスコープで処理します。
+
+Pub/Sub関連の環境変数:
+| 環境変数 | 説明 |
+|---------|------|
+| `PUBSUB_ENABLED` | `true`でPub/Subを使う。既定は`false`（アプリ内ポーリング） |
+| `PUBSUB_PROJECT_ID` | GCPプロジェクトID。エミュレータ利用時は任意の文字列でよい |
+| `PUBSUB_EMULATOR_HOST` | `host:port`形式。設定するとエミュレータに接続する |
+| `GOOGLE_APPLICATION_CREDENTIALS` / `GOOGLE_CREDENTIALS_JSON` | 本番（GCP）接続時の認証情報。前者はファイルパス、後者はJSON本文（Railway向け） |
 
 ---
 
@@ -164,7 +176,10 @@ Kotlinコルーチンベースのスケジューラが5つ稼働します。
 
 ## 認証・セキュリティ
 
-- **JWT認証**: ログイン時にJWTトークンを発行（有効期限: 7日間）
+- **マルチテナント**: 1家族 = 1テナント。サインアップ（`/api/auth/register`）は家族の新規作成を意味し、以降に追加されるメンバーはログインした人と同じ家族に属します
+- **ログイン方式**: メールアドレス + パスワード（メンバー名ではありません）
+- **JWT認証**: ログイン時にJWTトークンを発行（有効期限: 7日間）。クレームに`tenantId`を含み、これが無い（マルチテナント化以前の）トークンは401になります
+- **テナント分離（RLS）**: PostgreSQLのRow Level Securityで、各テーブルの`tenant_id`とトランザクションごとに設定するテナントID（`app.current_tenant_id`）を比較し、他家族のデータにアクセスできないようにしています
 - **BCryptパスワードハッシュ**: パスワードはBCryptでハッシュ化して保存
 - **CORS設定**: 許可オリジンを環境変数で設定可能
 - **非rootユーザー実行**: Dockerコンテナ内でappuserとして実行
@@ -178,10 +193,15 @@ Kotlinコルーチンベースのスケジューラが5つ稼働します。
 ### 認証
 
 ```bash
-# ログイン
+# サインアップ（家族の新規作成。家族と最初のメンバーを1トランザクションで作成しJWTを返す）
+curl -X POST http://localhost:8080/api/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"familyName":"田中家","name":"田中太郎","email":"taro@example.com","familyRole":"FATHER","password":"password123"}'
+
+# ログイン（メンバー名ではなくemailで行う）
 curl -X POST http://localhost:8080/api/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"name":"田中太郎","password":"password123"}'
+  -d '{"email":"taro@example.com","password":"password123"}'
 
 # ログアウト（クライアント側でトークンを破棄）
 curl -X POST http://localhost:8080/api/auth/logout
@@ -189,8 +209,10 @@ curl -X POST http://localhost:8080/api/auth/logout
 
 ### メンバー管理
 
+メンバーの追加はログイン後に行い、追加されたメンバーはログインした人と同じ家族（テナント）に属します。
+
 ```bash
-# メンバー一覧取得（当日のポイント・完了タスク数を含む）
+# メンバー一覧取得（当日のポイント・完了タスク数を含む。自分の家族のメンバーのみ）
 curl http://localhost:8080/api/member
 
 # 特定メンバー取得
@@ -319,37 +341,55 @@ curl http://localhost:8080/health
 
 ## データベース
 
+マルチテナント化により、DB接続は用途に応じて2つのロールを使い分けます。
+
 ### 接続情報
+| ロール | 用途 | RLS | 環境変数 |
+|-----|-----|-----|-----|
+| `housework`（オーナー） | Flyway migration、Gradleの`flywayMigrate` / `generateJooq`、RLSを越える必要がある処理（emailログイン、サインアップ、バッチのためのテナント列挙、outboxのリレー / ポーリング） | 受けない（テーブル所有者） | `PGUSER` / `PGPASSWORD`（または`JDBC_DATABASE_URL`、`PGHOST` / `PGPORT` / `PGDATABASE`） |
+| `housework_app` | 通常のリクエスト処理・テナント単位のバッチ | 受ける | `APP_PGUSER`（既定`housework_app`）/ `APP_PGPASSWORD` |
+
 | 項目 | 値 |
 |-----|-----|
 | Host | localhost |
 | Port | 5432 |
 | Database | housework |
-| User | housework |
-| Password | housework_password |
+| User（オーナー） | housework |
+| Password（オーナー） | housework_password |
+| User（アプリ用） | housework_app |
+| Password（アプリ用） | housework_app_password |
 
-### テーブル構成（19マイグレーション）
+`housework_app`ロールはV21で作成されます。パスワードはFlywayのplaceholder（`appRolePassword`）で渡すためmigrationには直書きされません。アプリ起動時は`APP_PGPASSWORD`の値、Gradleでは`-PappRolePassword=...`（既定はローカル用の`housework_app_password`）を使います。
+
+**安全策**: `APP_PGPASSWORD`が未設定（ローカル用の既定値のまま）で、接続先がローカル（localhost / 127.0.0.1 / postgres / housework-db / housework-mt-db など）以外の場合、起動を停止します。
+
+接続プールは2本（オーナー用・アプリ用、各`maximumPoolSize = 10`）用意され、起動時にまずFlyway（オーナー接続）を実行した後、両方のプールが作られます。
+
+### テーブル構成（24マイグレーション）
 
 | テーブル名 | 説明 |
 |-----------|------|
-| members | 家族メンバー（name, email, password_hash, role） |
-| task_definitions | タスク定義テンプレート（schedule, scope, point） |
-| task_recurrences | 繰り返しスケジュール設定 |
-| task_executions | タスク実行インスタンス（status, scheduled_date） |
-| task_execution_participants | タスク担当者（多対多、複数メンバー対応） |
-| task_snapshots | タスク実行時のスナップショット（凍結された定義） |
-| push_subscriptions | Web Push通知サブスクリプション |
-| member_metas | メンバーメタデータ（キーバリュー） |
-| outbox | ドメインイベント永続化（Outboxパターン） |
-| completed_domain_events | 処理済みイベント（冪等性保証） |
+| tenants | テナント（家族）。family_name, email, status |
+| members | 家族メンバー（name, email, password_hash, role, tenant_id） |
+| task_definitions | タスク定義テンプレート（schedule, scope, point, tenant_id） |
+| task_recurrences | 繰り返しスケジュール設定（tenant_id） |
+| task_executions | タスク実行インスタンス（status, scheduled_date, tenant_id） |
+| task_execution_participants | タスク担当者（多対多、複数メンバー対応、tenant_id） |
+| task_snapshots | タスク実行時のスナップショット（凍結された定義、tenant_id） |
+| push_subscriptions | Web Push通知サブスクリプション（tenant_id） |
+| member_metas | メンバーメタデータ（キーバリュー、tenant_id） |
+| outbox | ドメインイベント永続化（Outboxパターン、tenant_id） |
+| completed_domain_events | 処理済みイベント（冪等性保証、tenant_id） |
 | flyway_schema_history | マイグレーション履歴 |
+
+上記のうち`tenants`と`flyway_schema_history`を除く10テーブルに`tenant_id`カラムとRow Level Security（RLS）が設定されています。
 
 ### マイグレーション履歴
 
 マイグレーションは**アプリケーション起動時に自動実行**されます（Flyway）。
 
 <details>
-<summary>マイグレーション一覧（V1〜V19）</summary>
+<summary>マイグレーション一覧（V1〜V24）</summary>
 
 | Version | 内容 |
 |---------|------|
@@ -372,6 +412,11 @@ curl http://localhost:8080/health
 | V17 | `member_metas` テーブル作成 |
 | V18 | `outbox` テーブル作成（ドメインイベント永続化） |
 | V19 | `completed_domain_events` テーブル作成 |
+| V20 | `tenants` テーブル作成 |
+| V21 | マルチテナント化適用（`housework_app`ロール作成、10テーブルに`tenant_id`とインデックス追加、`members`の名前一意制約を`(tenant_id, name)`に変更、8テーブルにRLS設定、`housework_app`への権限付与） |
+| V22 | 既存データのデフォルトテナントへのバックフィル |
+| V23 | 10テーブルの`tenant_id`をNOT NULL化、`tenants(id)`への外部キー追加 |
+| V24 | `outbox` / `completed_domain_events` にもRLS設定、`tenants`にRLS設定、`housework_app`からの`tenants`書き込み権限剥奪 |
 
 </details>
 
@@ -468,10 +513,12 @@ docker exec housework-db psql -U housework -d housework -c "SELECT version, desc
 
 ### バックエンド
 
+`./gradlew test` / `build` はTestcontainers（`postgres:17-alpine`とPub/Subエミュレータ）を使うため**Dockerの起動が必要**です。`build`はDBに接続しません（コンパイル時のjOOQ自動生成は行わない）。jOOQ生成とFlywayマイグレーション（`generateJooq` / `flywayMigrate`）は**オーナー（`housework`）ロールで**接続します。
+
 ```bash
 cd backend
 
-# 依存関係のインストールとビルド
+# 依存関係のインストールとビルド（DBには接続しない）
 ./gradlew build
 
 # アプリケーション実行（PostgreSQL要起動）
@@ -480,13 +527,13 @@ cd backend
 # Fat JAR作成
 ./gradlew shadowJar
 
-# jOOQコード生成（マイグレーション後）
-./gradlew generateJooq
+# jOOQコード生成（オーナー接続。接続先を明示的に指定する）
+./gradlew generateJooq -PdbUrl=jdbc:postgresql://localhost:5432/housework -PdbUser=housework -PdbPassword=housework_password
 
-# Flywayマイグレーション
-./gradlew flywayMigrate
+# Flywayマイグレーション（オーナー接続。housework_appロールの作成に必要なappRolePasswordも渡す）
+./gradlew flywayMigrate -PappRolePassword=housework_app_password
 
-# テスト実行
+# テスト実行（Docker必須。Testcontainersでpostgres:17-alpineとPub/Subエミュレータを起動）
 ./gradlew test
 
 # クリーンビルド
@@ -526,7 +573,7 @@ housework/
 ├── backend/                          # Kotlinバックエンド
 │   ├── build.gradle.kts             # Gradleビルド設定
 │   ├── Dockerfile                   # マルチステージDockerビルド
-│   ├── db/migration/                # Flywayマイグレーション（V1〜V19）
+│   ├── db/migration/                # Flywayマイグレーション（V1〜V24）
 │   ├── docker/postgres/init.sql     # PostgreSQL初期化スクリプト
 │   └── src/
 │       ├── main/kotlin/com/task/

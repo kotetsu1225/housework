@@ -2,7 +2,7 @@
 
 [multi-tenant-handoff.md](multi-tenant-handoff.md) §6.4 に従い、**issue の着手時と完了時に必ず更新する**。コンテキストが切れた別のエージェントが、このファイルだけを見て再開できる粒度で書く。
 
-最終更新: 2026-09-27(完了 26 件。#50 #61 実装中。#69 apply と #48 の方針はオーナーの判断待ち)
+最終更新: 2026-09-27(完了 28 件。着手できる issue は #69 apply と #48 の方針の判断待ち)
 
 ## 現在の状態
 
@@ -25,18 +25,13 @@
 |---|---|---|
 | `~/Desktop/housework` | `mt/catchup-report`(マージ済み) | オーナーの作業ツリー。触らない |
 | `~/Desktop/housework-wt/integration` | `feature/topic-multitenant` | 進捗ファイルの更新、統合後のビルド |
-| `~/Desktop/housework-wt/mt-35` | `mt/35-tenant-id`(マージ済み) | 削除してよい |
-| `~/Desktop/housework-wt/mt-36` | `mt/36-migrations`(マージ済み) | 削除してよい |
-| `~/Desktop/housework-wt/mt-37` | `mt/37-app-role-pool` | #37 |
-| `~/Desktop/housework-wt/mt-39` | `mt/39-tenant-aggregate` | #39 |
-| `~/Desktop/housework-wt/mt-69` | `mt/69-gcp-foundation` | #69 |
+| `~/Desktop/housework-wt/mt-<番号>` | `mt/<番号>-<名前>` | issue ごとに 1 つ。下の「完了」にあるものはマージ済みなので削除してよい |
+| `~/Desktop/housework-wt/mt-69` | `mt/69-gcp-foundation` | #69(push 済み、PR 未作成)。**削除しない** |
 
 ## 着手中
 
 | issue | 担当 | ブランチ(worktree は `~/Desktop/housework-wt/mt-<番号>`) | 状況・次の一手 |
 |---|---|---|---|
-| #50 D6 | Sonnet(編集)+ 親(テスト・レビュー) | `mt/50-same-tenant-invariants` | same-tenant の require。`InProgress.complete / cancel` は TaskDefinition を受け取る形に変える |
-| #61 B5 | Sonnet(編集)+ 親(テスト・レビュー) | `mt/61-pubsub-subscriber` | subscriber。処理は tenant スコープの共通部品に切り出し、pubsub 無効時のアプリ内処理も同じ部品を使う(#61 にコメント) |
 | #48 D4 | — | 未着手 | **endpoint の他テナント衝突の扱いがオーナーの判断待ち**(推奨は「409 で断る」)。#52 #58〜#60 もこれ待ち |
 | #69 G0 | 親(人間と伴走) | `mt/69-gcp-foundation`(push 済み、PR 未作成) | plan は 5 件追加。**オーナーの承認後に apply → PR** |
 
@@ -70,12 +65,29 @@
 | #57 B1 | #102 | 2026-09-27 | 日次生成をテナント単位に |
 | #72 G3 | #103 | 2026-09-27 | outbox リレー。**pubsub 無効時はアプリ内処理を残す**(#72 にコメント)。属性名は `OutboxMessageAttributes` |
 | #36 F1 | #79 | 2026-09-26 | V22 backfill 新規、V23 に rename、jOOQ 再生成。**素の `./gradlew build` はもう DB に触れない**(コンパイル時の自動生成を停止)。生成は `./gradlew generateJooq -PdbUrl=jdbc:postgresql://localhost:5433/<DB名>` |
+| #50 D6 | #104 | 2026-09-27 | same-tenant の require。`InProgress.complete / cancel` は TaskDefinition を受け取る形に変更。担当者 ID の重複は `distinct()` してから数える |
+| #61 B5 | #105 | 2026-09-27 | streaming pull subscriber。処理本体を `HandleTaskDefinitionDeletedUseCase` / `OutboxEventProcessor` に切り出し、pubsub 無効時のアプリ内ポーリングと共有。属性欠落・未知の eventType・例外は nack。pubsub 無効時、未知の eventType は PROCESSED にせず retry に回す(挙動の変更)。**outbox 系の互換パス呼び出しはこれで無くなった** |
 
 ## ブロック中・未解決の疑問
 
 | 内容 | 誰の判断が必要か | 状態 |
 |---|---|---|
 | #69 の `terraform apply`(API 4 つの有効化と月 1,000 円の予算アラート) | オーナー | 承認待ち |
+| #48 endpoint(Web Push の購読先 URL)が別テナントで既に登録済みのときの扱い(推奨は「409 で断る」) | オーナー | 判断待ち。#48 → #52、#58〜#60 → #65 がこれで止まっている |
+
+## 残っている互換パス(`database.withTransaction { }` / `withSession { }`)の呼び出し
+
+#65 で互換パスを消す前に、次の 7 箇所が無くなっている必要がある(2026-09-27、#105 マージ後の統合ブランチで grep)。
+
+| 呼び出し元 | 片付ける issue |
+|---|---|
+| `GetPushSubscriptionUseCaseImpl` / `RegisterPushSubscriptionUseCaseImpl` | #52 |
+| `GetUserMetasUseCaseImpl` / `SaveMemberMetaUseCaseImpl` | #52 |
+| `SendDailyNotCompletedTaskNotificationsUseCaseImpl` | #58 |
+| `SendNotDailyTaskRemindersUseCaseImpl` | #59 |
+| `SendNotDailyTomorrowTaskNotificationsUseCaseImpl` | #60 |
+
+確認コマンド: `grep -rnE "database\.(withTransaction|withSession) *\{" backend/src/main/kotlin`
 
 ## handoff の補正(キャッチアップで判明。詳細は `doc/multi-tenant-catchup.md` 5.4)
 
@@ -112,6 +124,8 @@
 - **Ktor の `testApplication` には必ず `environment { config = MapApplicationConfig() }` を付ける。** 付けないと `src/main/resources/application.conf` を読み、本物の `Application.module` を起動して、既定の DB(ポート 5432、shopping のデータ入り)に接続し Flyway とスケジューラまで動かそうとする(#42 のレビューで発覚。DB は変わっていないことを確認済み)。
 - DB のテストは `PostgresTestDatabase`(Testcontainers の postgres:17)を使う。fail-closed のエラーは、新しい接続では「設定が無い」、使い回した接続では「uuid に変換できない」になる。両方を受け入れる。
 - 例外のテストは型だけでなく、メッセージで原因(RLS 違反など)まで確かめる。
+- Pub/Sub エミュレータのテストは、**テストクラスごとに専用の topic / subscription 名**を使う(同じ名前だと他のテストのメッセージが混ざる)。非同期の結果は固定の sleep ではなく、条件が成り立つまで待つ(例: `OutboxEventProcessor` を継承して結果を記録し、件数がそろうまで待つ。#61 の `DomainEventSubscriberEndToEndTest`)。
+- 大事な判定(冪等性など)のテストは、一時的に本体を壊して**テストが落ちることを確かめてから**元に戻す。
 
 ## 運用上の教訓
 
@@ -122,10 +136,7 @@
 
 ## 次にやること(優先順)
 
-1. #50 #61 をレビュー → テスト → PR → マージ
-2. #48 の判断後: #48 → #52、#58〜#60
-3. Wave 3: #65(互換パス撤去。#52 #58〜#60 の後)、#66(隔離の統合テスト)、#68(ドキュメント)
-3. #48: オーナーの判断後
-4. #69: オーナーの承認後に apply → PR → #70(Pub/Sub の Terraform)
-5. Wave 3: #65(互換パス撤去)、#66(隔離の統合テスト)、#68(ドキュメント)、#67 #73(人間と一緒に)
-4. 並行可能: #62 #63 #64(フロント)、#71(Pub/Sub クライアント基盤)
+1. #48 の判断後: #48 → #52、#58〜#60(この 3 つは並行できる)
+2. #69: オーナーの承認後に apply → `terraform plan` で差分なしを確認 → PR → #70(Pub/Sub の Terraform)
+3. Wave 3: #65(互換パス撤去。上の 7 箇所が無くなってから)、#66(隔離の統合テスト)、#68(ドキュメント)
+4. 人間と一緒に: #67(本番リハーサル)、#73(Pub/Sub への切り替え)

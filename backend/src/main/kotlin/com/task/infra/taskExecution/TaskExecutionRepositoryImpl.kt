@@ -10,6 +10,7 @@ import com.task.domain.taskExecution.TaskExecution
 import com.task.domain.taskExecution.TaskExecutionId
 import com.task.domain.taskExecution.TaskExecutionRepository
 import com.task.domain.taskExecution.TaskSnapshot
+import com.task.domain.tenant.TenantId
 import com.task.infra.database.jooq.tables.references.TASK_EXECUTION_PARTICIPANTS
 import com.task.infra.database.jooq.tables.references.TASK_EXECUTIONS
 import com.task.infra.database.jooq.tables.references.TASK_SNAPSHOTS
@@ -57,10 +58,12 @@ class TaskExecutionRepositoryImpl : TaskExecutionRepository {
             .set(TASK_EXECUTIONS.STATUS, "NOT_STARTED")
             .set(TASK_EXECUTIONS.CREATED_AT, now)
             .set(TASK_EXECUTIONS.UPDATED_AT, now)
+            // tenant_id は親集約(TaskExecution)が保持する値をそのまま書き込む。
+            .set(TASK_EXECUTIONS.TENANT_ID, taskExecution.tenantId.value)
             .execute()
 
         taskExecution.assigneeMemberIds.let { assigneeIds ->
-            insertTaskExecutionAssignee(taskExecution.id,assigneeIds , session)
+            insertTaskExecutionAssignee(taskExecution.id, taskExecution.tenantId, assigneeIds, session)
         }
 
         return taskExecution
@@ -81,8 +84,10 @@ class TaskExecutionRepositoryImpl : TaskExecutionRepository {
             }
 
             is TaskExecution.InProgress -> {
-                insertSnapshot(taskExecution.id.value, taskExecution.taskSnapshot, session)
-                insertTaskExecutionAssignee(taskExecution.id, taskExecution.assigneeMemberIds, session)
+                // task_snapshots / task_execution_participants の tenant_id は
+                // 常に親の TaskExecution.tenantId から引く(子テーブル自身は tenantId を持たない)。
+                insertSnapshot(taskExecution.id.value, taskExecution.tenantId, taskExecution.taskSnapshot, session)
+                insertTaskExecutionAssignee(taskExecution.id, taskExecution.tenantId, taskExecution.assigneeMemberIds, session)
                 updateStep
                     .set(TASK_EXECUTIONS.STATUS, "IN_PROGRESS")
                     .set(TASK_EXECUTIONS.STARTED_AT, taskExecution.startedAt.toOffsetDateTime())
@@ -98,12 +103,14 @@ class TaskExecutionRepositoryImpl : TaskExecutionRepository {
             is TaskExecution.Cancelled -> updateStep
                 .set(TASK_EXECUTIONS.STATUS, "CANCELLED")
 
+            // UPDATE では tenant_id は変更しない(テナント間の付け替えは想定しない)。
         }.where(TASK_EXECUTIONS.ID.eq(taskExecution.id.value)).execute()
 
         return taskExecution
     }
 
-    private fun insertSnapshot(taskExecutionId: UUID, snapshot: TaskSnapshot, session: DSLContext) {
+    // tenantId は呼び出し元(親の TaskExecution)から受け取る。子テーブルは自前で tenantId を持たない。
+    private fun insertSnapshot(taskExecutionId: UUID, tenantId: TenantId, snapshot: TaskSnapshot, session: DSLContext) {
         session.insertInto(TASK_SNAPSHOTS)
             .set(TASK_SNAPSHOTS.TASK_EXECUTION_ID, taskExecutionId)
             .set(TASK_SNAPSHOTS.NAME, snapshot.frozenName.value)
@@ -113,6 +120,7 @@ class TaskExecutionRepositoryImpl : TaskExecutionRepository {
             .set(TASK_SNAPSHOTS.DEFINITION_VERSION, snapshot.definitionVersion)
             .set(TASK_SNAPSHOTS.FROZEN_POINT, snapshot.frozenPoint)
             .set(TASK_SNAPSHOTS.CREATED_AT, snapshot.capturedAt.toOffsetDateTime())
+            .set(TASK_SNAPSHOTS.TENANT_ID, tenantId.value)
             .execute()
     }
 
@@ -128,8 +136,10 @@ class TaskExecutionRepositoryImpl : TaskExecutionRepository {
             .execute()
     }
 
+    // tenantId は呼び出し元(親の TaskExecution)から受け取る。子テーブルは自前で tenantId を持たない。
     private fun insertTaskExecutionAssignee(
         taskExecutionId: TaskExecutionId,
+        tenantId: TenantId,
         assigneeMemberIds: List<MemberId>,
         session: DSLContext
     ) {
@@ -139,6 +149,7 @@ class TaskExecutionRepositoryImpl : TaskExecutionRepository {
                 this.taskExecutionId = taskExecutionId.value
                 this.memberId = memberId.value
                 this.joinedAt = now
+                this.tenantId = tenantId.value
             }
         }
         session.batchInsert(records).execute()
@@ -387,7 +398,8 @@ class TaskExecutionRepositoryImpl : TaskExecutionRepository {
         if (insertMemberIdValues.isNotEmpty()) {
             val insertMemberIds = existingTaskExecution.assigneeMemberIds
                 .filter { it.value in insertMemberIdValues }
-            insertTaskExecutionAssignee(existingTaskExecution.id, insertMemberIds, session)
+            // tenant_id は既存の TaskExecution(親)から引き継ぐ。
+            insertTaskExecutionAssignee(existingTaskExecution.id, existingTaskExecution.tenantId, insertMemberIds, session)
         }
 
         val record = session.select(
@@ -413,12 +425,16 @@ class TaskExecutionRepositoryImpl : TaskExecutionRepository {
         participants: List<TaskExecutionParticipantsRecord>
     ): TaskExecution {
         val id = TaskExecutionId(execution.id!!)
+        // tenantId は task_executions(親)の列から復元し、reconstruct* にそのまま渡す。
+        // 子テーブル(task_snapshots / task_execution_participants)側の tenant_id は参照しない。
+        val tenantId = TenantId(execution.tenantId)
         val taskDefinitionId = TaskDefinitionId(execution.taskDefinitionId!!)
         val scheduledDate = execution.scheduledDate!!.toDomainInstant()
 
         return when (execution.status) {
             "NOT_STARTED" -> TaskExecution.reconstructNotStarted(
                 id = id,
+                tenantId = tenantId,
                 taskDefinitionId = taskDefinitionId,
                 scheduledDate = scheduledDate,
                 assigneeMemberIds = participants.map {
@@ -428,6 +444,7 @@ class TaskExecutionRepositoryImpl : TaskExecutionRepository {
 
             "IN_PROGRESS" -> TaskExecution.reconstructInProgress(
                 id = id,
+                tenantId = tenantId,
                 taskDefinitionId = taskDefinitionId,
                 scheduledDate = scheduledDate,
                 assigneeMemberIds = participants.map {
@@ -443,6 +460,7 @@ class TaskExecutionRepositoryImpl : TaskExecutionRepository {
 
             "COMPLETED" -> TaskExecution.reconstructCompleted(
                 id = id,
+                tenantId = tenantId,
                 taskDefinitionId = taskDefinitionId,
                 scheduledDate = scheduledDate,
                 assigneeMemberIds = participants.map {
@@ -461,6 +479,7 @@ class TaskExecutionRepositoryImpl : TaskExecutionRepository {
 
             "CANCELLED" -> TaskExecution.reconstructCancelled(
                 id = id,
+                tenantId = tenantId,
                 taskDefinitionId = taskDefinitionId,
                 scheduledDate = scheduledDate,
                 assigneeMemberIds = participants.map {

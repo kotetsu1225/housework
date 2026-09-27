@@ -4,6 +4,7 @@ import com.google.inject.ImplementedBy
 import com.task.domain.member.MemberId
 import com.task.domain.taskDefinition.TaskDefinitionId
 import com.task.domain.taskExecution.TaskExecutionId
+import com.task.domain.tenant.TenantId
 import java.time.Instant
 import java.time.LocalDate
 
@@ -23,6 +24,7 @@ interface GetTaskExecutionsUseCase {
     }
 
     data class Input(
+        val tenantId: TenantId,
         val limit: Int = 20,
         val offset: Int = 0,
         val filter: FilterSpec = FilterSpec.empty()

@@ -17,7 +17,7 @@ class CancelTaskExecutionUseCaseImpl @Inject constructor(
     private val domainEventDispatcher: DomainEventDispatcher
 ) : CancelTaskExecutionUseCase {
     override fun execute(input: CancelTaskExecutionUseCase.Input): CancelTaskExecutionUseCase.Output {
-        return database.withTransaction { session: DSLContext ->
+        return database.withTransaction(input.tenantId) { session: DSLContext ->
             val taskExecution = taskExecutionRepository.findById(input.id, session)
                 ?: throw IllegalArgumentException("TaskExecution with id ${input.id} not found")
             val taskDefinition = taskDefinitionRepository.findById(taskExecution.taskDefinitionId, session)

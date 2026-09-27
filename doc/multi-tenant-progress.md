@@ -2,7 +2,7 @@
 
 [multi-tenant-handoff.md](multi-tenant-handoff.md) §6.4 に従い、**issue の着手時と完了時に必ず更新する**。コンテキストが切れた別のエージェントが、このファイルだけを見て再開できる粒度で書く。
 
-最終更新: 2026-09-27(完了 16 件。#43 #44 #56 #71 実装中。#69 apply と #48 の方針はオーナーの判断待ち)
+最終更新: 2026-09-27(完了 20 件。U 系 #51 #53 #54 #55 実装中。#69 apply と #48 の方針はオーナーの判断待ち)
 
 ## 現在の状態
 
@@ -35,11 +35,11 @@
 
 | issue | 担当 | ブランチ(worktree は `~/Desktop/housework-wt/mt-<番号>`) | 状況・次の一手 |
 |---|---|---|---|
-| #43 A2 | Sonnet(編集)+ 親(DB テスト・レビュー) | `mt/43-email-login` | email ログイン、DatabaseWithoutRLS、失敗メッセージ統一、tenant が ACTIVE でなければ 401 |
-| #44 A3 | Sonnet(編集)+ 親(DB テスト・レビュー) | `mt/44-register-family` | RegisterFamilyUseCase(1 トランザクション)、EmailAlreadyUsedException → 409(一意制約違反で判定)。**#43 と Auth.kt の別の部分を触る。後にマージする方が取り込む** |
-| #56 B0 | Sonnet(編集)+ 親(DB テスト・レビュー) | `mt/56-tenant-batch-runner` | TenantBatchRunner。既存スケジューラは変えない |
-| #71 G2 | Sonnet(編集)+ 親(エミュレータのテスト・起動確認) | `mt/71-pubsub-client` | libraries-bom 26.89.0、testcontainers-gcloud 2.0.5、エミュレータ `google-cloud-cli:586.0.0-emulators` |
-| #48 D4 | — | 未着手 | **endpoint の他テナント衝突の扱いがオーナーの判断待ち**(#48 にコメント。推奨は「409 で断る」) |
+| #51 U1 | Sonnet(編集)+ 親(DB テスト・レビュー) | `mt/51-member-usecases-tenant` | Member 系 4 UseCase。member/create の 409(一意制約違反の変換を共通化) |
+| #53 U3 | Sonnet(編集)+ 親(DB テスト・レビュー) | `mt/53-taskdefinition-usecases-tenant` | TaskDefinition 系 5 UseCase。ハンドラ経由の TaskExecution と outbox の tenant_id |
+| #54 U4 | Sonnet(編集)+ 親(DB テスト・レビュー) | `mt/54-taskexecution-usecases-tenant` | TaskExecution 系 7 UseCase。**通知が他テナントに飛ばないこと**をフェイクの送信で確認 |
+| #55 U5 | Sonnet(編集)+ 親(DB テスト・レビュー) | `mt/55-query-usecases-tenant` | Dashboard / CompletedTasks。withSession を撤去 |
+| #48 D4 | — | 未着手 | **endpoint の他テナント衝突の扱いがオーナーの判断待ち**(推奨は「409 で断る」)。#52 #58〜#60 もこれ待ち |
 | #69 G0 | 親(人間と伴走) | `mt/69-gcp-foundation`(push 済み、PR 未作成) | plan は 5 件追加。**オーナーの承認後に apply → PR** |
 
 ## 完了(統合ブランチにマージ済み)
@@ -61,6 +61,10 @@
 | #42 A1 | #92 | 2026-09-27 | JWT の tenantId クレーム、validate で 401、AuthenticatedMember。principal 6 箇所を置き換え |
 | #47 D3 | #93 | 2026-09-27 | TaskExecution の 4 状態と 3 テーブルに tenantId。create は TaskDefinition から引き継ぐ |
 | #49 D5 | #91 | 2026-09-26 | OutboxRecord / completed_domain_events に tenantId(エンベロープ方式) |
+| #43 A2 | #95 | 2026-09-27 | email ログイン(DatabaseWithoutRLS)、失敗メッセージを 1 つに統一、tenant が ACTIVE でなければ 401 |
+| #44 A3 | #96 | 2026-09-27 | RegisterFamilyUseCase(1 トランザクション)、EmailAlreadyUsedException → 409(一意制約違反で判定) |
+| #56 B0 | #94 | 2026-09-27 | TenantBatchRunner |
+| #71 G2 | #97 | 2026-09-27 | Pub/Sub クライアント基盤。エミュレータ `google-cloud-cli:586.0.0-emulators` |
 | #36 F1 | #79 | 2026-09-26 | V22 backfill 新規、V23 に rename、jOOQ 再生成。**素の `./gradlew build` はもう DB に触れない**(コンパイル時の自動生成を停止)。生成は `./gradlew generateJooq -PdbUrl=jdbc:postgresql://localhost:5433/<DB名>` |
 
 ## ブロック中・未解決の疑問
@@ -113,8 +117,9 @@
 
 ## 次にやること(優先順)
 
-1. #43 #44 #56 #71 をレビュー → テスト → PR → マージ
-2. U 系(#51〜#55。#51 は #44 の後)、B 系(#57〜#60。#56 の後)、#72(outbox リレー。#71 の後)→ #61(subscriber)、#50(same-tenant。U 系の後)
+1. #51 #53 #54 #55 をレビュー → テスト → PR → マージ
+2. #57(日次生成)、#72(outbox リレー)→ #61(subscriber)、#50(same-tenant。U 系の後)
+3. #48 の判断後: #48 → #52、#58〜#60
 3. #48: オーナーの判断後
 4. #69: オーナーの承認後に apply → PR → #70(Pub/Sub の Terraform)
 5. Wave 3: #65(互換パス撤去)、#66(隔離の統合テスト)、#68(ドキュメント)、#67 #73(人間と一緒に)

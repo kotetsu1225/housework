@@ -10,7 +10,15 @@ interface MemberRepository {
     fun update(member: Member, session: DSLContext): Member
     fun findById(id: MemberId, session: DSLContext): Member?
     fun findByIds(ids: List<MemberId>, session: DSLContext): List<Member>?
-    fun findByName(name: MemberName, session: DSLContext): Member?
+
+    /**
+     * email でメンバーを検索する。
+     *
+     * `members.email` はテナントをまたいでグローバルに一意(V11 `members_email_key`)なので、
+     * SQL は tenant で絞り込まない。ログイン(#43)のように tenant が確定する前の処理から、
+     * `DatabaseWithoutRLS` が発行する session を渡して呼び出すことを想定している。
+     */
+    fun findByEmail(email: MemberEmail, session: DSLContext): Member?
 
     /**
      * SQL は tenant で絞り込まない(無条件で全件の name を SELECT する)。

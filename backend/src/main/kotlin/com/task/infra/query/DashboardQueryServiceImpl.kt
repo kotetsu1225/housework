@@ -55,7 +55,7 @@ class DashboardQueryServiceImpl @Inject constructor(
     }
 
     override fun fetchDashboardData(input: DashboardQueryService.Input): DashboardQueryService.Output {
-        return database.withSession { dsl ->
+        return database.withTransaction(input.tenantId) { dsl ->
             val targetDate = input.targetDate
             val today = LocalDate.now(AppTimeZone.ZONE)
 

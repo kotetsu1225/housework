@@ -104,9 +104,11 @@ fun Route.completedTasks() {
             ?.filter { it.isNotEmpty() }
 
         val date = resource.date?.let { LocalDate.parse(it) }
+        val tenantId = call.authenticatedMember().tenantId
 
         val output = instance<GetCompletedTasksUseCase>().execute(
             GetCompletedTasksUseCase.Input(
+                tenantId = tenantId,
                 memberIds = memberIdList,
                 date = date,
                 limit = resource.limit,

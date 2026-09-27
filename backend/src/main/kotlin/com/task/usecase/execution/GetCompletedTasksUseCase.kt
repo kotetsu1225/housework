@@ -1,5 +1,6 @@
 package com.task.usecase.execution
 
+import com.task.domain.tenant.TenantId
 import com.task.usecase.query.execution.CompletedTaskDto
 import java.time.LocalDate
 
@@ -11,6 +12,7 @@ import java.time.LocalDate
 interface GetCompletedTasksUseCase {
 
     data class Input(
+        val tenantId: TenantId,
         /** 担当者IDでフィルタ（nullの場合は全員） */
         val memberIds: List<String>? = null,
         /** 日付でフィルタ（nullの場合は全期間） */

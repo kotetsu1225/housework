@@ -1,5 +1,6 @@
 package com.task.usecase.query.dashboard
 
+import com.task.domain.tenant.TenantId
 import java.time.LocalDate
 
 /**
@@ -13,7 +14,8 @@ import java.time.LocalDate
 interface DashboardQueryService {
 
     data class Input(
-        val targetDate: LocalDate
+        val targetDate: LocalDate,
+        val tenantId: TenantId
     )
 
     data class Output(

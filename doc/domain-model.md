@@ -11,16 +11,37 @@ DDDの戦術的パターン（Entity、Value Object、Aggregate、Domain Event�
 
 ```mermaid
 classDiagram
+    namespace TenantAggregate {
+        class Tenant {
+            <<Aggregate Root>>
+            +TenantId id
+            +FamilyName familyName
+            +MemberEmail email
+            +TenantStatus status
+            +create(familyName, email)
+            +reconstruct(id, familyName, email, status)
+        }
+
+        class TenantId { <<Value Object>> +UUID value }
+        class FamilyName { <<Value Object>> +String value }
+        class TenantStatus { <<Enum>> ACTIVE DELETED }
+    }
+
+    Tenant *-- TenantId
+    Tenant *-- FamilyName
+    Tenant *-- TenantStatus
+
     namespace MemberAggregate {
         class Member {
             <<Aggregate Root>>
             +MemberId id
+            +TenantId tenantId
             +MemberName name
             +MemberEmail email
             +FamilyRole familyRole
             +PasswordHash password
-            +create(name, email, familyRole, password, existingMembersName)
-            +reconstruct(id, name, email, familyRole, password)
+            +create(tenantId, name, email, familyRole, password, existingMembersName)
+            +reconstruct(id, tenantId, name, email, familyRole, password)
             +updateName(newName, existingMembersName)
             +updateEmail(newEmail)
             +updateFamilyRole(newRole)
@@ -39,11 +60,13 @@ classDiagram
     Member *-- MemberEmail
     Member *-- PasswordHash
     Member *-- FamilyRole
+    Member ..> Tenant : tenantId
 
     namespace TaskDefinitionAggregate {
         class TaskDefinition {
             <<Aggregate Root / extends AggregateRoot>>
             +TaskDefinitionId id
+            +TenantId tenantId
             +TaskDefinitionName name
             +TaskDefinitionDescription description
             +ScheduledTimeRange scheduledTimeRange
@@ -92,18 +115,20 @@ classDiagram
     RecurrencePattern <|-- Daily
     RecurrencePattern <|-- Weekly
     RecurrencePattern <|-- Monthly
+    TaskDefinition ..> Tenant : tenantId
 
     namespace TaskExecutionAggregate {
         class TaskExecution {
             <<Sealed Class / Aggregate Root>>
             +TaskExecutionId id
+            +TenantId tenantId
             +TaskDefinitionId taskDefinitionId
             +Instant scheduledDate
             +List~MemberId~ assigneeMemberIds
         }
 
         class NotStarted {
-            +start(memberIds, taskDefinition) StateChange~InProgress~
+            +start(assignees, taskDefinition) StateChange~InProgress~
             +cancel(taskDefinition) StateChange~Cancelled~
         }
 
@@ -155,14 +180,59 @@ classDiagram
     TaskExecution ..> TaskDefinition : taskDefinitionId
     TaskExecution ..> Member : assigneeMemberIds
     TaskDefinition ..> Member : ownerMemberId
+    TaskExecution ..> Tenant : tenantId
 ```
 
 ---
 
-## 1. Member集約
+## 1. Tenant集約
 
 ### 概要
-家族メンバーを表現する集約。認証情報（パスワードハッシュ）を含む。
+テナント（= 家族）を表現する集約。1家族 = 1テナントであり、`Member`・`TaskDefinition`・`TaskExecution`など他の集約はすべていずれかの`Tenant`に属する（マルチテナント化、issue #34）。
+
+### 構成要素
+
+| 要素 | 種類 | 説明 |
+|------|------|------|
+| `Tenant` | Entity (Aggregate Root) | テナントエンティティ |
+| `TenantId` | Value Object | UUIDベースの識別子 |
+| `FamilyName` | Value Object | 家族名 |
+| `MemberEmail`（Member集約と同じ型を再利用） | Value Object | テナント連絡先メールアドレス |
+| `TenantStatus` | Enum | `ACTIVE`（有効）/ `DELETED`（削除済み） |
+
+### 不変条件（Invariants）
+
+```kotlin
+require(value.isNotBlank()) {
+    "家族名は必須です。"
+}
+require(value.length <= 255) {
+    "家族名は255文字以内で入力してください。"
+}
+```
+
+### ファクトリメソッド
+
+```kotlin
+fun create(
+    familyName: FamilyName,
+    email: MemberEmail,
+): Tenant
+
+fun reconstruct(
+    id: TenantId,
+    familyName: FamilyName,
+    email: MemberEmail,
+    status: TenantStatus,
+): Tenant
+```
+
+---
+
+## 2. Member集約
+
+### 概要
+家族メンバーを表現する集約。認証情報（パスワードハッシュ）と所属テナント（`tenantId`）を含む。
 
 ### 構成要素
 
@@ -170,8 +240,9 @@ classDiagram
 |------|------|------|
 | `Member` | Entity (Aggregate Root) | メンバーエンティティ |
 | `MemberId` | Value Object | UUIDベースの識別子 |
-| `MemberName` | Value Object | メンバー名（一意制約） |
-| `MemberEmail` | Value Object | メールアドレス（正規表現検証） |
+| `TenantId`（Tenant集約で定義） | Value Object | 所属テナントの識別子 |
+| `MemberName` | Value Object | メンバー名（テナント内で一意） |
+| `MemberEmail` | Value Object | メールアドレス（正規表現検証、全テナントを通してグローバルに一意） |
 | `PasswordHash` | Value Object | BCryptハッシュ化済みパスワード |
 | `PlainPassword` | Value Object | 平文パスワード（5〜72文字） |
 | `FamilyRole` | Enum | 家族内の役割 |
@@ -192,10 +263,13 @@ require(existingMembersName.none { it.value == name.value }) {
 }
 ```
 
+`existingMembersName`は`MemberRepository.findAllNames`から取得する。SQL自体はtenantで絞り込まないが、tenantスコープのトランザクション内ではRLSにより自テナント分のみが返るため、この重複チェックは実質的に「家族（テナント）の中で」一意という意味になる。別のテナントであれば同じ名前を使ってよい。
+
 ### ファクトリメソッド
 
 ```kotlin
 fun create(
+    tenantId: TenantId,
     name: MemberName,
     email: MemberEmail,
     familyRole: FamilyRole,
@@ -205,6 +279,7 @@ fun create(
 
 fun reconstruct(
     id: MemberId,
+    tenantId: TenantId,
     name: MemberName,
     email: MemberEmail,
     familyRole: FamilyRole,
@@ -214,11 +289,11 @@ fun reconstruct(
 
 ---
 
-## 2. TaskDefinition集約
+## 3. TaskDefinition集約
 
 ### 概要
 タスクのテンプレート/カタログを表現する集約。定期タスクまたは単発タスクのスケジュールを持つ。
-`AggregateRoot`を継承し、ドメインイベントの蓄積機能を持つ。
+`AggregateRoot`を継承し、ドメインイベントの蓄積機能を持つ。所属テナント（`tenantId`）を持つ。
 
 ### 構成要素
 
@@ -226,6 +301,7 @@ fun reconstruct(
 |------|------|------|
 | `TaskDefinition` | Entity (Aggregate Root) | タスク定義エンティティ |
 | `TaskDefinitionId` | Value Object | UUIDベースの識別子 |
+| `TenantId`（Tenant集約で定義） | Value Object | 所属テナントの識別子 |
 | `TaskDefinitionName` | Value Object | タスク名 |
 | `TaskDefinitionDescription` | Value Object | タスク説明 |
 | `ScheduledTimeRange` | Value Object | 実行予定時間範囲 |
@@ -252,6 +328,20 @@ require(dayOfMonth in 1..28) {
     "dayOfMonthは1以上28以下である必要があります"
 }
 ```
+
+### テナント不変条件（issue #50）
+
+`TaskDefinition`は`tenantId: TenantId`を持つ。PERSONALスコープのオーナー（`Member`）を指定する`create`/`update`では、オーナーが自分と同じテナントに属していることを`require`で検証する。
+
+```kotlin
+if (owner != null) {
+    require(owner.tenantId == tenantId) {
+        "別の家族のメンバーは指定できません。"
+    }
+}
+```
+
+RLS（Row Level Security）はDBレベルのアクセス制御であり、「関連付ける相手が同じテナントであること」という意味的な整合性までは保証しない。バイパス接続の経路（バッチ、outbox処理）や将来の変更に対しても不変条件が守られるよう、この検証はドメイン層の`require`で行う（ADR #19 決定4）。
 
 ### スケジュール判定ロジック
 
@@ -316,11 +406,11 @@ fun delete(): TaskDefinition {
 
 ---
 
-## 3. TaskExecution集約（状態機械）
+## 4. TaskExecution集約（状態機械）
 
 ### 概要
 タスクの実行インスタンスを表現する集約。**Sealed Classによる型安全な状態機械**を実装。
-状態遷移時に`StateChange<T>`を返し、新しい状態とドメインイベントをペアで提供する。
+状態遷移時に`StateChange<T>`を返し、新しい状態とドメインイベントをペアで提供する。所属テナント（`tenantId`）を持ち、生成時に親の`TaskDefinition`から引き継ぐ。
 
 ### 状態遷移図
 
@@ -344,11 +434,12 @@ fun delete(): TaskDefinition {
 ```kotlin
 data class NotStarted(
     override val id: TaskExecutionId,
+    override val tenantId: TenantId,
     override val taskDefinitionId: TaskDefinitionId,
     override val scheduledDate: Instant,
     override val assigneeMemberIds: List<MemberId> = emptyList()
 ) : TaskExecution() {
-    fun start(memberIds: List<MemberId>, taskDefinition: TaskDefinition): StateChange<InProgress>
+    fun start(assignees: List<Member>, taskDefinition: TaskDefinition): StateChange<InProgress>
     fun cancel(taskDefinition: TaskDefinition): StateChange<Cancelled>
 }
 ```
@@ -357,6 +448,7 @@ data class NotStarted(
 ```kotlin
 data class InProgress(
     override val id: TaskExecutionId,
+    override val tenantId: TenantId,
     override val taskDefinitionId: TaskDefinitionId,
     override val scheduledDate: Instant,
     override val assigneeMemberIds: List<MemberId>,
@@ -378,6 +470,7 @@ data class InProgress(
 ```kotlin
 data class Completed(
     override val id: TaskExecutionId,
+    override val tenantId: TenantId,
     override val taskDefinitionId: TaskDefinitionId,
     override val scheduledDate: Instant,
     override val assigneeMemberIds: List<MemberId>,
@@ -401,6 +494,7 @@ data class Completed(
 ```kotlin
 data class Cancelled(
     override val id: TaskExecutionId,
+    override val tenantId: TenantId,
     override val taskDefinitionId: TaskDefinitionId,
     override val scheduledDate: Instant,
     override val assigneeMemberIds: List<MemberId>,
@@ -409,6 +503,23 @@ data class Cancelled(
     val cancelledAt: Instant
 ) : TaskExecution()
 ```
+
+### 同一テナント不変条件（issue #50）
+
+`TaskDefinition`との関連付けや担当者（`Member`）の割り当ては、状態遷移メソッド（`start`/`cancel`/`complete`）内で同じテナントであることを`require`で検証する（ADR #19 決定4）。
+
+```kotlin
+require(taskDefinition.tenantId == this.tenantId) {
+    "別の家族のタスク定義は指定できません。"
+}
+require(assignees.all { it.tenantId == this.tenantId }) {
+    "別の家族のメンバーは指定できません。"
+}
+```
+
+担当者変更のように状態遷移メソッドを介さずにメンバーを割り当てる操作のために、共通の検証関数`requireSameTenant(members: List<Member>)`が用意されている。
+
+なお、`TaskExecution.create(taskDefinition, scheduledDate)`は親の`TaskDefinition`の`tenantId`をそのまま引き継ぐため、生成時点でのTaskDefinitionとのsame-tenantは構造的に保証されている（issue #47）。
 
 ### StateChangeパターン
 
@@ -460,7 +571,7 @@ fun complete(definitionIsDeleted: Boolean): StateChange<Completed> {
 
 ---
 
-## 4. ドメインイベント
+## 5. ドメインイベント
 
 ### イベント基盤
 
@@ -497,6 +608,10 @@ abstract class AggregateRoot {
     }
 }
 ```
+
+### イベントとtenantId
+
+`TaskDefinitionDeleted`をはじめ、ドメインイベント自体は`tenantId`フィールドを持たない。イベントはOutboxパターンで永続化されるが、Outboxテーブルの行（エンベロープ）が`tenant_id`列を持ち、イベント本体（`payload`のJSON）にはtenantIdを含めない。
 
 ### TaskDefinition関連イベント
 
@@ -634,7 +749,7 @@ sequenceDiagram
 
 ---
 
-## 5. ドメインサービス
+## 6. ドメインサービス
 
 ### TaskGenerationService
 
@@ -680,7 +795,7 @@ interface TaskDefinitionAuthService {
 
 ---
 
-## 6. 値オブジェクトのバリデーション一覧
+## 7. 値オブジェクトのバリデーション一覧
 
 | 値オブジェクト | バリデーション | 型 |
 |---|---|---|
@@ -695,10 +810,12 @@ interface TaskDefinitionAuthService {
 | `ScheduledTimeRange` | `startTime < endTime` | `data class` |
 | `RecurrencePattern.Monthly` | `dayOfMonth in 1..28` | `sealed class` |
 | `TaskExecutionId` | なし（UUID生成） | `@JvmInline value class` |
+| `TenantId` | なし（UUID生成） | `@JvmInline value class` |
+| `FamilyName` | `isNotBlank()` + 255文字以内 | `data class` |
 
 ---
 
-## 7. タイムゾーン設定
+## 8. タイムゾーン設定
 
 ```kotlin
 object AppTimeZone {
@@ -713,7 +830,7 @@ object AppTimeZone {
 
 ---
 
-## 8. Mail（インフラ層境界のドメインオブジェクト）
+## 9. Mail（インフラ層境界のドメインオブジェクト）
 
 ```kotlin
 data class Mail(
@@ -736,15 +853,32 @@ interface MailSender {
 
 ---
 
-## 9. リポジトリインターフェース
+## 10. リポジトリインターフェース
+
+### TenantRepository
+
+`tenants`への書き込み・全件列挙は、テナントが確定する前（サインアップ #44 など）またはテナント横断の処理（バッチ #56 など）でのみ発生する。そのため呼び出し側は通常のRLS付きDatabaseではなく、`DatabaseWithoutRLS`（#40）が発行するsessionを渡すこと。
+
+```kotlin
+interface TenantRepository {
+    fun create(tenant: Tenant, session: DSLContext): Tenant
+    fun findById(id: TenantId, session: DSLContext): Tenant?
+
+    // status = 'ACTIVE' のTenantIdを列挙する。#56のテナント横断バッチ処理から利用される。
+    fun findAllActiveIds(session: DSLContext): List<TenantId>
+}
+```
 
 ### MemberRepository
+
+ログインはメンバー名ではなくemailで行う（#43）ため、`findByName`ではなく`findByEmail`を持つ。`members.email`はテナントをまたいでグローバルに一意（V11 `members_email_key`）なので、SQLはtenantで絞り込まない。ログイン（#43）のようにtenantが確定する前の処理から、`DatabaseWithoutRLS`が発行するsessionを渡して呼び出すことを想定している。
+
 ```kotlin
 interface MemberRepository {
     fun create(member: Member, session: DSLContext): Member
     fun update(member: Member, session: DSLContext): Member
     fun findById(id: MemberId, session: DSLContext): Member?
-    fun findByName(name: MemberName, session: DSLContext): Member?
+    fun findByEmail(email: MemberEmail, session: DSLContext): Member?
     fun findAll(session: DSLContext): List<Member>
     fun findAllNames(session: DSLContext): List<MemberName>
     fun findByIds(ids: List<MemberId>, session: DSLContext): List<Member>
@@ -777,7 +911,7 @@ interface TaskExecutionRepository {
 
 ---
 
-## 10. 設計原則まとめ
+## 11. 設計原則まとめ
 
 | 原則 | 適用状況 |
 |------|----------|

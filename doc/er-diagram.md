@@ -1,11 +1,12 @@
 # RDB ER図
 
-V1〜V17マイグレーション適用後の最終スキーマ。
+V1〜V24マイグレーション適用後の最終スキーマ。マルチテナント化(V20〜V24、issue #34)により、`tenants`テーブルと全10テーブルの`tenant_id`列、PostgreSQLのRow Level Security(RLS)によるテナント分離が導入されている（詳細は本ドキュメント末尾の「Row Level Security (RLS) によるテナント分離」を参照）。
 
 ## 概要
 
 | テーブル名 | 説明 | 集約 |
 |-----------|------|------|
+| `tenants` | テナント（家族）情報 | Tenant |
 | `members` | 家族メンバー | Member |
 | `member_metas` | メンバーのメタ情報 | - (インフラ層) |
 | `task_definitions` | タスク定義（カタログ） | TaskDefinition |
@@ -21,9 +22,19 @@ V1〜V17マイグレーション適用後の最終スキーマ。
 
 ```mermaid
 erDiagram
+    TENANTS {
+        UUID id PK "テナントID"
+        VARCHAR(255) family_name "家族名"
+        VARCHAR(255) email UK "テナント連絡先メール（ユニーク）"
+        VARCHAR(20) status "ACTIVE|DELETED"
+        TIMESTAMPTZ created_at "作成日時"
+        TIMESTAMPTZ updated_at "更新日時"
+    }
+
     MEMBERS {
         UUID id PK "メンバーID"
-        VARCHAR(100) name UK "メンバー名（ユニーク）"
+        UUID tenant_id FK "テナントID"
+        VARCHAR(100) name "メンバー名（テナント内でユニーク）"
         VARCHAR(255) email UK "メールアドレス（ユニーク）"
         VARCHAR(20) role "FATHER|MOTHER|SISTER|BROTHER"
         VARCHAR(255) password_hash "BCryptハッシュ"
@@ -34,6 +45,7 @@ erDiagram
     MEMBER_METAS {
         UUID member_id PK_FK "メンバーID"
         TEXT key PK "メタキー"
+        UUID tenant_id FK "テナントID"
         BOOLEAN value "メタ値"
         TIMESTAMPTZ created_at "作成日時"
         TIMESTAMPTZ updated_at "更新日時"
@@ -41,6 +53,7 @@ erDiagram
 
     TASK_DEFINITIONS {
         UUID id PK "タスク定義ID"
+        UUID tenant_id FK "テナントID"
         VARCHAR(200) name "タスク名"
         TEXT description "説明"
         TIMESTAMPTZ scheduled_start_time "予定開始時刻"
@@ -58,6 +71,7 @@ erDiagram
 
     TASK_RECURRENCES {
         UUID task_definition_id PK_FK "タスク定義ID"
+        UUID tenant_id FK "テナントID"
         VARCHAR(20) pattern_type "DAILY|WEEKLY|MONTHLY"
         BOOLEAN daily_skip_weekends "土日スキップ（DAILY用）"
         INTEGER weekly_day_of_week "曜日1-7（WEEKLY用）"
@@ -70,6 +84,7 @@ erDiagram
 
     TASK_EXECUTIONS {
         UUID id PK "タスク実行ID"
+        UUID tenant_id FK "テナントID"
         UUID task_definition_id FK "元タスク定義ID"
         DATE scheduled_date "実行予定日"
         VARCHAR(20) status "NOT_STARTED|IN_PROGRESS|COMPLETED|CANCELLED"
@@ -81,6 +96,7 @@ erDiagram
 
     TASK_SNAPSHOTS {
         UUID task_execution_id PK_FK "タスク実行ID"
+        UUID tenant_id FK "テナントID"
         VARCHAR(200) name "凍結タスク名"
         TEXT description "凍結説明"
         TIMESTAMPTZ scheduled_start_time "凍結予定開始時刻"
@@ -93,12 +109,14 @@ erDiagram
     TASK_EXECUTION_PARTICIPANTS {
         UUID task_execution_id PK_FK "タスク実行ID"
         UUID member_id PK_FK "メンバーID"
+        UUID tenant_id FK "テナントID"
         TIMESTAMPTZ joined_at "参加日時"
         INTEGER earned_point "獲得ポイント（完了時）"
     }
 
     PUSH_SUBSCRIPTIONS {
         UUID id PK "購読ID"
+        UUID tenant_id FK "テナントID"
         UUID member_id FK "メンバーID"
         TEXT endpoint UK "Push ServiceエンドポイントURL"
         TEXT p256dh_key "暗号化用ECDH公開鍵"
@@ -121,11 +139,41 @@ erDiagram
     TASK_EXECUTIONS ||--o| TASK_SNAPSHOTS : "has snapshot"
     TASK_EXECUTIONS ||--o{ TASK_EXECUTION_PARTICIPANTS : "has participants"
     MEMBERS ||--o{ TASK_EXECUTION_PARTICIPANTS : "participates"
+
+    TENANTS ||--o{ MEMBERS : "tenant_id"
+    TENANTS ||--o{ MEMBER_METAS : "tenant_id"
+    TENANTS ||--o{ TASK_DEFINITIONS : "tenant_id"
+    TENANTS ||--o{ TASK_RECURRENCES : "tenant_id"
+    TENANTS ||--o{ TASK_EXECUTIONS : "tenant_id"
+    TENANTS ||--o{ TASK_SNAPSHOTS : "tenant_id"
+    TENANTS ||--o{ TASK_EXECUTION_PARTICIPANTS : "tenant_id"
+    TENANTS ||--o{ PUSH_SUBSCRIPTIONS : "tenant_id"
+
+    %% outbox, completed_domain_events も tenant_id(NOT NULL, FK)でtenants(id)を参照する。
+    %% 本ER図では上記8テーブルのみをエンティティとして描画しているため、この2テーブルは図中に出てこない。
 ```
 
 ---
 
 ## テーブル詳細
+
+### tenants
+
+テナント（家族）の管理情報。1家族 = 1テナントであり、複数の家族が同じアプリ・同じDBを共有する（V20）。
+
+| カラム | 型 | NULL | 制約 | 説明 |
+|--------|-----|------|------|------|
+| id | UUID | NO | PK, DEFAULT uuid_generate_v4() | テナントID |
+| family_name | VARCHAR(255) | NO | | 家族名 |
+| email | VARCHAR(255) | NO | UNIQUE | テナント連絡先メールアドレス（登録時の最初のメンバーのemailを保持） |
+| status | VARCHAR(20) | NO | DEFAULT 'ACTIVE', CHECK (ACTIVE\|DELETED) | ステータス |
+| created_at | TIMESTAMPTZ | NO | DEFAULT CURRENT_TIMESTAMP | 作成日時 |
+| updated_at | TIMESTAMPTZ | NO | DEFAULT CURRENT_TIMESTAMP | 更新日時 |
+
+**制約:**
+- `tenants_email_key` UNIQUE (email)
+
+---
 
 ### members
 
@@ -134,8 +182,9 @@ erDiagram
 | カラム | 型 | NULL | 制約 | 説明 |
 |--------|-----|------|------|------|
 | id | UUID | NO | PK, DEFAULT uuid_generate_v4() | メンバーID |
-| name | VARCHAR(100) | NO | UNIQUE | メンバー名 |
-| email | VARCHAR(255) | NO | UNIQUE | メールアドレス |
+| tenant_id | UUID | NO | FK→tenants(id)（V21で追加、V23でNOT NULL化） | テナントID |
+| name | VARCHAR(100) | NO | UNIQUE (tenant_id, name) | メンバー名（テナント内でユニーク。別テナントなら同名可） |
+| email | VARCHAR(255) | NO | UNIQUE | メールアドレス（全テナントを通してグローバルに一意。ログインに使用） |
 | role | VARCHAR(20) | NO | CHECK (FATHER\|MOTHER\|SISTER\|BROTHER) | 家族内役割 |
 | password_hash | VARCHAR(255) | NO | | BCryptハッシュ |
 | created_at | TIMESTAMPTZ | NO | DEFAULT CURRENT_TIMESTAMP | 作成日時 |
@@ -143,7 +192,8 @@ erDiagram
 
 **インデックス:**
 - `idx_members_role` (role)
-- `idx_members_name` UNIQUE (name)
+- `idx_members_tenant_id` (tenant_id)
+- `idx_members_tenant_name` UNIQUE (tenant_id, name)（V21で`idx_members_name`から変更。旧インデックスは削除済み）
 
 ---
 
@@ -155,12 +205,14 @@ erDiagram
 |--------|-----|------|------|------|
 | member_id | UUID | NO | PK, FK→members(id) ON DELETE CASCADE | メンバーID |
 | key | TEXT | NO | PK | メタキー |
+| tenant_id | UUID | NO | FK→tenants(id) | テナントID |
 | value | BOOLEAN | NO | | メタ値 |
 | created_at | TIMESTAMPTZ | NO | DEFAULT CURRENT_TIMESTAMP | 作成日時 |
 | updated_at | TIMESTAMPTZ | NO | DEFAULT CURRENT_TIMESTAMP | 更新日時 |
 
 **インデックス:**
 - `idx_member_metas_member_id` (member_id)
+- `idx_member_metas_tenant_id` (tenant_id)
 
 ---
 
@@ -171,6 +223,7 @@ erDiagram
 | カラム | 型 | NULL | 制約 | 説明 |
 |--------|-----|------|------|------|
 | id | UUID | NO | PK, DEFAULT uuid_generate_v4() | タスク定義ID |
+| tenant_id | UUID | NO | FK→tenants(id) | テナントID |
 | name | VARCHAR(200) | NO | | タスク名 |
 | description | TEXT | YES | | 説明・手順 |
 | scheduled_start_time | TIMESTAMPTZ | NO | | 予定開始時刻 |
@@ -197,6 +250,7 @@ erDiagram
 - `idx_task_definitions_is_deleted` (is_deleted)
 - `idx_task_definitions_scheduled_start_time` (scheduled_start_time)
 - `idx_task_definitions_scheduled_end_time` (scheduled_end_time)
+- `idx_task_definitions_tenant_id` (tenant_id)
 
 ---
 
@@ -207,6 +261,7 @@ erDiagram
 | カラム | 型 | NULL | 制約 | 説明 |
 |--------|-----|------|------|------|
 | task_definition_id | UUID | NO | PK, FK→task_definitions(id) ON DELETE CASCADE | タスク定義ID |
+| tenant_id | UUID | NO | FK→tenants(id) | テナントID |
 | pattern_type | VARCHAR(20) | NO | CHECK (DAILY\|WEEKLY\|MONTHLY) | パターンタイプ |
 | daily_skip_weekends | BOOLEAN | YES | | 土日スキップ（DAILY用） |
 | weekly_day_of_week | INTEGER | YES | CHECK (1-7) | 曜日（WEEKLY用） |
@@ -222,6 +277,9 @@ erDiagram
 - `chk_monthly_pattern`: MONTHLY→monthly_day_of_month≠NULL
 - `chk_date_order`: end_date=NULL OR start_date≤end_date
 
+**インデックス:**
+- `idx_task_recurrences_tenant_id` (tenant_id)
+
 ---
 
 ### task_executions
@@ -231,6 +289,7 @@ erDiagram
 | カラム | 型 | NULL | 制約 | 説明 |
 |--------|-----|------|------|------|
 | id | UUID | NO | PK, DEFAULT uuid_generate_v4() | タスク実行ID |
+| tenant_id | UUID | NO | FK→tenants(id) | テナントID |
 | task_definition_id | UUID | NO | FK→task_definitions(id) ON DELETE RESTRICT | 元タスク定義ID |
 | scheduled_date | DATE | NO | | 実行予定日 |
 | status | VARCHAR(20) | NO | DEFAULT 'NOT_STARTED', CHECK (NOT_STARTED\|IN_PROGRESS\|COMPLETED\|CANCELLED) | ステータス |
@@ -248,6 +307,7 @@ erDiagram
 - `idx_task_executions_scheduled_date` (scheduled_date)
 - `idx_task_executions_status` (status)
 - `idx_task_executions_date_status` (scheduled_date, status)
+- `idx_task_executions_tenant_id` (tenant_id)
 
 ---
 
@@ -258,6 +318,7 @@ erDiagram
 | カラム | 型 | NULL | 制約 | 説明 |
 |--------|-----|------|------|------|
 | task_execution_id | UUID | NO | PK, FK→task_executions(id) ON DELETE CASCADE | タスク実行ID |
+| tenant_id | UUID | NO | FK→tenants(id) | テナントID |
 | name | VARCHAR(200) | NO | | 凍結タスク名 |
 | description | TEXT | YES | | 凍結説明 |
 | scheduled_start_time | TIMESTAMPTZ | NO | | 凍結予定開始時刻 |
@@ -269,6 +330,9 @@ erDiagram
 **CHECK制約:**
 - `chk_snapshot_scheduled_time_range`: scheduled_start_time < scheduled_end_time
 
+**インデックス:**
+- `idx_task_snapshots_tenant_id` (tenant_id)
+
 ---
 
 ### task_execution_participants
@@ -279,12 +343,14 @@ erDiagram
 |--------|-----|------|------|------|
 | task_execution_id | UUID | NO | PK, FK→task_executions(id) ON DELETE CASCADE | タスク実行ID |
 | member_id | UUID | NO | PK, FK→members(id) ON DELETE CASCADE | メンバーID |
+| tenant_id | UUID | NO | FK→tenants(id) | テナントID |
 | joined_at | TIMESTAMPTZ | NO | DEFAULT CURRENT_TIMESTAMP | 参加日時 |
 | earned_point | INTEGER | YES | | 獲得ポイント（完了時に設定） |
 
 **インデックス:**
 - `idx_task_execution_participants_member` (member_id)
 - `idx_task_execution_participants_execution` (task_execution_id)
+- `idx_task_execution_participants_tenant_id` (tenant_id)
 
 ---
 
@@ -295,6 +361,7 @@ Web Push通知の購読情報。インフラ層の関心事。
 | カラム | 型 | NULL | 制約 | 説明 |
 |--------|-----|------|------|------|
 | id | UUID | NO | PK, DEFAULT uuid_generate_v4() | 購読ID |
+| tenant_id | UUID | NO | FK→tenants(id) | テナントID |
 | member_id | UUID | NO | FK→members(id) ON DELETE CASCADE | メンバーID |
 | endpoint | TEXT | NO | UNIQUE | Push ServiceエンドポイントURL |
 | p256dh_key | TEXT | NO | | 暗号化用ECDH公開鍵（Base64） |
@@ -308,6 +375,7 @@ Web Push通知の購読情報。インフラ層の関心事。
 **インデックス:**
 - `idx_push_subscriptions_member` (member_id)
 - `idx_push_subscriptions_active` (is_active) WHERE is_active=TRUE（部分インデックス）
+- `idx_push_subscriptions_tenant_id` (tenant_id)
 
 ---
 
@@ -381,6 +449,15 @@ Web Push通知の購読情報。インフラ層の関心事。
 | V15 | point機能追加（definitions, snapshots, participants） |
 | V16 | push_subscriptions作成 |
 | V17 | member_metas作成 |
+| V18 | outbox作成（ドメインイベントの結果整合性用） |
+| V19 | completed_domain_events作成（イベント処理の冪等性担保用） |
+| V20 | tenants作成 |
+| V21 | マルチテナント対応: `housework_app`ロール作成、10テーブルに`tenant_id`(nullable)追加、membersの一意制約を`(tenant_id, name)`に変更、8テーブル（outbox・completed_domain_events以外）にRLS適用 |
+| V22 | 既存データを1つのdefault tenantへbackfill（membersが0件なら何もしない） |
+| V23 | 10テーブルの`tenant_id`をNOT NULL化し、`tenants(id)`へのFK制約を追加 |
+| V24 | outbox・completed_domain_events・tenantsにRLS適用、`housework_app`からtenantsへのINSERT/UPDATE/DELETE権限を剥奪 |
+
+V25以降は別機能のために予約されている。
 
 ---
 
@@ -396,3 +473,38 @@ Web Push通知の購読情報。インフラ層の関心事。
 | task_snapshots | task_execution_id | task_executions(id) | CASCADE |
 | task_execution_participants | task_execution_id | task_executions(id) | CASCADE |
 | task_execution_participants | member_id | members(id) | CASCADE |
+| members | tenant_id | tenants(id) | NO ACTION（V23、`fk_members_tenant`） |
+| member_metas | tenant_id | tenants(id) | NO ACTION（V23、`fk_member_metas_tenant`） |
+| task_definitions | tenant_id | tenants(id) | NO ACTION（V23、`fk_task_definitions_tenant`） |
+| task_recurrences | tenant_id | tenants(id) | NO ACTION（V23、`fk_task_recurrences_tenant`） |
+| task_executions | tenant_id | tenants(id) | NO ACTION（V23、`fk_task_executions_tenant`） |
+| task_snapshots | tenant_id | tenants(id) | NO ACTION（V23、`fk_task_snapshots_tenant`） |
+| task_execution_participants | tenant_id | tenants(id) | NO ACTION（V23、`fk_task_execution_participants_tenant`） |
+| push_subscriptions | tenant_id | tenants(id) | NO ACTION（V23、`fk_push_subscriptions_tenant`） |
+
+上記8テーブルに加えて、outbox（`fk_outbox_tenant`）とcompleted_domain_events（`fk_completed_domain_events_tenant`）も同様にV23で`tenant_id`→`tenants(id)`のFKが追加されている（本ドキュメントでは全カラムの詳細は割愛）。
+
+---
+
+## Row Level Security (RLS) によるテナント分離
+
+マルチテナント化（issue #34）では、テナントの分離をPostgreSQLのRow Level Security（RLS）で行う（アプリ側でもtenantIdを明示的に渡し、same-tenantの不変条件をドメインで検査する。ADR #19）。各テーブルの`tenant_id`列と、トランザクションごとに`set_config`で設定する`app.current_tenant_id`を比較する。
+
+### DBロール（2つ）
+
+| ロール | 用途 | RLS |
+|---|---|---|
+| `housework`（オーナー、テーブル所有者） | Flyway migration、テナント作成・列挙などRLSを越える必要がある処理 | 受けない |
+| `housework_app`（V21で作成） | 通常のリクエスト処理・テナント単位のバッチ | 受ける |
+
+### ポリシー
+
+- `members`, `task_definitions`, `task_recurrences`, `task_executions`, `task_snapshots`, `task_execution_participants`, `push_subscriptions`, `member_metas`, `outbox`, `completed_domain_events`（計10テーブル）: `tenant_isolation_policy`
+  ```sql
+  USING (tenant_id = current_setting('app.current_tenant_id')::uuid)
+  WITH CHECK (tenant_id = current_setting('app.current_tenant_id')::uuid)
+  ```
+  上記のうちoutboxとcompleted_domain_eventsはV21では未適用で、V24でこの10テーブルすべてに揃えられた。
+- `tenants`: `tenant_self_select_policy`（V24） — `FOR SELECT USING (id = current_setting('app.current_tenant_id')::uuid)`。INSERT/UPDATE/DELETEのポリシーは意図的に作られておらず、`housework_app`からはそれらの権限自体もREVOKEされている（テナントの作成・列挙はオーナー接続で行う）。
+- `app.current_tenant_id`が設定されていないトランザクションでは、上記`USING`句の評価がエラーになる（0件が返るのではなくエラーになる = fail-closed）。
+- オーナー（`housework`）はテーブル所有者のためRLSポリシーの対象外（`FORCE ROW LEVEL SECURITY`は付けていない）。

@@ -82,6 +82,8 @@ class ProcessOutboxEventsUseCaseImpl @Inject constructor(
                         val now = Instant.now()
                         val cancelled = TaskExecution.Cancelled(
                             id = execution.id,
+                            // tenantId は親の TaskExecution から引き継ぐ(自分では持たない)。
+                            tenantId = execution.tenantId,
                             taskDefinitionId = execution.taskDefinitionId,
                             scheduledDate = execution.scheduledDate,
                             assigneeMemberIds = execution.assigneeMemberIds,
@@ -97,6 +99,8 @@ class ProcessOutboxEventsUseCaseImpl @Inject constructor(
                         val now = Instant.now()
                         val cancelled = TaskExecution.Cancelled(
                             id = execution.id,
+                            // tenantId は親の TaskExecution から引き継ぐ(自分では持たない)。
+                            tenantId = execution.tenantId,
                             taskDefinitionId = execution.taskDefinitionId,
                             scheduledDate = execution.scheduledDate,
                             assigneeMemberIds = execution.assigneeMemberIds,

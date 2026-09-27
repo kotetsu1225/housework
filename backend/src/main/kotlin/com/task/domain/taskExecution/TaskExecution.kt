@@ -11,17 +11,20 @@ import com.task.domain.taskExecution.event.TaskExecutionCancelled
 import com.task.domain.taskExecution.event.TaskExecutionCompleted
 import com.task.domain.taskExecution.event.TaskExecutionCreated
 import com.task.domain.taskExecution.event.TaskExecutionStarted
+import com.task.domain.tenant.TenantId
 import java.time.Instant
 import java.util.UUID
 
 sealed class TaskExecution {
     abstract val id: TaskExecutionId
+    abstract val tenantId: TenantId
     abstract val taskDefinitionId: TaskDefinitionId
     abstract val scheduledDate: Instant
     abstract val assigneeMemberIds: List<MemberId>
 
     data class NotStarted(
         override val id: TaskExecutionId,
+        override val tenantId: TenantId,
         override val taskDefinitionId: TaskDefinitionId,
         override val scheduledDate: Instant,
         override val assigneeMemberIds: List<MemberId>
@@ -39,6 +42,7 @@ sealed class TaskExecution {
 
             val newInProgressState = InProgress(
                 id = this.id,
+                tenantId = this.tenantId,
                 taskDefinitionId = this.taskDefinitionId,
                 scheduledDate = this.scheduledDate,
                 assigneeMemberIds = assigneeMemberIds,
@@ -70,6 +74,7 @@ sealed class TaskExecution {
 
             val newCancelledState = Cancelled(
                 id = this.id,
+                tenantId = this.tenantId,
                 taskDefinitionId = this.taskDefinitionId,
                 scheduledDate = this.scheduledDate,
                 assigneeMemberIds = this.assigneeMemberIds,
@@ -90,6 +95,7 @@ sealed class TaskExecution {
 
     data class InProgress(
         override val id: TaskExecutionId,
+        override val tenantId: TenantId,
         override val taskDefinitionId: TaskDefinitionId,
         override val scheduledDate: Instant,
         override val assigneeMemberIds: List<MemberId>,
@@ -116,6 +122,7 @@ sealed class TaskExecution {
 
             val newCompletedState = Completed(
                 id = this.id,
+                tenantId = this.tenantId,
                 taskDefinitionId = this.taskDefinitionId,
                 scheduledDate = this.scheduledDate,
                 assigneeMemberIds = this.assigneeMemberIds,
@@ -147,6 +154,7 @@ sealed class TaskExecution {
             val now = Instant.now()
             val newCancelledState =  Cancelled(
                 id = this.id,
+                tenantId = this.tenantId,
                 taskDefinitionId = this.taskDefinitionId,
                 scheduledDate = this.scheduledDate,
                 assigneeMemberIds = this.assigneeMemberIds,
@@ -167,6 +175,7 @@ sealed class TaskExecution {
 
     data class Completed(
         override val id: TaskExecutionId,
+        override val tenantId: TenantId,
         override val taskDefinitionId: TaskDefinitionId,
         override val scheduledDate: Instant,
         override val assigneeMemberIds: List<MemberId>,
@@ -187,6 +196,7 @@ sealed class TaskExecution {
 
     data class Cancelled(
         override val id: TaskExecutionId,
+        override val tenantId: TenantId,
         override val taskDefinitionId: TaskDefinitionId,
         override val scheduledDate: Instant,
         override val assigneeMemberIds: List<MemberId>,
@@ -205,6 +215,9 @@ sealed class TaskExecution {
 
             val newNotStartedState = NotStarted(
                 id = TaskExecutionId.generate(),
+                // 親の TaskDefinition の tenantId を引き継ぐ。
+                // これにより TaskExecution → TaskDefinition の same-tenant が構造的に保証される(#50)。
+                tenantId = taskDefinition.tenantId,
                 taskDefinitionId = taskDefinition.id,
                 scheduledDate = scheduledDate,
                 assigneeMemberIds = emptyList(),
@@ -222,24 +235,27 @@ sealed class TaskExecution {
 
         fun reconstructNotStarted(
             id: TaskExecutionId,
+            tenantId: TenantId,
             taskDefinitionId: TaskDefinitionId,
             scheduledDate: Instant,
             assigneeMemberIds: List<MemberId>,
-        ): NotStarted = NotStarted(id, taskDefinitionId, scheduledDate, assigneeMemberIds)
+        ): NotStarted = NotStarted(id, tenantId, taskDefinitionId, scheduledDate, assigneeMemberIds)
 
         fun reconstructInProgress(
             id: TaskExecutionId,
+            tenantId: TenantId,
             taskDefinitionId: TaskDefinitionId,
             scheduledDate: Instant,
             assigneeMemberIds: List<MemberId>,
             taskSnapshot: TaskSnapshot,
             startedAt: Instant,
         ): InProgress = InProgress(
-            id, taskDefinitionId, scheduledDate, assigneeMemberIds, taskSnapshot, startedAt
+            id, tenantId, taskDefinitionId, scheduledDate, assigneeMemberIds, taskSnapshot, startedAt
         )
 
         fun reconstructCompleted(
             id: TaskExecutionId,
+            tenantId: TenantId,
             taskDefinitionId: TaskDefinitionId,
             scheduledDate: Instant,
             assigneeMemberIds: List<MemberId>,
@@ -248,10 +264,11 @@ sealed class TaskExecution {
             completedAt: Instant,
             earnedPoint: Int
         ): Completed = Completed(
-            id, taskDefinitionId, scheduledDate, assigneeMemberIds, taskSnapshot, startedAt, completedAt, earnedPoint)
+            id, tenantId, taskDefinitionId, scheduledDate, assigneeMemberIds, taskSnapshot, startedAt, completedAt, earnedPoint)
 
         fun reconstructCancelled(
             id: TaskExecutionId,
+            tenantId: TenantId,
             taskDefinitionId: TaskDefinitionId,
             scheduledDate: Instant,
             assigneeMemberIds: List<MemberId>,
@@ -259,7 +276,7 @@ sealed class TaskExecution {
             startedAt: Instant?,
             cancelledAt: Instant,
         ): Cancelled = Cancelled(
-            id, taskDefinitionId, scheduledDate, assigneeMemberIds, taskSnapshot, startedAt, cancelledAt
+            id, tenantId, taskDefinitionId, scheduledDate, assigneeMemberIds, taskSnapshot, startedAt, cancelledAt
         )
     }
 }

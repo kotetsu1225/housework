@@ -28,6 +28,8 @@ class TaskDefinitionDeletedHandler @Inject constructor(
                     val now = java.time.Instant.now()
                     val cancelled = TaskExecution.Cancelled(
                         id = execution.id,
+                        // tenantId は親の TaskExecution から引き継ぐ(自分では持たない)。
+                        tenantId = execution.tenantId,
                         taskDefinitionId = execution.taskDefinitionId,
                         scheduledDate = execution.scheduledDate,
                         assigneeMemberIds = execution.assigneeMemberIds,
@@ -48,6 +50,8 @@ class TaskDefinitionDeletedHandler @Inject constructor(
                     val now = java.time.Instant.now()
                     val cancelled = TaskExecution.Cancelled(
                         id = execution.id,
+                        // tenantId は親の TaskExecution から引き継ぐ(自分では持たない)。
+                        tenantId = execution.tenantId,
                         taskDefinitionId = execution.taskDefinitionId,
                         scheduledDate = execution.scheduledDate,
                         assigneeMemberIds = execution.assigneeMemberIds,

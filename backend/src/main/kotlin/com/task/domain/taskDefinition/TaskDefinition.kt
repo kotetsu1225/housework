@@ -1,6 +1,7 @@
 package com.task.domain.taskDefinition
 
 import com.task.domain.AggregateRoot
+import com.task.domain.member.Member
 import com.task.domain.member.MemberId
 import com.task.domain.taskDefinition.event.TaskDefinitionCreated
 import com.task.domain.taskDefinition.event.TaskDefinitionDeleted
@@ -8,6 +9,12 @@ import com.task.domain.tenant.TenantId
 import java.time.Instant
 import java.util.UUID
 
+/**
+ * RLS(Row Level Security)はDBレベルのアクセス制御であり、「関連付ける相手が同じテナントであること」
+ * という意味的な整合性を保証するものではない。バイパス接続の経路(バッチ、outbox処理)や将来の変更に対しても
+ * 不変条件が守られるよう、集約間の関連付け(owner Member)は本クラスの `create`/`update` が
+ * `require` でドメインの不変条件として検証する(ADR #19 決定4、issue #50)。
+ */
 class TaskDefinition private constructor(
     val id: TaskDefinitionId,
     val tenantId: TenantId,
@@ -36,10 +43,15 @@ class TaskDefinition private constructor(
         description: TaskDefinitionDescription?,
         scheduledTimeRange: ScheduledTimeRange?,
         scope: TaskScope?,
-        ownerMemberId: MemberId?,
+        owner: Member?,
         schedule: TaskSchedule?,
         point: Int?,
     ): TaskDefinition {
+        if (owner != null) {
+            require(owner.tenantId == this.tenantId) {
+                "別の家族のメンバーは指定できません。"
+            }
+        }
         return TaskDefinition(
             id = id,
             tenantId = this.tenantId,
@@ -47,7 +59,7 @@ class TaskDefinition private constructor(
             description = description ?: this.description,
             scheduledTimeRange = scheduledTimeRange ?: this.scheduledTimeRange,
             scope = scope ?: this.scope,
-            ownerMemberId = ownerMemberId ?: this.ownerMemberId,
+            ownerMemberId = owner?.id ?: this.ownerMemberId,
             schedule = schedule ?: this.schedule,
             version = this.version + 1,
             isDeleted = false,
@@ -93,10 +105,15 @@ class TaskDefinition private constructor(
             description: TaskDefinitionDescription,
             scheduledTimeRange: ScheduledTimeRange,
             scope: TaskScope,
-            ownerMemberId: MemberId?,
+            owner: Member?,
             schedule: TaskSchedule,
             point: Int,
         ): TaskDefinition {
+            if (owner != null) {
+                require(owner.tenantId == tenantId) {
+                    "別の家族のメンバーは指定できません。"
+                }
+            }
             val taskDefinition = TaskDefinition(
                 id = TaskDefinitionId.generate(),
                 tenantId = tenantId,
@@ -104,7 +121,7 @@ class TaskDefinition private constructor(
                 description = description,
                 scheduledTimeRange = scheduledTimeRange,
                 scope = scope,
-                ownerMemberId = ownerMemberId,
+                ownerMemberId = owner?.id,
                 schedule = schedule,
                 version = 1,
                 isDeleted = false,

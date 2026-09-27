@@ -2,6 +2,7 @@ package com.task.usecase.taskExecution.assign
 
 import com.google.inject.Inject
 import com.google.inject.Singleton
+import com.task.domain.member.MemberRepository
 import com.task.domain.taskExecution.TaskExecution
 import com.task.domain.taskExecution.TaskExecutionRepository
 import com.task.infra.database.Database
@@ -9,12 +10,22 @@ import com.task.infra.database.Database
 @Singleton
 class UpdateAssignTaskExecutionUseCaseImpl @Inject constructor(
     private val database: Database,
-    private val taskExecutionRepository: TaskExecutionRepository
+    private val taskExecutionRepository: TaskExecutionRepository,
+    private val memberRepository: MemberRepository
 ) : UpdateAssignTaskExecutionUseCase {
     override fun execute(input: UpdateAssignTaskExecutionUseCase.Input): UpdateAssignTaskExecutionUseCase.Output {
         return database.withTransaction(input.tenantId) { session ->
             val existingExecution = taskExecutionRepository.findById(input.id, session)
                 ?: throw IllegalArgumentException("TaskExecution with id ${input.id} does not exist")
+
+            // ID ではなく集約(Member)を取得し、ドメイン側の検証関数で same-tenant を確認する(#50)。
+            // 見つからない場合(RLSで他テナントのメンバーが見えない場合を含む)は既存の「見つかりません」の扱いに合わせる。
+            // findByIds は重複を 1 件にまとめて返すので、重複を除いた件数で比べる。
+            val newAssignees = memberRepository.findByIds(input.newAssigneeMemberIds, session) ?: emptyList()
+            if (newAssignees.size != input.newAssigneeMemberIds.distinct().size) {
+                throw IllegalArgumentException("メンバーが見つかりません: ${input.newAssigneeMemberIds}")
+            }
+            existingExecution.requireSameTenant(newAssignees)
 
             val taskExecution = taskExecutionRepository.updateAssigneeMember(existingExecution, input.newAssigneeMemberIds ,session)
 

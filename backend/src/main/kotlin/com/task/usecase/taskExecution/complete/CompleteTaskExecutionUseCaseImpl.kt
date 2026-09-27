@@ -28,7 +28,7 @@ class CompleteTaskExecutionUseCaseImpl @Inject constructor(
             val stateChange = when(taskExecution){
                 is TaskExecution.InProgress -> {
                     // ポイント計算はcomplete()内部で実行される
-                    taskExecution.complete(taskDefinition.isDeleted, taskDefinition.scope)
+                    taskExecution.complete(taskDefinition)
                 }
                 is TaskExecution.NotStarted -> {
                     throw IllegalStateException("タスクが開始されていません")

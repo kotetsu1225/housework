@@ -3,6 +3,7 @@ package com.task.usecase.taskExecution.start
 import com.google.inject.Inject
 import com.google.inject.Singleton
 import com.task.domain.event.DomainEventDispatcher
+import com.task.domain.member.MemberRepository
 import com.task.domain.taskDefinition.TaskDefinitionRepository
 import com.task.domain.taskExecution.TaskExecution
 import com.task.domain.taskExecution.TaskExecutionRepository
@@ -13,6 +14,7 @@ class StartTaskExecutionUseCaseImpl @Inject constructor(
     private val database: Database,
     private val taskExecutionRepository: TaskExecutionRepository,
     private val taskDefinitionRepository: TaskDefinitionRepository,
+    private val memberRepository: MemberRepository,
     private val domainEventDispatcher: DomainEventDispatcher
 ) : StartTaskExecutionUseCase {
 
@@ -22,11 +24,19 @@ class StartTaskExecutionUseCaseImpl @Inject constructor(
                 ?: throw IllegalArgumentException("タスク実行が見つかりません: ${input.id}")
             val taskDefinition = taskDefinitionRepository.findById(taskExecution.taskDefinitionId, session)
                 ?: throw IllegalArgumentException("タスク定義が見つかりません: ${taskExecution.taskDefinitionId}")
-            
+
+            // ID ではなく集約(Member)を渡すことで、start 側で same-tenant を検証できるようにする(#50)。
+            // 見つからない場合(RLSで他テナントのメンバーが見えない場合を含む)は既存の「見つかりません」の扱いに合わせる。
+            // findByIds は重複を 1 件にまとめて返すので、重複を除いた件数で比べる。
+            val assignees = memberRepository.findByIds(input.assigneeMemberIds, session) ?: emptyList()
+            if (assignees.size != input.assigneeMemberIds.distinct().size) {
+                throw IllegalArgumentException("メンバーが見つかりません: ${input.assigneeMemberIds}")
+            }
+
             val stateChange = when (taskExecution) {
                 is TaskExecution.NotStarted -> {
                     taskExecution.start(
-                        assigneeMemberIds = input.assigneeMemberIds,
+                        assignees = assignees,
                         taskDefinition = taskDefinition
                     )
                 }

@@ -60,6 +60,31 @@ class OutboxRepositoryImpl : OutboxRepository {
             }
     }
 
+    override fun findPendingForUpdateSkipLocked(session: DSLContext, limit: Int): List<OutboxRecord> {
+        return session.selectFrom(OUTBOX)
+            .where(OUTBOX.STATUS.eq(OutboxStatus.PENDING.name))
+            .orderBy(OUTBOX.CREATED_AT.asc())
+            .limit(limit)
+            .forUpdate()
+            .skipLocked()
+            .fetch { record ->
+                OutboxRecord(
+                    id = record.id!!,
+                    tenantId = TenantId(record.tenantId),
+                    eventType = record.eventType!!,
+                    aggregateType = record.aggregateType!!,
+                    aggregateId = record.aggregateId!!,
+                    payload = record.payload!!.data(),
+                    status = OutboxStatus.valueOf(record.status!!),
+                    retryCount = record.retryCount!!,
+                    maxRetries = record.maxRetries!!,
+                    createdAt = record.createdAt!!.toDomainInstant(),
+                    processedAt = record.processedAt?.toDomainInstant(),
+                    errorMessage = record.errorMessage
+                )
+            }
+    }
+
     override fun update(record: OutboxRecord, session: DSLContext): OutboxRecord {
         session.update(OUTBOX)
             .set(OUTBOX.STATUS, record.status.name)

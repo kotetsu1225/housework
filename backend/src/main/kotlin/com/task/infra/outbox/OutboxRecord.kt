@@ -66,6 +66,17 @@ data class OutboxRecord(
         )
     }
 
+    /**
+     * Pub/Subへのpublishが成功したことを記録する(issue #72のリレー方式)。
+     * 旧方式の[markAsProcessed]とは意味が異なる([OutboxStatus.PUBLISHED]のKDoc参照)。
+     */
+    fun markAsPublished(): OutboxRecord {
+        return this.copy(
+            status = OutboxStatus.PUBLISHED,
+            processedAt = Instant.now()
+        )
+    }
+
     fun incrementRetry(errorMessage: String): OutboxRecord {
         val newRetryCount = this.retryCount + 1
         val newStatus = if (newRetryCount >= this.maxRetries) {
@@ -83,6 +94,20 @@ data class OutboxRecord(
 
 enum class OutboxStatus {
     PENDING,
+
+    /**
+     * 旧方式(`ProcessOutboxEventsUseCaseImpl`によるアプリ内その場処理)で処理済みになったことを表す。
+     * リレー方式(issue #72)導入後は新規にこの状態にはならない(既存行はそのまま残す)。
+     * リレー後の状態は[PUBLISHED]を使う。
+     */
     PROCESSED,
+
+    /**
+     * Pub/Subへのpublishが成功し、outbox行としての役目を終えたことを表す(issue #72)。
+     * 実際の処理(subscriber側)はここでは保証されない(at-least-once配信のため、
+     * subscriber側の冪等判定に委ねる。issue #61)。
+     */
+    PUBLISHED,
+
     FAILED
 }

@@ -43,6 +43,8 @@ import com.task.infra.outbox.CompletedDomainEventRepository
 import com.task.infra.outbox.CompletedDomainEventRepositoryImpl
 import com.task.usecase.outbox.ProcessOutboxEventsUseCase
 import com.task.usecase.outbox.ProcessOutboxEventsUseCaseImpl
+import com.task.usecase.outbox.RelayOutboxEventsUseCase
+import com.task.usecase.outbox.RelayOutboxEventsUseCaseImpl
 import kotlin.jvm.java
 
 import com.task.infra.security.JwtConfig
@@ -107,6 +109,7 @@ class AppModule : AbstractModule() {
         bind(OutboxRepository::class.java).to(OutboxRepositoryImpl::class.java)
         bind(CompletedDomainEventRepository::class.java).to(CompletedDomainEventRepositoryImpl::class.java)
         bind(ProcessOutboxEventsUseCase::class.java).to(ProcessOutboxEventsUseCaseImpl::class.java)
+        bind(RelayOutboxEventsUseCase::class.java).to(RelayOutboxEventsUseCaseImpl::class.java)
 
         bind(SendDailyNotCompletedTaskNotificationsUseCase::class.java)
             .to(SendDailyNotCompletedTaskNotificationsUseCaseImpl::class.java)

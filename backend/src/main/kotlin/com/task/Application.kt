@@ -29,6 +29,8 @@ import com.task.usecase.task.SendNotDailyTomorrowTaskNotificationsUseCase
 import com.task.usecase.task.SendNotDailyTaskRemindersUseCase
 import com.task.usecase.outbox.ProcessOutboxEventsUseCase
 import com.task.usecase.batch.TenantBatchRunner
+import com.task.usecase.outbox.RelayOutboxEventsUseCase
+import com.task.usecase.outbox.RelayOutboxEventsUseCaseImpl
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpMethod
 import io.ktor.serialization.kotlinx.json.*
@@ -158,8 +160,12 @@ fun Application.module() {
         injector.getInstance(SendNotDailyTaskRemindersUseCase::class.java)
     )
 
+    // issue #72: pubsub.enabled に応じてリレー方式(Pub/Subへpublish)と旧方式(アプリ内処理)を
+    // OutboxEventProcessorScheduler側で呼び分けるため、両方のUseCaseを渡す。
     val outboxScheduler = OutboxEventProcessorScheduler(
-        injector.getInstance(ProcessOutboxEventsUseCase::class.java),
+        pubSubConfig = pubSubConfig,
+        relayOutboxEventsUseCase = injector.getInstance(RelayOutboxEventsUseCase::class.java),
+        processOutboxEventsUseCase = injector.getInstance(ProcessOutboxEventsUseCase::class.java),
         intervalSeconds = 10
     )
 
@@ -189,6 +195,8 @@ fun Application.module() {
         notDailyTomorrowNotificationScheduler.stop()
         notDailyTaskReminderScheduler.stop()
         outboxScheduler.stop()
+        // RelayOutboxEventsUseCaseImplが保持するPublisherをshutdownする(issue #72)。
+        injector.getInstance(RelayOutboxEventsUseCaseImpl::class.java).close()
         injector.getInstance(PubSubClientFactory::class.java).close()
     }
 

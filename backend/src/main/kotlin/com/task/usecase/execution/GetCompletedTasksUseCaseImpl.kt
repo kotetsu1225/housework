@@ -18,7 +18,7 @@ class GetCompletedTasksUseCaseImpl @Inject constructor(
 ) : GetCompletedTasksUseCase {
 
     override fun execute(input: GetCompletedTasksUseCase.Input): GetCompletedTasksUseCase.Output {
-        return database.withTransaction { session ->
+        return database.withTransaction(input.tenantId) { session ->
             // memberIds を UUID に変換
             val memberUuids = input.memberIds?.map { UUID.fromString(it) }
 

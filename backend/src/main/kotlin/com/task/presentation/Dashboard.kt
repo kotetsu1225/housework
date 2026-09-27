@@ -115,9 +115,10 @@ private fun MemberTaskSummaryDto.toResponse() = MemberTaskSummaryResponse(
 fun Route.dashboard() {
     get<Dashboard.Get> { resource ->
         val targetDate = resource.date?.let { LocalDate.parse(it) } ?: LocalDate.now()
+        val tenantId = call.authenticatedMember().tenantId
 
         val output = instance<DashboardQueryService>().fetchDashboardData(
-            DashboardQueryService.Input(targetDate = targetDate)
+            DashboardQueryService.Input(targetDate = targetDate, tenantId = tenantId)
         )
 
         call.respond(

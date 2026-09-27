@@ -46,6 +46,15 @@ object DomainEventSerializer {
             ?: throw IllegalArgumentException("eventId not found in payload")
         return UUID.fromString(eventIdStr)
     }
+
+    /**
+     * payloadから`occurredAt`を取り出す(issue #72のメッセージ契約用)。
+     * 無ければnullを返すので、呼び出し側はoutbox行の`created_at`(ISO-8601)で代替すること。
+     */
+    fun extractOccurredAt(jsonString: String): String? {
+        val jsonElement = json.parseToJsonElement(jsonString)
+        return jsonElement.jsonObject["occurredAt"]?.toString()?.trim('"')
+    }
 }
 
 @Serializable

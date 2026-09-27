@@ -5,11 +5,13 @@ import com.task.domain.member.FamilyRole
 import com.task.domain.member.MemberEmail
 import com.task.domain.member.MemberId
 import com.task.domain.member.MemberName
+import com.task.domain.tenant.TenantId
 
 
 @ImplementedBy(UpdateMemberUseCaseImpl::class)
 interface UpdateMemberUseCase {
     data class Input(
+        val tenantId: TenantId,
         val id: MemberId,
         val name: MemberName? = null,
         val familyRole: FamilyRole? = null,

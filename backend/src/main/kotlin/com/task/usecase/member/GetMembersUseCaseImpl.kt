@@ -15,8 +15,8 @@ class GetMembersUseCaseImpl @Inject constructor(
     private val memberStatsQueryService: MemberStatsQueryService
 ) : GetMembersUseCase {
 
-    override fun execute(): GetMembersUseCase.Output {
-        return database.withTransaction { session ->
+    override fun execute(input: GetMembersUseCase.Input): GetMembersUseCase.Output {
+        return database.withTransaction(input.tenantId) { session ->
             val members = memberRepository.findAll(session)
             val today = LocalDate.now(AppTimeZone.ZONE)
             val statsByMemberId = memberStatsQueryService

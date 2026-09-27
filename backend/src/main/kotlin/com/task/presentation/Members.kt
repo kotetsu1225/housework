@@ -100,7 +100,10 @@ class Members{
 fun Route.members() {
 
     get<Members.List> {
-        val output = instance<GetMembersUseCase>().execute()
+        val tenantId = call.authenticatedMember().tenantId
+        val output = instance<GetMembersUseCase>().execute(
+            GetMembersUseCase.Input(tenantId = tenantId)
+        )
 
         call.respond(
             HttpStatusCode.OK,
@@ -121,8 +124,10 @@ fun Route.members() {
     }
 
     get<Members.Member> { resource ->
+        val tenantId = call.authenticatedMember().tenantId
         val output = instance<GetMemberUseCase>().execute(
             GetMemberUseCase.Input(
+                tenantId = tenantId,
                 id = MemberId(UUID.fromString(resource.memberId))
             )
         )
@@ -144,14 +149,14 @@ fun Route.members() {
     }
 
     post<Members.CreateMember> {
+        val tenantId = call.authenticatedMember().tenantId
         val request = call.receive<Members.CreateMember.Request>()
 
         val output = instance<CreateMemberUseCase>().execute(
             CreateMemberUseCase.Input(
-                // TODO(#51): 呼び出し元メンバーの tenantId を JWT(#42 の AuthenticatedMember)から渡す。
-                // マルチテナント化の途中の暫定で、ここに来ると NotImplementedError(500)になる。
-                // 統合ブランチは全 issue 完了まで本番に出ない。
-                tenantId = TODO("#51: 呼び出し元メンバーの tenantId を JWT から渡す"),
+                // ログイン中メンバーのテナントへメンバーを追加するAPI(issue #51で確定)。
+                // tenantIdはリクエストボディからは取らず、必ずJWT(認証済みメンバー)由来にする。
+                tenantId = tenantId,
                 name = MemberName(request.name),
                 email = MemberEmail(request.email),
                 familyRole = FamilyRole.get(request.familyRole),
@@ -170,10 +175,12 @@ fun Route.members() {
         )
     }
     post<Members.UpdateMember> {
+        val tenantId = call.authenticatedMember().tenantId
         val request = call.receive<Members.UpdateMember.Request>()
 
         val output = instance<UpdateMemberUseCase>().execute(
             UpdateMemberUseCase.Input(
+                tenantId = tenantId,
                 id = MemberId(UUID.fromString(it.memberId)),
                 name = request.name?.let { MemberName(it) },
                 familyRole = request.familyRole?.let { FamilyRole.get(it) }

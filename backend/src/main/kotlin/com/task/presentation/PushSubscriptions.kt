@@ -1,6 +1,5 @@
 package com.task.presentation
 
-import com.task.domain.member.MemberId
 import com.task.usecase.memberMeta.GetUserMetasUseCase
 import com.task.usecase.memberMeta.SaveMemberMetaUseCase
 import com.task.usecase.pushSubscription.GetPushSubscriptionUseCase
@@ -8,15 +7,12 @@ import com.task.usecase.pushSubscription.RegisterPushSubscriptionUseCase
 import io.ktor.http.*
 import io.ktor.resources.Resource
 import io.ktor.server.application.*
-import io.ktor.server.auth.*
-import io.ktor.server.auth.jwt.JWTPrincipal
 import io.ktor.server.request.*
 import io.ktor.server.resources.get
 import io.ktor.server.resources.post
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import kotlinx.serialization.Serializable
-import java.util.UUID
 
 @Resource("/api/push-subscriptions")
 class PushSubscriptions {
@@ -83,9 +79,7 @@ data class IsPushNotificationsPermissionAnswerResponse(
 fun Route.pushSubscriptions() {
 
     get<PushSubscriptions.My> {
-        val principal = call.principal<JWTPrincipal>()
-            ?: throw IllegalArgumentException("No principal")
-        val memberId = MemberId(UUID.fromString(principal.payload.subject))
+        val memberId = call.authenticatedMember().memberId
 
         val output = instance<GetPushSubscriptionUseCase>().execute(
             GetPushSubscriptionUseCase.Input(memberId)
@@ -111,13 +105,12 @@ fun Route.pushSubscriptions() {
     }
 
     post<PushSubscriptions.Register> {
-        val principal = call.principal<JWTPrincipal>()
-            ?: throw IllegalArgumentException("No principal")
+        val memberId = call.authenticatedMember().memberId
         val request = call.receive<PushSubscriptions.Register.Request>()
 
         val output = instance<RegisterPushSubscriptionUseCase>().execute(
             RegisterPushSubscriptionUseCase.Input(
-                memberId = MemberId(UUID.fromString(principal.payload.subject)),
+                memberId = memberId,
                 endpoint = request.endpoint,
                 p256dhKey = request.keys.p256dh,
                 authKey = request.keys.auth,
@@ -134,13 +127,12 @@ fun Route.pushSubscriptions() {
     }
 
     get<PushSubscriptions.IsPushNotificationsPermissionAnswer> {
-        val principal = call.principal<JWTPrincipal>()
-        ?: throw IllegalArgumentException("No principal")
+        val memberId = call.authenticatedMember().memberId
 
         // レコードがあればtrue, なければfalse→表示していい
         val output = instance<GetUserMetasUseCase>().execute(
             GetUserMetasUseCase.Input(
-                memberId = MemberId(UUID.fromString(principal.payload.subject)),
+                memberId = memberId,
                 key = "pushNotificationsPermission"
             )
         )
@@ -155,13 +147,12 @@ fun Route.pushSubscriptions() {
     }
 
     post<PushSubscriptions.PermissionAnswer> {
-        val principal = call.principal<JWTPrincipal>()
-            ?: throw IllegalArgumentException("No principal")
+        val memberId = call.authenticatedMember().memberId
         val request = call.receive<PushSubscriptions.PermissionAnswer.Request>()
 
         instance<SaveMemberMetaUseCase>().execute(
             SaveMemberMetaUseCase.Input(
-                memberId = MemberId(UUID.fromString(principal.payload.subject)),
+                memberId = memberId,
                 key = "pushNotificationsPermission",
                 value = request.value
             )

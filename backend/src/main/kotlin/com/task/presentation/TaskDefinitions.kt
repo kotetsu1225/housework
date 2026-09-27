@@ -8,8 +8,6 @@ import com.task.usecase.taskDefinition.get.GetTaskDefinitionUseCase
 import com.task.usecase.taskDefinition.get.GetTaskDefinitionsUseCase
 import com.task.usecase.taskDefinition.update.UpdateTaskDefinitionUseCase
 import io.ktor.http.HttpStatusCode
-import io.ktor.server.auth.jwt.JWTPrincipal
-import io.ktor.server.auth.principal
 import io.ktor.resources.Resource
 import io.ktor.server.application.call
 import io.ktor.server.request.receive
@@ -291,8 +289,7 @@ fun Route.taskDefinitions() {
     }
 
     post<TaskDefinitions.Update> { resource ->
-        val principal = call.principal<JWTPrincipal>()
-        val requesterId = MemberId(UUID.fromString(principal?.subject ?: throw IllegalArgumentException("No principal")))
+        val requesterId = call.authenticatedMember().memberId
 
         val request = call.receive<TaskDefinitions.Update.Request>()
 
@@ -327,8 +324,7 @@ fun Route.taskDefinitions() {
     }
 
     post<TaskDefinitions.Delete> { resource ->
-        val principal = call.principal<JWTPrincipal>()
-        val requesterId = MemberId(UUID.fromString(principal?.subject ?: throw IllegalArgumentException("No principal")))
+        val requesterId = call.authenticatedMember().memberId
 
         val output = instance<DeleteTaskDefinitionUseCase>().execute(
             DeleteTaskDefinitionUseCase.Input(

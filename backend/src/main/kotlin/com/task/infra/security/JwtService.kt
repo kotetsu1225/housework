@@ -25,6 +25,7 @@ class JwtService(
             .withIssuer(config.issuer)
             .withClaim("name", member.name.value)
             .withClaim("role", member.familyRole.name)
+            .withClaim("tenantId", member.tenantId.value.toString())
             .withExpiresAt(Date(System.currentTimeMillis() + config.expiresInMs))
             .sign(Algorithm.HMAC256(config.secret))
     }

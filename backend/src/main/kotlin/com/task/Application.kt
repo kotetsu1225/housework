@@ -3,6 +3,7 @@ package com.task
 import com.task.domain.member.EmailAlreadyUsedException
 import com.task.infra.config.DotenvLoader
 import com.task.infra.database.DatabaseConfig
+import com.task.infra.pubsub.DomainEventSubscriber
 import com.task.infra.pubsub.PubSubClientFactory
 import com.task.infra.pubsub.PubSubConfig
 import com.task.infra.security.JwtConfig
@@ -127,6 +128,13 @@ fun Application.module() {
         environment.log.info("Pub/Sub: enabled=${pubSubConfig.enabled}, emulator=${pubSubConfig.emulatorHost != null}")
     }
 
+    // issue #61: streaming pull subscriberを起動する。#73の切替順序により、
+    // publish側(下のoutboxScheduler.start、リレー方式のとき)より先に起動しておく。
+    // pubsub.enabled = falseのときは起動しない(DomainEventSubscriber.start()もIllegalStateExceptionになる)。
+    if (pubSubConfig.enabled) {
+        injector.getInstance(DomainEventSubscriber::class.java).start()
+    }
+
     val jwtConfig = injector.getInstance(JwtConfig::class.java)
     configureJwtAuth(jwtConfig)
 
@@ -195,6 +203,11 @@ fun Application.module() {
         notDailyTomorrowNotificationScheduler.stop()
         notDailyTaskReminderScheduler.stop()
         outboxScheduler.stop()
+        // issue #61: streaming pull subscriberを止める(処理中メッセージはack期限切れ後に再配信される)。
+        // PubSubClientFactory.close()(下、エミュレータ用チャネルのshutdown)より先に止めること。
+        if (pubSubConfig.enabled) {
+            injector.getInstance(DomainEventSubscriber::class.java).stop()
+        }
         // RelayOutboxEventsUseCaseImplが保持するPublisherをshutdownする(issue #72)。
         injector.getInstance(RelayOutboxEventsUseCaseImpl::class.java).close()
         injector.getInstance(PubSubClientFactory::class.java).close()

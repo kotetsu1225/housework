@@ -45,6 +45,8 @@ import com.task.usecase.outbox.ProcessOutboxEventsUseCase
 import com.task.usecase.outbox.ProcessOutboxEventsUseCaseImpl
 import com.task.usecase.outbox.RelayOutboxEventsUseCase
 import com.task.usecase.outbox.RelayOutboxEventsUseCaseImpl
+import com.task.usecase.outbox.HandleTaskDefinitionDeletedUseCase
+import com.task.usecase.outbox.HandleTaskDefinitionDeletedUseCaseImpl
 import kotlin.jvm.java
 
 import com.task.infra.security.JwtConfig
@@ -110,6 +112,10 @@ class AppModule : AbstractModule() {
         bind(CompletedDomainEventRepository::class.java).to(CompletedDomainEventRepositoryImpl::class.java)
         bind(ProcessOutboxEventsUseCase::class.java).to(ProcessOutboxEventsUseCaseImpl::class.java)
         bind(RelayOutboxEventsUseCase::class.java).to(RelayOutboxEventsUseCaseImpl::class.java)
+        // イベント処理本体(issue #61)。OutboxEventProcessor / DomainEventSubscriberは
+        // コンストラクタが@Injectされた具象クラスなのでJITバインディングに任せる
+        // (PubSubClientFactoryと同じ扱い)。
+        bind(HandleTaskDefinitionDeletedUseCase::class.java).to(HandleTaskDefinitionDeletedUseCaseImpl::class.java)
 
         bind(SendDailyNotCompletedTaskNotificationsUseCase::class.java)
             .to(SendDailyNotCompletedTaskNotificationsUseCaseImpl::class.java)

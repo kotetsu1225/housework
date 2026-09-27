@@ -25,7 +25,7 @@ import javax.sql.DataSource
  * - ログイン（#43）
  * - サインアップ（#44）
  * - テナント横断バッチの「取得」処理（#56）
- * - outboxリレー（#72）
+ * - outboxリレー（#72）と、pubsub 無効時の outbox ポーリング(取得と retry の記録。#61)
  *
  * 【Databaseとの違い】
  * - `Database`: tenantスコープAPIはhousework_appプール接続でRLSが自動適用される。

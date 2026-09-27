@@ -28,6 +28,7 @@ import com.task.usecase.task.SendDailyNotCompletedTaskNotificationsUseCase
 import com.task.usecase.task.SendNotDailyTomorrowTaskNotificationsUseCase
 import com.task.usecase.task.SendNotDailyTaskRemindersUseCase
 import com.task.usecase.outbox.ProcessOutboxEventsUseCase
+import com.task.usecase.batch.TenantBatchRunner
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpMethod
 import io.ktor.serialization.kotlinx.json.*
@@ -129,6 +130,7 @@ fun Application.module() {
 
     val taskGenerationScheduler = DailyTaskGenerationScheduler(
         injector.getInstance(GenerateDailyExecutionsUseCase::class.java),
+        injector.getInstance(TenantBatchRunner::class.java),
     )
 
     val notificationScheduleTime = (

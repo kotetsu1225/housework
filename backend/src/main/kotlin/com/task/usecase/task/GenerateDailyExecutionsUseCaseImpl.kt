@@ -9,7 +9,9 @@ class GenerateDailyExecutionsUseCaseImpl @Inject constructor(
     private val taskGenerationService: TaskGenerationService
 ) : GenerateDailyExecutionsUseCase {
     override fun execute(input: GenerateDailyExecutionsUseCase.Input): GenerateDailyExecutionsUseCase.Output {
-        return database.withTransaction { session ->
+        // 1テナント分だけをtenantスコープのtransactionで生成する(issue #57)。
+        // RLSにより、このsessionではinput.tenantId自身の定義しか見えない/書けない。
+        return database.withTransaction(input.tenantId) { session ->
             val generatedExecutions = taskGenerationService.generateDailyTaskExecution(
                 input.targetDate,
                 session

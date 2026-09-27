@@ -49,6 +49,8 @@ import com.task.infra.security.JwtConfig
 import com.task.infra.security.JwtService
 import com.task.usecase.auth.LoginUseCase
 import com.task.usecase.auth.LoginUseCaseImpl
+import com.task.usecase.auth.RegisterFamilyUseCase
+import com.task.usecase.auth.RegisterFamilyUseCaseImpl
 import com.typesafe.config.ConfigFactory
 import com.task.domain.mail.MailSender
 import com.task.infra.mail.LoggingMailSender
@@ -156,6 +158,7 @@ class AppModule : AbstractModule() {
         bind(WebPushSender::class.java).to(WebPushSenderImpl::class.java)
 
         bind(LoginUseCase::class.java).to(LoginUseCaseImpl::class.java)
+        bind(RegisterFamilyUseCase::class.java).to(RegisterFamilyUseCaseImpl::class.java)
 
         bind(DashboardQueryService::class.java).to(DashboardQueryServiceImpl::class.java)
         bind(MemberStatsQueryService::class.java).to(MemberStatsQueryServiceImpl::class.java)

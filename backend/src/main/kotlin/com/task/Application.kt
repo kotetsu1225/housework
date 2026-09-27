@@ -1,5 +1,6 @@
 package com.task
 
+import com.task.domain.member.EmailAlreadyUsedException
 import com.task.infra.config.DotenvLoader
 import com.task.infra.database.DatabaseConfig
 import com.task.infra.security.JwtConfig
@@ -95,6 +96,9 @@ fun Application.module() {
     }
 
     install(StatusPages) {
+        exception<EmailAlreadyUsedException> { call, cause ->
+            call.respond(HttpStatusCode.Conflict, mapOf("error" to cause.message))
+        }
         exception<IllegalArgumentException> { call, cause ->
             call.respond(HttpStatusCode.BadRequest, mapOf("error" to (cause.message ?: "Bad Request")))
         }

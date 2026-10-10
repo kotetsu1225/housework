@@ -1,5 +1,6 @@
 package com.task.usecase.task
 
+import com.task.domain.tenant.TenantId
 import com.google.inject.ImplementedBy
 import com.task.domain.member.MemberId
 import com.task.domain.taskDefinition.TaskDefinitionName
@@ -8,6 +9,7 @@ import java.time.LocalDate
 @ImplementedBy(SendDailyNotCompletedTaskNotificationsUseCaseImpl::class)
 interface SendDailyNotCompletedTaskNotificationsUseCase {
     data class Input(
+        val tenantId: TenantId,
         val targetDate: LocalDate
     )
 

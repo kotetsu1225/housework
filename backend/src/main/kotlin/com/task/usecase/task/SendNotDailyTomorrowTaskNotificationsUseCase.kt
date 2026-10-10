@@ -1,5 +1,6 @@
 package com.task.usecase.task
 
+import com.task.domain.tenant.TenantId
 import com.google.inject.ImplementedBy
 import com.task.domain.member.MemberId
 import com.task.domain.taskDefinition.TaskDefinitionName
@@ -7,7 +8,7 @@ import java.time.LocalDate
 
 @ImplementedBy(SendNotDailyTomorrowTaskNotificationsUseCaseImpl::class)
 interface SendNotDailyTomorrowTaskNotificationsUseCase {
-    data class Input(val targetDate: LocalDate)
+    data class Input(val tenantId: TenantId, val targetDate: LocalDate)
 
     data class NotificationTasksOutput(
         val notificationsForMember: List<NotificationForMember>

@@ -1,5 +1,6 @@
 package com.task.usecase.task
 
+import com.task.domain.tenant.TenantId
 import com.google.inject.ImplementedBy
 import java.time.Instant
 
@@ -17,6 +18,7 @@ import java.time.Instant
 @ImplementedBy(SendNotDailyTaskRemindersUseCaseImpl::class)
 interface SendNotDailyTaskRemindersUseCase {
     data class Input(
+        val tenantId: TenantId,
         val now: Instant
     )
 

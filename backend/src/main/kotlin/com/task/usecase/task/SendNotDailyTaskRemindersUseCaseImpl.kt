@@ -4,27 +4,25 @@ import com.google.inject.Inject
 import com.task.domain.AppTimeZone
 import com.task.infra.database.Database
 import com.task.infra.pushSubscription.PushSubscriptionRepository
-import com.task.infra.webpush.WebPushSender
 import com.task.usecase.query.notifications.UpcomingNotDailyTaskQueryService
 import com.task.usecase.task.SendNotDailyTaskRemindersUseCase.ExecutionResult
 import org.slf4j.LoggerFactory
-import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
 
 /**
- * 非毎日タスクのリマインダー通知を送信するUseCase実装
+ * 非毎日タスクのリマインダー通知を、1 テナント分送るUseCase実装(#59)
  *
  * フロー:
- * 1. QueryServiceから通知対象タスクをメンバーごとに取得
- * 2. Push購読を取得
- * 3. メンバーごとにWebPush通知を送信
+ * 1. 取得: テナントのトランザクションで、通知対象タスク(メンバーごと)と Push 購読を取得する
+ * 2. 送信: トランザクションの外でメンバーごとに WebPush 通知を送る([TenantPushNotificationDelivery])
+ * 3. 後処理: 期限切れ購読を別の短いトランザクションで無効化する
  */
 class SendNotDailyTaskRemindersUseCaseImpl @Inject constructor(
     private val database: Database,
     private val upcomingNotDailyTaskQueryService: UpcomingNotDailyTaskQueryService,
     private val pushSubscriptionRepository: PushSubscriptionRepository,
-    private val webPushSender: WebPushSender,
+    private val delivery: TenantPushNotificationDelivery,
 ) : SendNotDailyTaskRemindersUseCase {
 
     private val logger = LoggerFactory.getLogger(this::class.java)
@@ -39,8 +37,9 @@ class SendNotDailyTaskRemindersUseCaseImpl @Inject constructor(
         val windowEndDate: LocalDate = windowEnd.toLocalDate()
         val windowEndTime: LocalTime = windowEnd.toLocalTime()
 
-        return database.withTransaction { session ->
-            val notificationTargets = upcomingNotDailyTaskQueryService
+        // 1. 取得(tenant スコープ)
+        val messages = database.withTransaction(input.tenantId) { session ->
+            val targets = upcomingNotDailyTaskQueryService
                 .fetchUpcomingNotDailyTasks(
                     session,
                     windowStartDate,
@@ -50,58 +49,36 @@ class SendNotDailyTaskRemindersUseCaseImpl @Inject constructor(
                 )
                 .filter { it.taskNames.isNotEmpty() }
 
-            if (notificationTargets.isEmpty()) {
-                logger.debug("通知対象タスクなし")
-                return@withTransaction ExecutionResult.Success
+            if (targets.isEmpty()) {
+                logger.debug("通知対象タスクなし: tenantId=${input.tenantId.value}")
+                return@withTransaction emptyList()
             }
 
-            val memberIds = notificationTargets.map { it.memberId }
             val subscriptionsByMember = pushSubscriptionRepository
-                .findActiveByMemberIds(memberIds, session)
+                .findActiveByMemberIds(targets.map { it.memberId }, session)
                 .associateBy { it.memberId }
 
-            val failedResults = mutableListOf<String>()
-
-            for (target in notificationTargets) {
+            targets.mapNotNull { target ->
                 val subscription = subscriptionsByMember[target.memberId]
                 if (subscription == null) {
                     logger.debug("購読なし: memberId=${target.memberId.value}")
-                    continue
+                    return@mapNotNull null
                 }
-
-                val body = target.taskNames
-                    .joinToString("\n") { "・${it.value}" }
-
-                val result = webPushSender.sendWebPushToMember(
-                    WebPushSender.SendWebPushInput(
-                        pushSubscription = subscription,
-                        title = "まもなくタスクの時間です！",
-                        body = body
-                    )
-                )
-
-                when (result) {
-                    is WebPushSender.SendResult.Success -> {
-                        logger.info("リマインダー通知送信成功: memberId=${target.memberId.value}")
-                    }
-                    is WebPushSender.SendResult.SubscriptionExpired -> {
-                        pushSubscriptionRepository.deactivate(subscription.id, session)
-                        failedResults.add("memberId=${target.memberId.value}: 購読期限切れ")
-                    }
-                    is WebPushSender.SendResult.Failed -> {
-                        failedResults.add("memberId=${target.memberId.value}: ${result.message}")
-                    }
-                }
-            }
-
-            if (failedResults.isEmpty()) {
-                ExecutionResult.Success
-            } else {
-                ExecutionResult.Failed(
-                    status = "PARTIAL_FAILURE",
-                    message = failedResults.joinToString("; ")
+                TenantPushNotificationDelivery.Message(
+                    memberId = target.memberId,
+                    subscription = subscription,
+                    title = "まもなくタスクの時間です！",
+                    body = target.taskNames.joinToString("\n") { "・${it.value}" },
                 )
             }
+        }
+
+        // 2. 送信(トランザクションの外)と 3. 期限切れ購読の無効化
+        val failures = delivery.deliver(input.tenantId, messages)
+        return if (failures.isEmpty()) {
+            ExecutionResult.Success
+        } else {
+            ExecutionResult.Failed(status = "PARTIAL_FAILURE", message = failures.joinToString("; "))
         }
     }
 }

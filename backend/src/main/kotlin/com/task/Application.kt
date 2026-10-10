@@ -162,15 +162,18 @@ fun Application.module() {
 
     val notificationScheduler = DailyNotCompletedTaskNotificationScheduler(
         injector.getInstance(SendDailyNotCompletedTaskNotificationsUseCase::class.java),
+        injector.getInstance(TenantBatchRunner::class.java),
         executionTime = notificationScheduleTime
     )
 
     val notDailyTomorrowNotificationScheduler = NotDailyTomorrowTaskNotificationScheduler(
-        injector.getInstance(SendNotDailyTomorrowTaskNotificationsUseCase::class.java)
+        injector.getInstance(SendNotDailyTomorrowTaskNotificationsUseCase::class.java),
+        injector.getInstance(TenantBatchRunner::class.java),
     )
 
     val notDailyTaskReminderScheduler = NotDailyTaskReminderScheduler(
-        injector.getInstance(SendNotDailyTaskRemindersUseCase::class.java)
+        injector.getInstance(SendNotDailyTaskRemindersUseCase::class.java),
+        injector.getInstance(TenantBatchRunner::class.java),
     )
 
     // issue #72: pubsub.enabled に応じてリレー方式(Pub/Subへpublish)と旧方式(アプリ内処理)を

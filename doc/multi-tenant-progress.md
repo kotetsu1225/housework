@@ -2,11 +2,11 @@
 
 [multi-tenant-handoff.md](multi-tenant-handoff.md) §6.4 に従い、**issue の着手時と完了時に必ず更新する**。コンテキストが切れた別のエージェントが、このファイルだけを見て再開できる粒度で書く。
 
-最終更新: 2026-10-10(完了 34 件 + #68 の大部分。#66 実装中。#69 apply はオーナーの承認待ち)
+最終更新: 2026-10-10(コードとドキュメントの issue はすべて完了。残りは #69 apply の承認待ちと、人間と行う #67 #73)
 
 ## 現在の状態
 
-- フェーズ: **Wave 3**。残りは #66(実装中)、#68 の最終確認、#69 → #70(apply の承認待ち)、人間と行う #67 #73
+- フェーズ: **Wave 3 の終盤**。残りは #69 → #70(apply の承認待ち)、人間と行う #67(本番リハーサル)・#73(Pub/Sub 切り替え)
 - 統合ブランチ: `feature/topic-multitenant`
 - 人間チェックポイント待ち: #69 の `terraform apply` の承認(plan は 5 件追加・変更 0・削除 0)
 - 作業体制(オーナー指示 2026-09-24): 親エージェントが具体的な指示を書き、安価なモデル(Sonnet)に実装させ、親が厳密にレビューする。数行で済む定型作業は親が直接書く
@@ -32,8 +32,6 @@
 
 | issue | 担当 | ブランチ(worktree は `~/Desktop/housework-wt/mt-<番号>`) | 状況・次の一手 |
 |---|---|---|---|
-| #66 Z2 | 親(土台)+ Sonnet(API テスト)+ 親(レビュー) | `mt/66-isolation-tests` | API テストの土台(`support/ApiTestApplication.kt`: 本物のルート + AppModule を Modules.override でテスト DB とフェイクに差し替え)を作成済み。API 経由の隔離テストを Sonnet が作成中。DB レベルの不足分(tenants / completed_domain_events)は親が作成 |
-| #68 Z4 | Sonnet(編集)+ 親(レビュー) | PR #106 でマージ済み(issue は開いたまま) | README / CLAUDE.md / ER 図 / ドメインモデルと ADR #19 への追記は済み。**残り: 全 issue 完了後の最終確認**(sequence-diagram.md と directory-structure.md もそこで見る)。`要件定義.md` は .gitignore 対象でリポジトリに無いため、オーナーの手元で更新 |
 | #69 G0 | 親(人間と伴走) | `mt/69-gcp-foundation`(push 済み、PR 未作成) | plan は 5 件追加。**オーナーの承認後に apply → PR** |
 
 ## 完了(統合ブランチにマージ済み)
@@ -70,6 +68,8 @@
 | #48 D4 + #52 U2 | #107 | 2026-10-10 | push_subscriptions / member_metas に tenant_id、Push / Meta の 4 UseCase を tenant スコープに。**案 C: 別の家族で登録済みの endpoint は 409**(一意制約違反をトランザクションの外で変換)。通知許可モーダルは失敗時に閉じずに理由を表示 |
 | #58 B2 + #59 B3 + #60 B4 | #108 | 2026-10-10 | 通知バッチ 3 つをテナント単位に。送信と期限切れ無効化を `TenantPushNotificationDelivery` に共通化(送信はトランザクションの外) |
 | #65 Z1 | #109 | 2026-10-10 | 互換パスを削除し、`Database` はアプリ用プールだけを持つ。`DatabaseWithoutRLSUsageTest` が許可リスト外の利用・理由コメントの欠落・tenant 無しメソッドの復活を検知 |
+| #66 Z2 | #111 | 2026-10-10 | API テストの土台 `apiTest { }` と API 経由の隔離テスト 19 件、`NonRlsTablesTenantTest`。RLS を外すと 20 件中 16 件が落ちることを確認 |
+| #68 Z4 | #106 #110 #111 | 2026-10-10 | README / CLAUDE.md / ER 図 / ドメインモデル / シーケンス図 / ディレクトリ構成、ADR #19 追記。`要件定義.md` はオーナー依頼でローカル更新 |
 | #61 B5 | #105 | 2026-09-27 | streaming pull subscriber。処理本体を `HandleTaskDefinitionDeletedUseCase` / `OutboxEventProcessor` に切り出し、pubsub 無効時のアプリ内ポーリングと共有。属性欠落・未知の eventType・例外は nack。pubsub 無効時、未知の eventType は PROCESSED にせず retry に回す(挙動の変更)。**outbox 系の互換パス呼び出しはこれで無くなった** |
 
 ## ブロック中・未解決の疑問
@@ -132,7 +132,5 @@
 
 ## 次にやること(優先順)
 
-1. #66(隔離の統合テスト)をレビュー → PR → マージ
-2. #68 の最終確認(sequence-diagram.md / directory-structure.md も含む)
-3. #69: オーナーの承認後に apply → `terraform plan` で差分なしを確認 → PR → #70(Pub/Sub の Terraform)
-4. 人間と一緒に: #67(本番リハーサル)、#73(Pub/Sub への切り替え)
+1. #69: オーナーの承認後に apply → `terraform plan` で差分なしを確認 → PR → #70(Pub/Sub の Terraform)
+2. 人間と一緒に: #67(本番リハーサル)、#73(Pub/Sub への切り替え)

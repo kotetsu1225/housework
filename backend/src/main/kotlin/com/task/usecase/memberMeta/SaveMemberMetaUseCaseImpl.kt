@@ -9,8 +9,8 @@ class SaveMemberMetaUseCaseImpl @Inject constructor(
     private val memberMetaRepository: MemberMetaRepository
 ) : SaveMemberMetaUseCase {
     override fun execute(input: SaveMemberMetaUseCase.Input) {
-        database.withTransaction { session ->
-            memberMetaRepository.save(input.memberId, input.key, input.value, session)
+        database.withTransaction(input.tenantId) { session ->
+            memberMetaRepository.save(input.tenantId, input.memberId, input.key, input.value, session)
         }
     }
 }

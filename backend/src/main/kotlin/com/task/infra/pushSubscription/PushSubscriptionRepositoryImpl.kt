@@ -2,6 +2,7 @@ package com.task.infra.pushSubscription
 
 import com.google.inject.Inject
 import com.task.domain.member.MemberId
+import com.task.domain.tenant.TenantId
 import com.task.infra.database.jooq.tables.references.PUSH_SUBSCRIPTIONS
 import org.jooq.DSLContext
 import java.time.OffsetDateTime
@@ -12,6 +13,9 @@ class PushSubscriptionRepositoryImpl @Inject constructor() : PushSubscriptionRep
 
     override fun save(subscription: PushSubscription, session: DSLContext): PushSubscription {
         val now = OffsetDateTime.now(ZoneOffset.UTC)
+        // tenant スコープのトランザクションでは、findByEndpoint は RLS により自テナントの行しか見ない。
+        // 同じ endpoint が別テナントで登録済みのときは existing = null となり INSERT に進み、
+        // uq_push_subscriptions_endpoint の一意制約違反になる(呼び出し側で 409 に変換する。#48 案 C)。
         val existing = findByEndpoint(subscription.endpoint, session)
 
         if (existing != null) {
@@ -32,6 +36,7 @@ class PushSubscriptionRepositoryImpl @Inject constructor() : PushSubscriptionRep
 
         session.insertInto(PUSH_SUBSCRIPTIONS)
             .set(PUSH_SUBSCRIPTIONS.ID, subscription.id)
+            .set(PUSH_SUBSCRIPTIONS.TENANT_ID, subscription.tenantId.value)
             .set(PUSH_SUBSCRIPTIONS.MEMBER_ID, subscription.memberId.value)
             .set(PUSH_SUBSCRIPTIONS.ENDPOINT, subscription.endpoint)
             .set(PUSH_SUBSCRIPTIONS.P256DH_KEY, subscription.p256dhKey)
@@ -95,6 +100,7 @@ class PushSubscriptionRepositoryImpl @Inject constructor() : PushSubscriptionRep
     private fun toEntity(record: org.jooq.Record): PushSubscription {
         return PushSubscription(
             id = record.get(PUSH_SUBSCRIPTIONS.ID)!!,
+            tenantId = TenantId(record.get(PUSH_SUBSCRIPTIONS.TENANT_ID)!!),
             memberId = MemberId(record.get(PUSH_SUBSCRIPTIONS.MEMBER_ID)!!),
             endpoint = record.get(PUSH_SUBSCRIPTIONS.ENDPOINT)!!,
             p256dhKey = record.get(PUSH_SUBSCRIPTIONS.P256DH_KEY)!!,

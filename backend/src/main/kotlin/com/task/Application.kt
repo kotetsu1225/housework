@@ -1,6 +1,7 @@
 package com.task
 
 import com.task.domain.member.EmailAlreadyUsedException
+import com.task.usecase.pushSubscription.PushEndpointRegisteredByAnotherFamilyException
 import com.task.infra.config.DotenvLoader
 import com.task.infra.database.DatabaseConfig
 import com.task.infra.pubsub.DomainEventSubscriber
@@ -103,6 +104,10 @@ fun Application.module() {
 
     install(StatusPages) {
         exception<EmailAlreadyUsedException> { call, cause ->
+            call.respond(HttpStatusCode.Conflict, mapOf("error" to cause.message))
+        }
+        // #48 案 C: 同じ端末が別の家族のアカウントで通知登録済み
+        exception<PushEndpointRegisteredByAnotherFamilyException> { call, cause ->
             call.respond(HttpStatusCode.Conflict, mapOf("error" to cause.message))
         }
         exception<IllegalArgumentException> { call, cause ->

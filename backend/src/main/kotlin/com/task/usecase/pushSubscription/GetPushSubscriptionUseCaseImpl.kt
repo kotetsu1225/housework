@@ -10,7 +10,7 @@ class GetPushSubscriptionUseCaseImpl @Inject constructor(
 ) : GetPushSubscriptionUseCase {
 
     override fun execute(input: GetPushSubscriptionUseCase.Input): GetPushSubscriptionUseCase.Output {
-        return database.withTransaction { session ->
+        return database.withTransaction(input.tenantId) { session ->
             val subscriptions = pushSubscriptionRepository.findByMemberId(input.memberId, session)
             GetPushSubscriptionUseCase.Output(subscriptions)
         }

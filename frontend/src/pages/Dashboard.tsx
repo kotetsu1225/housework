@@ -66,6 +66,7 @@ export function Dashboard() {
   // Push通知購読
   const {
     isRegistering,
+    error: pushSubscriptionError,
     subscribe,
     hasPermissionAnswer,
     hasCheckedPermissionAnswer,
@@ -386,6 +387,7 @@ export function Dashboard() {
           onAllow={handleAllowNotification}
           onDismiss={handleDismissNotification}
           isRegistering={isRegistering}
+          error={pushSubscriptionError}
         />
 
         {/* 明日のタスク一覧モーダル */}

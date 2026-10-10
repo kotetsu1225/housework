@@ -2,12 +2,14 @@ package com.task.usecase.pushSubscription
 
 import com.google.inject.ImplementedBy
 import com.task.domain.member.MemberId
+import com.task.domain.tenant.TenantId
 import java.time.Instant
 import java.util.UUID
 
 @ImplementedBy(RegisterPushSubscriptionUseCaseImpl::class)
 interface RegisterPushSubscriptionUseCase {
     data class Input(
+        val tenantId: TenantId,
         val memberId: MemberId,
         val endpoint: String,
         val p256dhKey: String,

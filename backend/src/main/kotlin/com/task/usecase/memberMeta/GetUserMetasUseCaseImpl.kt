@@ -9,7 +9,7 @@ class GetUserMetasUseCaseImpl@Inject constructor(
     private val memberMetaRepository: MemberMetaRepository
 ) : GetUserMetasUseCase {
     override fun execute(input: GetUserMetasUseCase.Input): GetUserMetasUseCase.Output {
-        return database.withTransaction { session ->
+        return database.withTransaction(input.tenantId) { session ->
             GetUserMetasUseCase.Output(
                 memberId = input.memberId,
                 value = memberMetaRepository.findByMemberIdAndKey(input.memberId, input.key, session)

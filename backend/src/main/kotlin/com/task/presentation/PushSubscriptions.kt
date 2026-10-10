@@ -79,10 +79,10 @@ data class IsPushNotificationsPermissionAnswerResponse(
 fun Route.pushSubscriptions() {
 
     get<PushSubscriptions.My> {
-        val memberId = call.authenticatedMember().memberId
+        val (memberId, tenantId) = call.authenticatedMember()
 
         val output = instance<GetPushSubscriptionUseCase>().execute(
-            GetPushSubscriptionUseCase.Input(memberId)
+            GetPushSubscriptionUseCase.Input(tenantId = tenantId, memberId = memberId)
         )
 
         val activeSubscriptions = output.subscriptions.filter { it.isActive }
@@ -105,11 +105,12 @@ fun Route.pushSubscriptions() {
     }
 
     post<PushSubscriptions.Register> {
-        val memberId = call.authenticatedMember().memberId
+        val (memberId, tenantId) = call.authenticatedMember()
         val request = call.receive<PushSubscriptions.Register.Request>()
 
         val output = instance<RegisterPushSubscriptionUseCase>().execute(
             RegisterPushSubscriptionUseCase.Input(
+                tenantId = tenantId,
                 memberId = memberId,
                 endpoint = request.endpoint,
                 p256dhKey = request.keys.p256dh,
@@ -127,11 +128,12 @@ fun Route.pushSubscriptions() {
     }
 
     get<PushSubscriptions.IsPushNotificationsPermissionAnswer> {
-        val memberId = call.authenticatedMember().memberId
+        val (memberId, tenantId) = call.authenticatedMember()
 
         // レコードがあればtrue, なければfalse→表示していい
         val output = instance<GetUserMetasUseCase>().execute(
             GetUserMetasUseCase.Input(
+                tenantId = tenantId,
                 memberId = memberId,
                 key = "pushNotificationsPermission"
             )
@@ -147,11 +149,12 @@ fun Route.pushSubscriptions() {
     }
 
     post<PushSubscriptions.PermissionAnswer> {
-        val memberId = call.authenticatedMember().memberId
+        val (memberId, tenantId) = call.authenticatedMember()
         val request = call.receive<PushSubscriptions.PermissionAnswer.Request>()
 
         instance<SaveMemberMetaUseCase>().execute(
             SaveMemberMetaUseCase.Input(
+                tenantId = tenantId,
                 memberId = memberId,
                 key = "pushNotificationsPermission",
                 value = request.value

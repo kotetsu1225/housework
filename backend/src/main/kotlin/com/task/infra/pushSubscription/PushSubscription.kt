@@ -1,11 +1,13 @@
 package com.task.infra.pushSubscription
 
 import com.task.domain.member.MemberId
+import com.task.domain.tenant.TenantId
 import java.time.Instant
 import java.util.UUID
 
 data class PushSubscription(
     val id: UUID,
+    val tenantId: TenantId,         // 所属テナント。登録したメンバーのテナント(#48)
     val memberId: MemberId,
     val endpoint: String,           // Push ServiceのエンドポイントURL
     val p256dhKey: String,          // 暗号化用ECDH公開鍵（Base64）

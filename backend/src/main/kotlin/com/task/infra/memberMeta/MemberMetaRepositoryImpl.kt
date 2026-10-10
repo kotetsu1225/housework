@@ -2,6 +2,7 @@ package com.task.infra.memberMeta
 
 import com.google.inject.Inject
 import com.task.domain.member.MemberId
+import com.task.domain.tenant.TenantId
 import com.task.infra.database.jooq.tables.references.MEMBER_METAS
 import org.jooq.DSLContext
 import java.time.OffsetDateTime
@@ -22,6 +23,7 @@ class MemberMetaRepositoryImpl @Inject constructor() : MemberMetaRepository {
     }
 
     override fun save(
+        tenantId: TenantId,
         memberId: MemberId,
         key: String,
         value: Boolean,
@@ -46,6 +48,7 @@ class MemberMetaRepositoryImpl @Inject constructor() : MemberMetaRepository {
 
         session.insertInto(MEMBER_METAS)
             .set(MEMBER_METAS.MEMBER_ID, memberId.value)
+            .set(MEMBER_METAS.TENANT_ID, tenantId.value)
             .set(MEMBER_METAS.KEY, key)
             .set(MEMBER_METAS.VALUE, value)
             .set(MEMBER_METAS.CREATED_AT, now)

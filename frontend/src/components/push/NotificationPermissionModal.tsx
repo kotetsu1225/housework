@@ -7,6 +7,7 @@
 import { Bell } from 'lucide-react'
 import { Modal } from '../ui/Modal'
 import { Button } from '../ui/Button'
+import { Alert } from '../ui/Alert'
 
 export interface NotificationPermissionModalProps {
   /** モーダルの表示状態 */
@@ -19,6 +20,8 @@ export interface NotificationPermissionModalProps {
   onDismiss: () => void
   /** 登録中かどうか */
   isRegistering?: boolean
+  /** 登録に失敗したときのメッセージ(例: 別の家族のアカウントで登録済み = 409) */
+  error?: string | null
 }
 
 /**
@@ -32,10 +35,11 @@ export function NotificationPermissionModal({
   onAllow,
   onDismiss,
   isRegistering = false,
+  error = null,
 }: NotificationPermissionModalProps) {
+  // 成功時は呼び出し側(onAllow)が閉じる。失敗時は閉じずに理由(error)を表示する
   const handleAllow = async () => {
     await onAllow()
-    onClose()
   }
 
   const handleDismiss = () => {
@@ -66,6 +70,8 @@ export function NotificationPermissionModal({
             毎日19時に未完了の毎日タスクを通知します。
           </p>
         </div>
+
+        {error && <Alert variant="error">{error}</Alert>}
 
         <div className="flex flex-col gap-3 pt-4">
           <Button

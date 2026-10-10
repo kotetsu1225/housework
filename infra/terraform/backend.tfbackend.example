@@ -1,0 +1,4 @@
+# このファイルを backend.tfbackend にコピーして値を埋める。backend.tfbackend はコミットしない(.gitignore 済み)。
+# 使い方: terraform init -backend-config=backend.tfbackend
+bucket = "your-project-id-tfstate"
+prefix = "housework"

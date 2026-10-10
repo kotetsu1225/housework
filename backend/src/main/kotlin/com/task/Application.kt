@@ -68,13 +68,7 @@ fun Application.module() {
 
     install(Resources)
 
-    install(ContentNegotiation) {
-        json(Json {
-            prettyPrint = true
-            isLenient = true
-            ignoreUnknownKeys = true
-        })
-    }
+    configureSerialization()
 
     install(CORS) {
         val allowedOriginsEnv = System.getenv("CORS_ALLOWED_ORIGINS")
@@ -102,21 +96,7 @@ fun Application.module() {
         allowCredentials = true
     }
 
-    install(StatusPages) {
-        exception<EmailAlreadyUsedException> { call, cause ->
-            call.respond(HttpStatusCode.Conflict, mapOf("error" to cause.message))
-        }
-        // #48 案 C: 同じ端末が別の家族のアカウントで通知登録済み
-        exception<PushEndpointRegisteredByAnotherFamilyException> { call, cause ->
-            call.respond(HttpStatusCode.Conflict, mapOf("error" to cause.message))
-        }
-        exception<IllegalArgumentException> { call, cause ->
-            call.respond(HttpStatusCode.BadRequest, mapOf("error" to (cause.message ?: "Bad Request")))
-        }
-        exception<Throwable> { call, cause ->
-            call.respond(HttpStatusCode.InternalServerError, mapOf("error" to (cause.message ?: "Internal Server Error")))
-        }
-    }
+    configureStatusPages()
 
     val injector = attributes[guiceInjectorKey]
 
@@ -221,6 +201,48 @@ fun Application.module() {
         injector.getInstance(PubSubClientFactory::class.java).close()
     }
 
+    configureApiRoutes()
+}
+
+/**
+ * JSON の (デ)シリアライズ設定。統合テスト(#66)からも同じ設定で呼べるように切り出している。
+ */
+fun Application.configureSerialization() {
+    install(ContentNegotiation) {
+        json(Json {
+            prettyPrint = true
+            isLenient = true
+            ignoreUnknownKeys = true
+        })
+    }
+}
+
+/**
+ * 例外 → HTTP ステータスの対応。統合テスト(#66)からも同じ対応で呼べるように切り出している。
+ */
+fun Application.configureStatusPages() {
+    install(StatusPages) {
+        exception<EmailAlreadyUsedException> { call, cause ->
+            call.respond(HttpStatusCode.Conflict, mapOf("error" to cause.message))
+        }
+        // #48 案 C: 同じ端末が別の家族のアカウントで通知登録済み
+        exception<PushEndpointRegisteredByAnotherFamilyException> { call, cause ->
+            call.respond(HttpStatusCode.Conflict, mapOf("error" to cause.message))
+        }
+        exception<IllegalArgumentException> { call, cause ->
+            call.respond(HttpStatusCode.BadRequest, mapOf("error" to (cause.message ?: "Bad Request")))
+        }
+        exception<Throwable> { call, cause ->
+            call.respond(HttpStatusCode.InternalServerError, mapOf("error" to (cause.message ?: "Internal Server Error")))
+        }
+    }
+}
+
+/**
+ * API のルーティング(認証不要の /health と /api/auth、JWT 必須のそれ以外)。
+ * 統合テスト(#66)からも同じルートで呼べるように切り出している。
+ */
+fun Application.configureApiRoutes() {
     routing {
         get("/health") {
             call.respondText("ok")

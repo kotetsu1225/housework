@@ -46,7 +46,7 @@ backend/
 │   └── postgres/
 │       └── init.sql               # DB初期化スクリプト
 ├── db/
-│   └── migration/                 # Flywayマイグレーション (V1〜V17)
+│   └── migration/                 # Flywayマイグレーション (V1〜V24)
 ├── gradle/
 │   └── wrapper/                   # Gradleラッパー
 └── src/
@@ -56,7 +56,7 @@ backend/
     │   ├── kotlin/com/task/       # メインソースコード
     │   └── resources/             # 設定ファイル
     └── test/
-        └── kotlin/                # テストコード
+        └── kotlin/com/task/       # テストコード（詳細は後述）
 ```
 
 ### ドメイン層 (`domain/`)
@@ -75,7 +75,8 @@ domain/
 │   ├── Mail.kt                    # メールValue Object
 │   └── MailSender.kt              # メール送信インターフェース
 ├── member/                        # メンバー集約
-│   ├── Member.kt                  # メンバーエンティティ + Value Objects
+│   ├── EmailAlreadyUsedException.kt # email重複(グローバル一意)の例外
+│   ├── Member.kt                  # メンバーエンティティ + Value Objects (tenantIdを持つ)
 │   ├── MemberEmail.kt             # メールアドレスValue Object
 │   ├── MemberRepository.kt        # リポジトリインターフェース
 │   └── PasswordHasher.kt          # パスワードハッシュインターフェース
@@ -83,6 +84,11 @@ domain/
 │   └── service/                   # ドメインサービス
 │       ├── TaskGenerationService.kt      # タスク生成サービス
 │       └── TaskdefinitionAuthService.kt  # タスク定義認可サービス
+├── tenant/                        # テナント(=家族)集約
+│   ├── FamilyName.kt              # 家族名Value Object
+│   ├── Tenant.kt                  # テナントエンティティ + TenantStatus (ACTIVE / DELETED)
+│   ├── TenantId.kt                # テナントID Value Object
+│   └── TenantRepository.kt        # リポジトリインターフェース (ACTIVEなID列挙を含む)
 ├── taskDefinition/                # タスク定義集約
 │   ├── TaskDefinition.kt          # タスク定義エンティティ + Value Objects
 │   ├── TaskDefinitionRepository.kt # リポジトリインターフェース
@@ -100,13 +106,17 @@ domain/
 
 ### ユースケース層 (`usecase/`)
 
-アプリケーションサービス。トランザクション境界とドメインイベントのディスパッチを担当。
+アプリケーションサービス。トランザクション境界とドメインイベントのディスパッチを担当。認証後のUseCaseは`Input`に`tenantId`を持ち、`Database.withTransaction(tenantId)`で処理する。
 
 ```
 usecase/
-├── auth/                          # 認証
-│   ├── LoginUseCase.kt
-│   └── LoginUseCaseImpl.kt
+├── auth/                          # 認証（テナント確定前のためオーナー接続を使う）
+│   ├── LoginUseCase.kt            # emailでログイン (tenantがACTIVEであること)
+│   ├── LoginUseCaseImpl.kt
+│   ├── RegisterFamilyUseCase.kt   # サインアップ = 家族(テナント) + 最初のメンバーを作成
+│   └── RegisterFamilyUseCaseImpl.kt
+├── batch/
+│   └── TenantBatchRunner.kt       # ACTIVEな全テナントを列挙し、テナントごとにバッチ処理を実行
 ├── member/                        # メンバー管理
 │   ├── CreateMemberUseCase.kt
 │   ├── CreateMemberUseCaseImpl.kt
@@ -124,8 +134,17 @@ usecase/
 ├── pushSubscription/              # プッシュ通知購読
 │   ├── GetPushSubscriptionUseCase.kt
 │   ├── GetPushSubscriptionUseCaseImpl.kt
+│   ├── PushEndpointRegisteredByAnotherFamilyException.kt  # 他の家族が登録済みのendpoint (409)
 │   ├── RegisterPushSubscriptionUseCase.kt
 │   └── RegisterPushSubscriptionUseCaseImpl.kt
+├── outbox/                        # outboxの処理 (リレー / アプリ内処理 / ハンドラ)
+│   ├── HandleTaskDefinitionDeletedUseCase.kt      # TaskDefinitionDeletedを処理 (冪等)
+│   ├── HandleTaskDefinitionDeletedUseCaseImpl.kt
+│   ├── OutboxEventProcessor.kt                    # eventTypeに応じて処理を振り分ける共通入口
+│   ├── ProcessOutboxEventsUseCase.kt              # pubsub.enabled=false: PENDINGをポーリングして処理
+│   ├── ProcessOutboxEventsUseCaseImpl.kt
+│   ├── RelayOutboxEventsUseCase.kt                # pubsub.enabled=true: PENDINGをPub/Subへpublish
+│   └── RelayOutboxEventsUseCaseImpl.kt
 ├── taskDefinition/                # タスク定義
 │   ├── create/
 │   │   ├── CreateTaskDefinitionUseCase.kt
@@ -142,8 +161,8 @@ usecase/
 │   │   ├── UpdateTaskDefinitionUseCase.kt
 │   │   └── UpdateTaskDefinitionUseCaseImpl.kt
 │   └── handler/                   # イベントハンドラー
-│       ├── CreateTaskExecutionOnTaskDefinitionCreatedHandler.kt
-│       └── TaskDefinitionDeletedHandler.kt
+│       ├── CreateTaskExecutionOnTaskDefinitionCreatedHandler.kt  # Config.ktでバインド済み
+│       └── TaskDefinitionDeletedHandler.kt  # 現在Config.ktにバインドされていない (削除はoutbox経由、usecase/outbox/)
 ├── taskExecution/                 # タスク実行
 │   ├── assign/
 │   │   ├── UpdateAssignTaskExecutionUseCase.kt
@@ -151,6 +170,9 @@ usecase/
 │   ├── cancel/
 │   │   ├── CancelTaskExecutionUseCase.kt
 │   │   └── CancelTaskExecutionUseCaseImpl.kt
+│   ├── create/
+│   │   ├── CreateTaskExecutionUseCase.kt
+│   │   └── CreateTaskExecutionUseCaseImpl.kt
 │   ├── complete/
 │   │   ├── CompleteTaskExecutionUseCase.kt
 │   │   └── CompleteTaskExecutionUseCaseImpl.kt
@@ -174,6 +196,7 @@ usecase/
 │   ├── SendNotDailyTaskRemindersUseCaseImpl.kt
 │   ├── SendNotDailyTomorrowTaskNotificationsUseCase.kt
 │   ├── SendNotDailyTomorrowTaskNotificationsUseCaseImpl.kt
+│   ├── TenantPushNotificationDelivery.kt  # 通知バッチの送信(トランザクション外)と期限切れ購読の無効化
 │   └── service/
 │       ├── TaskGenerationServiceImpl.kt
 │       └── TaskDefinitionAuthorizationService.kt
@@ -192,15 +215,17 @@ usecase/
 
 ### インフラストラクチャ層 (`infra/`)
 
-外部システムとの接続を担当。リポジトリ実装、メール送信、イベントディスパッチャー等。
+外部システムとの接続を担当。リポジトリ実装、メール送信、イベントディスパッチャー、outbox、Pub/Sub等。
 
 ```
 infra/
 ├── config/
 │   └── DotenvLoader.kt            # 環境変数ローダー
 ├── database/
-│   ├── Database.kt                # トランザクション管理
-│   └── DatabaseConfig.kt          # DB接続設定
+│   ├── Database.kt                # tenantスコープのトランザクション管理 (withTransaction(tenantId)、housework_appプール・RLS適用)
+│   ├── DatabaseConfig.kt          # DB接続設定 (appプールとオーナープール)
+│   ├── DatabaseWithoutRLS.kt      # オーナー接続 (RLSバイパス)。許可リストの処理のみ使用可
+│   └── UniqueViolation.kt         # 一意制約違反(SQLState 23505)の判定ヘルパー
 ├── event/
 │   ├── InMemoryDomainEventDispatcher.kt  # イベントディスパッチャー実装
 │   └── handler/
@@ -218,6 +243,18 @@ infra/
 ├── memberMeta/
 │   ├── MemberMetaRepository.kt    # メンバーメタリポジトリインターフェース
 │   └── MemberMetaRepositoryImpl.kt
+├── outbox/                        # Transactional Outbox
+│   ├── CompletedDomainEventRepository.kt      # 処理済みイベント(冪等性判定)
+│   ├── CompletedDomainEventRepositoryImpl.kt
+│   ├── DomainEventSerializer.kt   # ドメインイベントのシリアライズ
+│   ├── OutboxMessageAttributes.kt # Pub/Subメッセージ属性名 (tenantId等)
+│   ├── OutboxRecord.kt            # outbox行 + OutboxStatus
+│   ├── OutboxRepository.kt
+│   └── OutboxRepositoryImpl.kt
+├── pubsub/                        # Google Cloud Pub/Sub
+│   ├── DomainEventSubscriber.kt   # streaming pullでイベントを受信し処理
+│   ├── PubSubClientFactory.kt     # Publisher / Subscriberの生成
+│   └── PubSubConfig.kt            # pubsub.enabled等の設定
 ├── pushSubscription/
 │   ├── PushSubscription.kt        # プッシュ購読エンティティ
 │   ├── PushSubscriptionRepository.kt
@@ -237,6 +274,8 @@ infra/
 │   └── TaskDefinitionRepositoryImpl.kt
 ├── taskExecution/
 │   └── TaskExecutionRepositoryImpl.kt
+├── tenant/
+│   └── TenantRepositoryImpl.kt
 └── webpush/
     ├── VapidConfig.kt             # VAPID設定
     ├── WebPushSender.kt           # WebPushインターフェース
@@ -249,8 +288,9 @@ REST APIエンドポイント。Ktorルーティングとリクエスト/レス�
 
 ```
 presentation/
-├── Auth.kt                        # POST /api/auth/login
-├── Members.kt                     # /api/members CRUD
+├── Auth.kt                        # POST /api/auth/register, POST /api/auth/login
+├── AuthenticatedMember.kt         # call.authenticatedMember() → (memberId, tenantId) をJWTから取得
+├── Members.kt                     # /api/member (一覧・取得・create・update)
 ├── TaskDefinitions.kt             # /api/task-definitions CRUD
 ├── TaskExecutions.kt              # /api/task-executions + 状態遷移
 ├── TaskGenerations.kt             # POST /api/task-generations (手動生成)
@@ -271,15 +311,18 @@ scheduler/
 ├── BaseScheduler.kt               # スケジューラ基底クラス
 ├── IntervalScheduler.kt           # インターバル実行スケジューラ基底クラス
 ├── DailyScheduler.kt              # 日次実行スケジューラ基底クラス
-├── DailyTaskGenerationScheduler.kt         # 毎朝のタスク生成
+├── DailyTaskGenerationScheduler.kt         # 毎朝のタスク生成 (テナントごと)
 ├── DailyNotCompletedTaskNotificationScheduler.kt  # 未完了タスク通知
 ├── NotDailyTaskReminderScheduler.kt        # 非日次タスクリマインダー
-└── NotDailyTomorrowTaskNotificationScheduler.kt   # 翌日タスク通知
+├── NotDailyTomorrowTaskNotificationScheduler.kt   # 翌日タスク通知
+└── OutboxEventProcessorScheduler.kt        # outbox処理 (10秒間隔、pubsub.enabledでリレー/アプリ内処理を切替)
 ```
+
+通知・タスク生成のスケジューラは`TenantBatchRunner`でテナントごとにUseCaseを呼ぶ。
 
 ### マイグレーション (`db/migration/`)
 
-Flywayマイグレーションファイル（V1〜V17）。
+Flywayマイグレーションファイル（V1〜V24）。V25以降は別機能のために予約されている。
 
 ```
 migration/
@@ -299,7 +342,14 @@ migration/
 ├── V14__add_task_execution_participants.sql  # 複数参加者対応
 ├── V15__add_points_to_tasks.sql              # ポイント機能追加
 ├── V16__create_push_subscriptions.sql        # プッシュ購読テーブル
-└── V17__create_member_metas.sql              # メンバーメタ情報テーブル
+├── V17__create_member_metas.sql              # メンバーメタ情報テーブル
+├── V18__create_outbox.sql                    # outboxテーブル
+├── V19__create_completed_domain_events.sql   # 処理済みイベントテーブル（冪等性）
+├── V20__create_tenants.sql                   # テナント(家族)テーブル
+├── V21__apply_multi_tenant.sql               # ロール作成 + tenant_id列追加 + RLS（テナント分離）
+├── V22__backfill_default_tenant.sql          # 既存データをdefault tenantへ移行
+├── V23__add_tenant_id_constraints.sql        # tenant_idのNOT NULL化 + FK
+└── V24__tighten_non_rls_tables.sql           # outbox/completed_domain_events/tenantsへのRLS適用、tenants書き込み権限の剥奪
 ```
 
 ### その他
@@ -308,6 +358,19 @@ migration/
 src/main/kotlin/com/task/
 ├── Application.kt                 # アプリケーションエントリポイント
 └── Config.kt                      # Guice DIモジュール定義
+```
+
+### テスト (`src/test/kotlin/com/task/`)
+
+```
+src/test/kotlin/com/task/
+├── support/
+│   ├── PostgresTestDatabase.kt    # Testcontainers上のPostgreSQL（マイグレーション適用済み）
+│   └── TestFixtures.kt            # テスト用データ生成
+├── domain/                        # ドメインのテスト (Member / TaskDefinition / TaskExecution / Tenant、SameTenantInvariantTest)
+├── infra/                         # database(tenantスコープ・DatabaseWithoutRLS使用箇所の検査・テナント分離) / outbox / pubsub / security / 各Repositoryのテナント分離
+├── presentation/                  # AuthenticatedMemberTest
+└── usecase/                       # auth / batch / member / outbox / pushSubscription / query / task / taskDefinition / taskExecution
 ```
 
 ---

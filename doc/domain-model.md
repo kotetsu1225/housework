@@ -648,8 +648,10 @@ data class TaskDefinitionDeleted(
 ```
 
 **発行タイミング**: `TaskDefinition.delete()`、`CompleteTaskExecutionUseCase`（OneTime完了時）
-**ハンドラー**: `TaskDefinitionDeletedHandler`
+**ハンドラー**: `DeleteTaskDefinitionUseCase`が同一トランザクションでoutboxに書き込み、コミット後に`HandleTaskDefinitionDeletedUseCase`（`OutboxEventProcessor`経由）が処理する（詳細は`sequence-diagram.md`のUC-6）
 - 未完了の`TaskExecution`（NotStarted/InProgress）を一括キャンセル
+- `CompleteTaskExecutionUseCase`（OneTime完了時）の経路では`DomainEventDispatcher`に渡されるが、バインド済みのハンドラが無く、outboxにも書かれない
+- `usecase/taskDefinition/handler/TaskDefinitionDeletedHandler`クラスは残っているが、`Config.kt`にバインドされていないため呼ばれない
 
 ### TaskExecution関連イベント
 

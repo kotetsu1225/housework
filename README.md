@@ -139,7 +139,7 @@ NOT_STARTED ──→ IN_PROGRESS ──→ COMPLETED
 | イベント | トリガー | ハンドラ |
 |---------|---------|---------|
 | TaskDefinitionCreated | タスク定義作成時 | 当日分のTaskExecution自動生成 |
-| TaskDefinitionDeleted | タスク定義削除時 | - |
+| TaskDefinitionDeleted | タスク定義削除時 | outbox経由で、その定義の未完了のTaskExecution（未開始・進行中）をキャンセル |
 | TaskExecutionStarted | タスク開始時 | メール通知・Web Push（FAMILYタスク） |
 | TaskExecutionCompleted | タスク完了時 | メール通知・Web Push（FAMILYタスク） |
 | TaskExecutionCancelled | タスクキャンセル時 | - |
@@ -203,8 +203,7 @@ curl -X POST http://localhost:8080/api/auth/login \
   -H "Content-Type: application/json" \
   -d '{"email":"taro@example.com","password":"password123"}'
 
-# ログアウト（クライアント側でトークンを破棄）
-curl -X POST http://localhost:8080/api/auth/logout
+# ログアウトはサーバー側のエンドポイントを持たず、クライアント側でトークンを破棄する
 ```
 
 ### メンバー管理
@@ -226,7 +225,7 @@ curl -X POST http://localhost:8080/api/member/create \
 # メンバー更新
 curl -X POST http://localhost:8080/api/member/{memberId}/update \
   -H "Content-Type: application/json" \
-  -d '{"name":"田中花子","email":"hanako@example.com","familyRole":"MOTHER"}'
+  -d '{"name":"田中花子","familyRole":"MOTHER"}'
 ```
 
 ### タスク定義管理
@@ -312,22 +311,23 @@ curl "http://localhost:8080/api/dashboard?date=2024-01-15"
 # 完了済みタスク履歴
 curl "http://localhost:8080/api/completed-tasks?limit=20&offset=0"
 
+# 手動タスク生成（ログイン中の家族について当日分を生成）
+curl -X POST http://localhost:8080/api/task-generations/daily
+
 # 手動タスク生成（特定日のタスク実行を生成）
-curl -X POST http://localhost:8080/api/task-generations \
-  -H "Content-Type: application/json" \
-  -d '{"date":"2024-01-15"}'
+curl -X POST http://localhost:8080/api/task-generations/daily/2024-01-15
 ```
 
 ### Web Push通知
 
 ```bash
-# Push通知サブスクリプション登録
-curl -X POST http://localhost:8080/api/push-subscriptions/register \
+# Push通知サブスクリプション登録（同じendpointが別の家族で登録済みの場合は409）
+curl -X POST http://localhost:8080/api/push-subscriptions \
   -H "Content-Type: application/json" \
   -d '{"endpoint":"https://...","keys":{"p256dh":"...","auth":"..."}}'
 
 # Push通知サブスクリプション取得
-curl http://localhost:8080/api/push-subscriptions
+curl http://localhost:8080/api/push-subscriptions/my
 ```
 
 ### ヘルスチェック
@@ -581,13 +581,15 @@ housework/
 │       │   ├── Config.kt                    # Guice DI設定
 │       │   ├── domain/                      # ドメイン層
 │       │   │   ├── member/                 # Memberエンティティ・値オブジェクト
+│       │   │   ├── tenant/                 # Tenant（家族）エンティティ・値オブジェクト
 │       │   │   ├── taskDefinition/         # TaskDefinitionエンティティ・スケジュール
 │       │   │   ├── taskExecution/          # TaskExecution状態マシン・スナップショット
 │       │   │   ├── task/service/           # ドメインサービス（認可等）
 │       │   │   ├── event/                  # ドメインイベント定義
 │       │   │   └── mail/                   # メールドメインインターフェース
 │       │   ├── usecase/                     # アプリケーション層
-│       │   │   ├── auth/                   # ログイン
+│       │   │   ├── auth/                   # サインアップ（家族の作成）・ログイン
+│       │   │   ├── batch/                  # TenantBatchRunner（テナントごとのバッチ実行）
 │       │   │   ├── member/                 # メンバーCRUD
 │       │   │   ├── taskDefinition/         # タスク定義CRUD + イベントハンドラ
 │       │   │   ├── taskExecution/          # タスク実行状態遷移
@@ -597,7 +599,8 @@ housework/
 │       │   │   ├── memberMeta/             # メンバーメタデータ
 │       │   │   └── query/                  # CQRSクエリサービス
 │       │   ├── presentation/                # プレゼンテーション層
-│       │   │   ├── Auth.kt                 # 認証エンドポイント
+│       │   │   ├── Auth.kt                 # 認証エンドポイント（register / login）
+│       │   │   ├── AuthenticatedMember.kt  # JWTからmemberId・tenantIdを取得
 │       │   │   ├── Members.kt              # メンバーエンドポイント
 │       │   │   ├── TaskDefinitions.kt      # タスク定義エンドポイント
 │       │   │   ├── TaskExecutions.kt       # タスク実行エンドポイント
@@ -614,10 +617,11 @@ housework/
 │       │   │   ├── NotDailyTaskReminderScheduler.kt
 │       │   │   └── OutboxEventProcessorScheduler.kt
 │       │   └── infra/                       # インフラ層
-│       │       ├── database/               # DB接続・トランザクション管理
-│       │       ├── repository/             # jOOQリポジトリ実装
+│       │       ├── database/               # DB接続・トランザクション管理（Database: テナントスコープ / DatabaseWithoutRLS: オーナー接続）
+│       │       ├── member/ taskDefinition/ taskExecution/ tenant/   # jOOQリポジトリ実装
 │       │       ├── event/                  # ドメインイベントディスパッチャ
 │       │       ├── outbox/                 # Outboxリポジトリ
+│       │       ├── pubsub/                 # Pub/Sub（subscriber・クライアント生成）
 │       │       ├── security/              # JWT・BCrypt
 │       │       ├── mail/                   # SMTP・SendGrid・Logging
 │       │       ├── webpush/               # Web Push送信

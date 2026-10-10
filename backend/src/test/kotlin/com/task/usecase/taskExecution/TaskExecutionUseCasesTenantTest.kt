@@ -64,7 +64,7 @@ import java.util.UUID
  */
 class TaskExecutionUseCasesTenantTest {
 
-    private val database = Database(PostgresTestDatabase.ownerDataSource, PostgresTestDatabase.appDataSource)
+    private val database = Database(PostgresTestDatabase.appDataSource)
     private val taskExecutionRepository = TaskExecutionRepositoryImpl()
     private val taskDefinitionRepository = TaskDefinitionRepositoryImpl()
     private val memberRepository = MemberRepositoryImpl()

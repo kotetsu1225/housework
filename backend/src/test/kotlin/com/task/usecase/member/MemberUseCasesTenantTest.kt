@@ -32,10 +32,7 @@ import org.junit.jupiter.api.Test
  */
 class MemberUseCasesTenantTest {
 
-    private val database = Database(
-        PostgresTestDatabase.ownerDataSource,
-        PostgresTestDatabase.appDataSource,
-    )
+    private val database = Database(PostgresTestDatabase.appDataSource)
     private val memberRepository = MemberRepositoryImpl()
     private val memberStatsQueryService = MemberStatsQueryServiceImpl()
     private val passwordHasher = BCryptPasswordHasher()

@@ -25,7 +25,7 @@ interface MemberRepository {
      *
      * tenant スコープのトランザクション(`Database.withTransaction(tenantId)`)内で呼び出した場合は、
      * RLS(Row Level Security)によって自テナント分のみに絞られる。
-     * オーナー接続(互換パスや `DatabaseWithoutRLS` など RLS をバイパスする接続)から呼ぶと、
+     * オーナー接続(`DatabaseWithoutRLS` など RLS をバイパスする接続)から呼ぶと、
      * 全テナント分の名前が返ってしまうので注意すること。
      */
     fun findAllNames(session: DSLContext): List<MemberName>
@@ -35,7 +35,7 @@ interface MemberRepository {
      *
      * tenant スコープのトランザクション(`Database.withTransaction(tenantId)`)内で呼び出した場合は、
      * RLS(Row Level Security)によって自テナント分のみに絞られる。
-     * オーナー接続(互換パスや `DatabaseWithoutRLS` など RLS をバイパスする接続)から呼ぶと、
+     * オーナー接続(`DatabaseWithoutRLS` など RLS をバイパスする接続)から呼ぶと、
      * 全テナント分が返ってしまうので注意すること
      * (通知ハンドラが「家族全員」の意味でこのメソッドを使っている箇所があるため、呼び出し元の変更時は要確認)。
      */

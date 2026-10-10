@@ -52,7 +52,7 @@ class NotificationBatchesTenantTest {
 
     /** 接続 1 本のアプリ用プール。送信がトランザクションの中だと、送信中の withTransaction が接続を取れずに失敗する */
     private val singleAppDataSource: HikariDataSource = PostgresTestDatabase.createAppDataSource(1)
-    private val database = Database(PostgresTestDatabase.ownerDataSource, singleAppDataSource)
+    private val database = Database(singleAppDataSource)
 
     private val memberRepository = MemberRepositoryImpl()
     private val taskDefinitionRepository = TaskDefinitionRepositoryImpl()

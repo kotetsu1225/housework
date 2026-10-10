@@ -40,7 +40,7 @@ import java.util.UUID
  */
 class GenerateDailyExecutionsTenantTest {
 
-    private val database = Database(PostgresTestDatabase.ownerDataSource, PostgresTestDatabase.appDataSource)
+    private val database = Database(PostgresTestDatabase.appDataSource)
     private val taskDefinitionRepository = TaskDefinitionRepositoryImpl()
     private val taskExecutionRepository = TaskExecutionRepositoryImpl()
     private val domainEventDispatcher = InMemoryDomainEventDispatcher(emptySet())

@@ -27,8 +27,12 @@ import javax.sql.DataSource
  * - テナント横断バッチの「取得」処理（#56）
  * - outboxリレー（#72）と、pubsub 無効時の outbox ポーリング(取得と retry の記録。#61)
  *
+ * 許可リストは `DatabaseWithoutRLSUsageTest`(#65)が自動で検査する。許可リスト外のファイルで使う、
+ * または呼び出しの直前に「RLS」を含む理由コメントが無いと、テストが失敗する。
+ * 承認を得て追加するときは、この KDoc とテストの `ALLOWED_FILES` の両方を更新すること。
+ *
  * 【Databaseとの違い】
- * - `Database`: tenantスコープAPIはhousework_appプール接続でRLSが自動適用される。
+ * - `Database`: tenantスコープの`withTransaction(tenantId)`だけを持ち、housework_appプール接続でRLSが自動適用される。
  * - `DatabaseWithoutRLS`: 常にオーナー（housework）プール接続でRLSをバイパスする。
  *
  * 【コンストラクタでデータソースを受け取る理由】

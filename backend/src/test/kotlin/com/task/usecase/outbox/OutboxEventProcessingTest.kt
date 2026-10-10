@@ -45,7 +45,7 @@ import java.util.UUID
  */
 class OutboxEventProcessingTest {
 
-    private val database = Database(PostgresTestDatabase.ownerDataSource, PostgresTestDatabase.appDataSource)
+    private val database = Database(PostgresTestDatabase.appDataSource)
     private val databaseWithoutRLS = DatabaseWithoutRLS(PostgresTestDatabase.ownerDataSource)
     private val taskExecutionRepository = TaskExecutionRepositoryImpl()
     private val taskDefinitionRepository = TaskDefinitionRepositoryImpl()

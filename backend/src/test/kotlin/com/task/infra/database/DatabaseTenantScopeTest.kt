@@ -20,10 +20,7 @@ import java.util.UUID
  */
 class DatabaseTenantScopeTest {
 
-    private val database = Database(
-        PostgresTestDatabase.ownerDataSource,
-        PostgresTestDatabase.appDataSource,
-    )
+    private val database = Database(PostgresTestDatabase.appDataSource)
     private val databaseWithoutRLS = DatabaseWithoutRLS(PostgresTestDatabase.ownerDataSource)
 
     @AfterEach
@@ -85,7 +82,7 @@ class DatabaseTenantScopeTest {
 
         // 接続が 1 本しかないプールを使い、2 回のトランザクションが必ず同じ接続を使うようにする
         PostgresTestDatabase.createAppDataSource(maximumPoolSize = 1).use { singleConnectionPool ->
-            val db = Database(PostgresTestDatabase.ownerDataSource, singleConnectionPool)
+            val db = Database(singleConnectionPool)
             val backendPidOf = { session: org.jooq.DSLContext ->
                 session.fetchValue("select pg_backend_pid()") as Int
             }
@@ -109,20 +106,6 @@ class DatabaseTenantScopeTest {
                 assertTrue(leftover.isNullOrEmpty()) { "前のテナントの値が残っている: $leftover" }
             }
         }
-    }
-
-    @Suppress("DEPRECATION")
-    @Test
-    fun `互換パスの withTransaction(block) と withSession はオーナー接続で全テナントが見える`() {
-        val owner = PostgresTestDatabase.ownerDsl()
-        TestFixtures.createTenantWithMember(owner, "山田家", "太郎", "taro@example.com")
-        TestFixtures.createTenantWithMember(owner, "鈴木家", "次郎", "jiro@example.com")
-
-        val countInTransaction = database.withTransaction { session -> session.fetchCount(MEMBERS) }
-        val countInSession = database.withSession { session -> session.fetchCount(MEMBERS) }
-
-        assertEquals(2, countInTransaction)
-        assertEquals(2, countInSession)
     }
 
     @Test

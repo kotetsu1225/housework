@@ -2,11 +2,11 @@
 
 [multi-tenant-handoff.md](multi-tenant-handoff.md) §6.4 に従い、**issue の着手時と完了時に必ず更新する**。コンテキストが切れた別のエージェントが、このファイルだけを見て再開できる粒度で書く。
 
-最終更新: 2026-09-27(完了 28 件 + #68 の大部分。次に着手できる issue は #69 apply と #48 の方針の判断待ち)
+最終更新: 2026-10-10(完了 34 件 + #68 の大部分。#66 実装中。#69 apply はオーナーの承認待ち)
 
 ## 現在の状態
 
-- フェーズ: **Wave 2〜3**。オーナーの判断無しで進められる issue は終わった(残りは #48 系・#69 系・#65 #66、#68 の最終確認、人間と行う #67 #73)
+- フェーズ: **Wave 3**。残りは #66(実装中)、#68 の最終確認、#69 → #70(apply の承認待ち)、人間と行う #67 #73
 - 統合ブランチ: `feature/topic-multitenant`
 - 人間チェックポイント待ち: #69 の `terraform apply` の承認(plan は 5 件追加・変更 0・削除 0)
 - 作業体制(オーナー指示 2026-09-24): 親エージェントが具体的な指示を書き、安価なモデル(Sonnet)に実装させ、親が厳密にレビューする。数行で済む定型作業は親が直接書く
@@ -32,7 +32,7 @@
 
 | issue | 担当 | ブランチ(worktree は `~/Desktop/housework-wt/mt-<番号>`) | 状況・次の一手 |
 |---|---|---|---|
-| #48 D4 | — | 未着手 | **endpoint の他テナント衝突の扱いがオーナーの判断待ち**(推奨は「409 で断る」)。#52 #58〜#60 もこれ待ち |
+| #66 Z2 | 親(土台)+ Sonnet(API テスト)+ 親(レビュー) | `mt/66-isolation-tests` | API テストの土台(`support/ApiTestApplication.kt`: 本物のルート + AppModule を Modules.override でテスト DB とフェイクに差し替え)を作成済み。API 経由の隔離テストを Sonnet が作成中。DB レベルの不足分(tenants / completed_domain_events)は親が作成 |
 | #68 Z4 | Sonnet(編集)+ 親(レビュー) | PR #106 でマージ済み(issue は開いたまま) | README / CLAUDE.md / ER 図 / ドメインモデルと ADR #19 への追記は済み。**残り: 全 issue 完了後の最終確認**(sequence-diagram.md と directory-structure.md もそこで見る)。`要件定義.md` は .gitignore 対象でリポジトリに無いため、オーナーの手元で更新 |
 | #69 G0 | 親(人間と伴走) | `mt/69-gcp-foundation`(push 済み、PR 未作成) | plan は 5 件追加。**オーナーの承認後に apply → PR** |
 
@@ -67,6 +67,9 @@
 | #72 G3 | #103 | 2026-09-27 | outbox リレー。**pubsub 無効時はアプリ内処理を残す**(#72 にコメント)。属性名は `OutboxMessageAttributes` |
 | #36 F1 | #79 | 2026-09-26 | V22 backfill 新規、V23 に rename、jOOQ 再生成。**素の `./gradlew build` はもう DB に触れない**(コンパイル時の自動生成を停止)。生成は `./gradlew generateJooq -PdbUrl=jdbc:postgresql://localhost:5433/<DB名>` |
 | #50 D6 | #104 | 2026-09-27 | same-tenant の require。`InProgress.complete / cancel` は TaskDefinition を受け取る形に変更。担当者 ID の重複は `distinct()` してから数える |
+| #48 D4 + #52 U2 | #107 | 2026-10-10 | push_subscriptions / member_metas に tenant_id、Push / Meta の 4 UseCase を tenant スコープに。**案 C: 別の家族で登録済みの endpoint は 409**(一意制約違反をトランザクションの外で変換)。通知許可モーダルは失敗時に閉じずに理由を表示 |
+| #58 B2 + #59 B3 + #60 B4 | #108 | 2026-10-10 | 通知バッチ 3 つをテナント単位に。送信と期限切れ無効化を `TenantPushNotificationDelivery` に共通化(送信はトランザクションの外) |
+| #65 Z1 | #109 | 2026-10-10 | 互換パスを削除し、`Database` はアプリ用プールだけを持つ。`DatabaseWithoutRLSUsageTest` が許可リスト外の利用・理由コメントの欠落・tenant 無しメソッドの復活を検知 |
 | #61 B5 | #105 | 2026-09-27 | streaming pull subscriber。処理本体を `HandleTaskDefinitionDeletedUseCase` / `OutboxEventProcessor` に切り出し、pubsub 無効時のアプリ内ポーリングと共有。属性欠落・未知の eventType・例外は nack。pubsub 無効時、未知の eventType は PROCESSED にせず retry に回す(挙動の変更)。**outbox 系の互換パス呼び出しはこれで無くなった** |
 
 ## ブロック中・未解決の疑問
@@ -74,21 +77,11 @@
 | 内容 | 誰の判断が必要か | 状態 |
 |---|---|---|
 | #69 の `terraform apply`(API 4 つの有効化と月 1,000 円の予算アラート) | オーナー | 承認待ち |
-| #48 endpoint(Web Push の購読先 URL)が別テナントで既に登録済みのときの扱い(推奨は「409 で断る」) | オーナー | 判断待ち。#48 → #52、#58〜#60 → #65 がこれで止まっている |
+| ~~#48 endpoint の他テナント衝突の扱い~~ | オーナー | **2026-10-10 に案 C(409 で断る)で決定・実装済み**(PR #107) |
 
-## 残っている互換パス(`database.withTransaction { }` / `withSession { }`)の呼び出し
+## 互換パス(`database.withTransaction { }` / `withSession { }`)
 
-#65 で互換パスを消す前に、次の 7 箇所が無くなっている必要がある(2026-09-27、#105 マージ後の統合ブランチで grep)。
-
-| 呼び出し元 | 片付ける issue |
-|---|---|
-| `GetPushSubscriptionUseCaseImpl` / `RegisterPushSubscriptionUseCaseImpl` | #52 |
-| `GetUserMetasUseCaseImpl` / `SaveMemberMetaUseCaseImpl` | #52 |
-| `SendDailyNotCompletedTaskNotificationsUseCaseImpl` | #58 |
-| `SendNotDailyTaskRemindersUseCaseImpl` | #59 |
-| `SendNotDailyTomorrowTaskNotificationsUseCaseImpl` | #60 |
-
-確認コマンド: `grep -rnE "database\.(withTransaction|withSession) *\{" backend/src/main/kotlin`
+2026-10-10 に #65(PR #109)で削除済み。再発は `DatabaseWithoutRLSUsageTest` が検知する。
 
 ## handoff の補正(キャッチアップで判明。詳細は `doc/multi-tenant-catchup.md` 5.4)
 
@@ -127,6 +120,8 @@
 - 例外のテストは型だけでなく、メッセージで原因(RLS 違反など)まで確かめる。
 - Pub/Sub エミュレータのテストは、**テストクラスごとに専用の topic / subscription 名**を使う(同じ名前だと他のテストのメッセージが混ざる)。非同期の結果は固定の sleep ではなく、条件が成り立つまで待つ(例: `OutboxEventProcessor` を継承して結果を記録し、件数がそろうまで待つ。#61 の `DomainEventSubscriberEndToEndTest`)。
 - 大事な判定(冪等性など)のテストは、一時的に本体を壊して**テストが落ちることを確かめてから**元に戻す。
+- **DB を使うテストは Docker Desktop が起動している必要がある。** 止まっていると Testcontainers が「Could not find a valid Docker environment」で全滅する(2026-10-10、2 週間ぶりの再開時に発生。`open -a Docker` で起動)。
+- API 経由のテストは `support/ApiTestApplication.kt` の `apiTest { }` を使う(本物のルート・StatusPages・JWT・DI をテスト DB で動かす。WebPush / Mail はフェイク)。
 
 ## 運用上の教訓
 
@@ -137,7 +132,7 @@
 
 ## 次にやること(優先順)
 
-1. #48 の判断後: #48 → #52、#58〜#60(この 3 つは並行できる)
-2. #69: オーナーの承認後に apply → `terraform plan` で差分なしを確認 → PR → #70(Pub/Sub の Terraform)
-3. Wave 3: #65(互換パス撤去。上の 7 箇所が無くなってから)、#66(隔離の統合テスト)、#68 の最終確認(全 issue 完了後)
+1. #66(隔離の統合テスト)をレビュー → PR → マージ
+2. #68 の最終確認(sequence-diagram.md / directory-structure.md も含む)
+3. #69: オーナーの承認後に apply → `terraform plan` で差分なしを確認 → PR → #70(Pub/Sub の Terraform)
 4. 人間と一緒に: #67(本番リハーサル)、#73(Pub/Sub への切り替え)

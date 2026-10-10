@@ -196,7 +196,7 @@ class TaskDefinitionUseCasesTenantTest {
      * [LazyDomainEventDispatcher] を介して先にハンドラを組み立ててから実体を差し込む。
      */
     private class TestUseCases {
-        val database = Database(PostgresTestDatabase.ownerDataSource, PostgresTestDatabase.appDataSource)
+        val database = Database(PostgresTestDatabase.appDataSource)
         val taskDefinitionRepository: TaskDefinitionRepository = TaskDefinitionRepositoryImpl()
         val taskExecutionRepository: TaskExecutionRepository = TaskExecutionRepositoryImpl()
         val outboxRepository: OutboxRepository = OutboxRepositoryImpl()

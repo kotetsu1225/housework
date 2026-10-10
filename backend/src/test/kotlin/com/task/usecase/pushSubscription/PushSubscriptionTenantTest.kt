@@ -26,7 +26,7 @@ import org.junit.jupiter.api.assertThrows
  */
 class PushSubscriptionTenantTest {
 
-    private val database = Database(PostgresTestDatabase.ownerDataSource, PostgresTestDatabase.appDataSource)
+    private val database = Database(PostgresTestDatabase.appDataSource)
     private val pushRepository = PushSubscriptionRepositoryImpl()
     private val metaRepository = MemberMetaRepositoryImpl()
     private val register = RegisterPushSubscriptionUseCaseImpl(database, pushRepository, metaRepository)

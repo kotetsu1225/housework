@@ -39,7 +39,7 @@ import java.time.temporal.ChronoUnit
  */
 class QueryTenantScopeTest {
 
-    private val database = Database(PostgresTestDatabase.ownerDataSource, PostgresTestDatabase.appDataSource)
+    private val database = Database(PostgresTestDatabase.appDataSource)
     private val definitionRepository = TaskDefinitionRepositoryImpl()
     private val executionRepository = TaskExecutionRepositoryImpl()
     private val memberRepository = MemberRepositoryImpl()

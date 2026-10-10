@@ -51,7 +51,7 @@ class DomainEventSubscriberEndToEndTest {
     private lateinit var container: PubSubEmulatorContainer
     private lateinit var factory: PubSubClientFactory
 
-    private val database = Database(PostgresTestDatabase.ownerDataSource, PostgresTestDatabase.appDataSource)
+    private val database = Database(PostgresTestDatabase.appDataSource)
     private val databaseWithoutRLS = DatabaseWithoutRLS(PostgresTestDatabase.ownerDataSource)
     private val definitionRepository = TaskDefinitionRepositoryImpl()
     private val executionRepository = TaskExecutionRepositoryImpl()

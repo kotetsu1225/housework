@@ -10,19 +10,18 @@ import org.jooq.impl.DefaultConfiguration
 import javax.sql.DataSource
 
 /**
- * データベース操作のファサードクラス
+ * データベース操作のファサードクラス(tenant スコープ専用、RLS 適用)
  *
  * 【このクラスの役割】
  * 1. DBコネクションの取得と解放を自動化
  * 2. トランザクション管理（成功→コミット、失敗→ロールバック）
- * 3. DSLContext（JOOQの操作オブジェクト）を提供
+ * 3. tenantスコープのDSLContext（JOOQの操作オブジェクト）を提供
  *
- * 【2つの接続点】
- * - `withTransaction(tenantId, block)`: housework_appプール（RLS適用）。tenantスコープの
- *   処理（更新系・参照系ともに）はこちらを使う。
- * - `withTransaction(block)` / `withSession(block)`: オーナープール（RLSバイパス）。
- *   非推奨の互換パス。#65で削除予定。tenantスコープが必要な場合は上記か
- *   [DatabaseWithoutRLS] を使うこと。
+ * 【接続点はtenantスコープの1つだけ】
+ * `withTransaction(tenantId, block)`: housework_appプール（RLS適用）。更新系・参照系ともにこれを使う。
+ * テナントを指定しない(RLSを越える)接続はこのクラスには無い(#65で互換パスを削除)。
+ * RLSを越える必要がある処理は、許可リストに載っている場合に限り [DatabaseWithoutRLS] を使う
+ * (許可リストは [DatabaseWithoutRLS] の KDoc。DatabaseWithoutRLSUsageTest が自動で検査する)。
  *
  * 【使い方の例（tenantスコープ・推奨）】
  * ```
@@ -36,16 +35,16 @@ import javax.sql.DataSource
  * テストでTestcontainers等のデータソースを差し込めるようにするため。
  * 本番実行時は`@Inject`のセカンダリコンストラクタ経由で[DatabaseConfig]のデータソースが使われる。
  *
- * @param ownerDataSource オーナー（housework）接続プール。RLSをバイパスする。
+ * オーナー（RLSバイパス）のデータソースは受け取らない。このクラス経由で RLS を越える経路を構造的に無くすため(#65)。
+ *
  * @param appDataSource 非オーナー（housework_app）接続プール。RLSが自動適用される。
  */
 @Singleton
 class Database(
-    private val ownerDataSource: DataSource,
     private val appDataSource: DataSource,
 ) {
 
-    @Inject constructor() : this(DatabaseConfig.dataSource, DatabaseConfig.appDataSource)
+    @Inject constructor() : this(DatabaseConfig.appDataSource)
 
     /**
      * JOOQの基本設定
@@ -109,69 +108,6 @@ class Database(
                 // ⑥ あなたの処理を実行
                 block(txContext)
             }
-        }
-    }
-
-    /**
-     * トランザクション付きでDBセッションを開く（更新系処理用・オーナー接続）
-     *
-     * 【動作】
-     * 1. オーナー接続プールから接続を借りる
-     * 2. トランザクション開始
-     * 3. block（あなたの処理）を実行
-     * 4. 成功 → コミット、失敗 → ロールバック
-     * 5. 接続をプールに返却
-     *
-     * 【型パラメータ T】
-     * blockの戻り値の型。どんな型でも返せる。
-     * 例: Member, List<Member>, Unit（何も返さない）など
-     *
-     * @param block 実行したい処理（sessionを受け取るラムダ）
-     * @return blockの実行結果
-     */
-    @Deprecated("tenant スコープの withTransaction(tenantId) か DatabaseWithoutRLS を使う。#65 で削除する")
-    fun <T> withTransaction(block: (session: DSLContext) -> T): T {
-        // ① HikariCPから接続を借りる（use = 終わったら自動で返す）
-        return ownerDataSource.connection.use { connection ->
-            // ② 接続からJOOQのDSLContextを作成
-            val context = DSL.using(defaultConfig.derive(connection))
-
-            // ③ トランザクション内で処理を実行
-            // transactionResult = 戻り値あり版のトランザクション
-            // 成功→コミット、例外→ロールバック を自動で行う
-            context.transactionResult { txConfig ->
-                // ④ トランザクション専用のDSLContextを取得
-                val txContext = txConfig.dsl()
-
-                // ⑤ あなたの処理を実行
-                block(txContext)
-            }
-        }
-    }
-
-    /**
-     * トランザクションなしでDBセッションを開く（参照系処理用・オーナー接続）
-     *
-     * 【いつ使う？】
-     * - SELECTのみの処理
-     * - トランザクションが不要な場合
-     *
-     * 【withTransactionとの違い】
-     * - トランザクションを開始しない → オーバーヘッドが少ない
-     * - コミット/ロールバックがない → 参照専用
-     *
-     * @param block 実行したい処理（sessionを受け取るラムダ）
-     * @return blockの実行結果
-     */
-    @Deprecated("tenant スコープの withTransaction(tenantId) か DatabaseWithoutRLS を使う。#65 で削除する")
-    fun <T> withSession(block: (session: DSLContext) -> T): T {
-        // HikariCPから接続を借りる（use = 終わったら自動で返す）
-        return ownerDataSource.connection.use { connection ->
-            // 接続からJOOQのDSLContextを作成
-            val context = DSL.using(defaultConfig.derive(connection))
-
-            // そのまま処理を実行（トランザクションなし）
-            block(context)
         }
     }
 }

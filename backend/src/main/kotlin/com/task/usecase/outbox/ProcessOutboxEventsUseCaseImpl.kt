@@ -40,7 +40,7 @@ import org.slf4j.LoggerFactory
  * 【失敗時に[DatabaseWithoutRLS]で`incrementRetry`する理由】
  * 処理中の例外はtenantスコープのトランザクションをロールバックさせるため、そのセッションでは
  * もはやoutbox行を更新できない。ロールバック後に改めてオーナー接続で`incrementRetry`する
- * (`database.withTransaction()`/`withSession()`の互換パスは使わない。#65で削除予定のため)。
+ * (`Database` にはテナントを指定しない接続が無いため。#65)。
  */
 @Singleton
 class ProcessOutboxEventsUseCaseImpl @Inject constructor(

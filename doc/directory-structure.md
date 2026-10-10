@@ -366,7 +366,9 @@ src/main/kotlin/com/task/
 src/test/kotlin/com/task/
 ├── support/
 │   ├── PostgresTestDatabase.kt    # Testcontainers上のPostgreSQL（マイグレーション適用済み）
-│   └── TestFixtures.kt            # テスト用データ生成
+│   ├── TestFixtures.kt            # テスト用データ生成
+│   └── ApiTestApplication.kt      # API テストの土台 apiTest { }（本物のルート・JWT・DI をテスト DB で動かす。WebPush / Mail はフェイク）
+├── isolation/                     # API 経由のテナント隔離テスト（2 家族をサインアップし、A のトークンで B のデータに触れられないこと。#66）
 ├── domain/                        # ドメインのテスト (Member / TaskDefinition / TaskExecution / Tenant、SameTenantInvariantTest)
 ├── infra/                         # database(tenantスコープ・DatabaseWithoutRLS使用箇所の検査・テナント分離) / outbox / pubsub / security / 各Repositoryのテナント分離
 ├── presentation/                  # AuthenticatedMemberTest
